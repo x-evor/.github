@@ -1,0 +1,129 @@
+{
+  "apiVersion": "serving.knative.dev/v1",
+  "kind": "Service",
+  "metadata": {
+    "annotations": {
+      "run.googleapis.com/build-enable-automatic-updates": "false",
+      "run.googleapis.com/build-id": "8015d268-d7fa-4fd8-a752-39e9bc4da594",
+      "run.googleapis.com/build-image-uri": "asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/page-reading-svc-plus",
+      "run.googleapis.com/build-name": "projects/266500572462/locations/asia-northeast1/builds/8015d268-d7fa-4fd8-a752-39e9bc4da594",
+      "run.googleapis.com/build-source-location": "gs://run-sources-xzerolab-480008-asia-northeast1/services/page-reading-svc-plus/1769675785.602334-c5a331d4fbf0430b8063babb66e6ed4a.zip#1769675785961455",
+      "run.googleapis.com/client-name": "gcloud",
+      "run.googleapis.com/client-version": "554.0.0",
+      "run.googleapis.com/ingress": "all",
+      "run.googleapis.com/ingress-status": "all",
+      "run.googleapis.com/invoker-iam-disabled": "true",
+      "run.googleapis.com/maxScale": "50",
+      "run.googleapis.com/operation-id": "072eddc8-699d-47ac-934c-648e6d330e39",
+      "run.googleapis.com/urls": "[\"https://page-reading-svc-plus-266500572462.asia-northeast1.run.app\",\"https://page-reading-svc-plus-pztvwzbmpq-an.a.run.app\"]",
+      "serving.knative.dev/creator": "haitaopanhq@gmail.com",
+      "serving.knative.dev/lastModifier": "266500572462-compute@developer.gserviceaccount.com"
+    },
+    "creationTimestamp": "2026-01-21T09:54:23.938086Z",
+    "generation": 14,
+    "labels": {
+      "cloud.googleapis.com/location": "asia-northeast1",
+      "commit-sha": "6a753f8755c25a2b31304bf825eaea70c5e9135f",
+      "gcb-build-id": "2172a29f-e4ac-42ae-ad6c-af7af0d20f0f",
+      "gcb-trigger-id": "9c251ac6-044b-4942-9890-85fdf852a178",
+      "gcb-trigger-region": "global",
+      "managed-by": "gcp-cloud-build-deploy-cloud-run"
+    },
+    "name": "page-reading-svc-plus",
+    "namespace": "266500572462",
+    "resourceVersion": "AAZJh92H0e8",
+    "selfLink": "/apis/serving.knative.dev/v1/namespaces/266500572462/services/page-reading-svc-plus",
+    "uid": "da820ec3-777c-47e8-a41c-408ae68b9cc0"
+  },
+  "spec": {
+    "template": {
+      "metadata": {
+        "annotations": {
+          "autoscaling.knative.dev/maxScale": "20",
+          "run.googleapis.com/client-name": "gcloud",
+          "run.googleapis.com/client-version": "554.0.0",
+          "run.googleapis.com/startup-cpu-boost": "true"
+        },
+        "labels": {
+          "client.knative.dev/nonce": "vhtgwuxzns",
+          "commit-sha": "6a753f8755c25a2b31304bf825eaea70c5e9135f",
+          "gcb-build-id": "2172a29f-e4ac-42ae-ad6c-af7af0d20f0f",
+          "gcb-trigger-id": "9c251ac6-044b-4942-9890-85fdf852a178",
+          "gcb-trigger-region": "global",
+          "managed-by": "gcp-cloud-build-deploy-cloud-run",
+          "run.googleapis.com/startupProbeType": "Default"
+        }
+      },
+      "spec": {
+        "containerConcurrency": 80,
+        "containers": [
+          {
+            "image": "asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/page-reading-agent-backend/page-reading-svc-plus:6a753f8755c25a2b31304bf825eaea70c5e9135f",
+            "name": "placeholder-1",
+            "ports": [
+              {
+                "containerPort": 8080,
+                "name": "http1"
+              }
+            ],
+            "resources": {
+              "limits": {
+                "cpu": "1000m",
+                "memory": "2048Mi"
+              }
+            },
+            "startupProbe": {
+              "failureThreshold": 1,
+              "periodSeconds": 240,
+              "tcpSocket": {
+                "port": 8080
+              },
+              "timeoutSeconds": 240
+            }
+          }
+        ],
+        "serviceAccountName": "266500572462-compute@developer.gserviceaccount.com",
+        "timeoutSeconds": 300
+      }
+    },
+    "traffic": [
+      {
+        "latestRevision": true,
+        "percent": 100
+      }
+    ]
+  },
+  "status": {
+    "address": {
+      "url": "https://page-reading-svc-plus-pztvwzbmpq-an.a.run.app"
+    },
+    "conditions": [
+      {
+        "lastTransitionTime": "2026-01-29T14:42:26.342383Z",
+        "status": "True",
+        "type": "Ready"
+      },
+      {
+        "lastTransitionTime": "2026-01-29T14:42:20.702303Z",
+        "status": "True",
+        "type": "ConfigurationsReady"
+      },
+      {
+        "lastTransitionTime": "2026-01-29T14:42:26.312201Z",
+        "status": "True",
+        "type": "RoutesReady"
+      }
+    ],
+    "latestCreatedRevisionName": "page-reading-svc-plus-00013-wkk",
+    "latestReadyRevisionName": "page-reading-svc-plus-00013-wkk",
+    "observedGeneration": 14,
+    "traffic": [
+      {
+        "latestRevision": true,
+        "percent": 100,
+        "revisionName": "page-reading-svc-plus-00013-wkk"
+      }
+    ],
+    "url": "https://page-reading-svc-plus-pztvwzbmpq-an.a.run.app"
+  }
+}

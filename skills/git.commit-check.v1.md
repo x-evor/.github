@@ -31,14 +31,14 @@ bash scripts/hooks/install-hooks.sh
 
 ## Hook 行为设计
 ### pre-commit（快）
-只扫描 staged patch（避免扫全仓导致慢）
+只扫描 staged 变更（自动遵循 `.gitignore`，仅扫暂存区）。
 命令（参考）：
 ```bash
-git diff --cached -U0 | gitleaks detect -v --no-git --pipe --redact --config config/gitleaks.toml
+gitleaks protect -v --staged --redact --config config/gitleaks.toml
 ```
 
 ### pre-push（稳）
-推送前全仓扫描（兜底）
+推送前扫描历史 commits（兜底）。
 命令（参考）：
 ```bash
 gitleaks detect -v --redact --config config/gitleaks.toml

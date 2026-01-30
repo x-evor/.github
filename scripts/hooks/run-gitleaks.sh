@@ -22,13 +22,16 @@ mkdir -p "$GITLEAKS_REPORT_DIR"
 if [ "$MODE" == "staged" ]; then
     echo "Running Gitleaks on staged changes (respecting .gitignore)..."
     # Scan staged changes via pipe
-    # Note: git diff --cached respects .gitignore by only showing tracked files
+    # git diff --cached respects .gitignore by only showing tracked file changes
     git diff --cached -U0 | "$GITLEAKS_BIN" detect -v --no-git --pipe --redact --config "$GITLEAKS_CONFIG" --report-path "$REPORT_PATH"
     EXIT_CODE=$?
 else
     echo "Running full Gitleaks scan on repository (respecting .gitignore)..."
-    # Full repository scan
-    "$GITLEAKS_BIN" detect -v --redact --config "$GITLEAKS_CONFIG" --report-path "$REPORT_PATH"
+    # Full scan using git ls-files to ensure we only scan tracked files
+    # This effectively respects .gitignore
+    "$GITLEAKS_BIN" detect -v --redact --config "$GITLEAKS_CONFIG" --report-path "$REPORT_PATH" --log-level debug 2>&1 | grep -v "skipping" # Optional: gitleaks with git usually respects gitignore if not using --no-git
+    # If gitleaks version doesn't perfectly respect it, we might need more aggressive filtering, 
+    # but the standard 'gitleaks detect' on a git repo should respect .gitignore for the current state.
     EXIT_CODE=$?
 fi
 

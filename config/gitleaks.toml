@@ -10,6 +10,11 @@ paths = [
     '''\.env\.test$''',
     '''go\.sum$''',
     '''package-lock\.json$''',
+    '''\.next/''',
+    '''dist/''',
+    '''out/''',
+    '''build/''',
+    '''\.turbo/''',
 ]
 stopwords = [
     "example",

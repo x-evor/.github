@@ -44,12 +44,26 @@ sequenceDiagram
 
 ### 2. Backend: Accounts Service (`accounts.svc.plus`)
 
+*   **Role**: **The Central Bridge**
+    *   Acts as the authoritative intermediary between the User (Console) and the Infrastructure (Agent).
+    *   Ensures that the configuration displayed to the user creates a valid connection to the server.
+
+*   **Key Responsibilities**:
+    1.  **Authentication & Authorization**:
+        *   Validates the user's session from the Console.
+        *   Validates the Agent's identity via `INTERNAL_SERVICE_TOKEN` and `AuthUrl`.
+        *   Ensures only authorized users can access node information and only authorized agents can sync configuration.
+    2.  **Configuration Aggregation (The "Bridge" Logic)**:
+        *   **Dynamic Data**: Retrieving user-specific secrets (UUID) from the database.
+        *   **Static Templates**: Merging user data with server-side templates (e.g., `template_tcp.json`) which define protocol details like `flow`, `port`, and `transport`.
+        *   **API Response**: Delivers a unified JSON object to the Console containing both the Node's public address and the User's specific parameters.
+    3.  **State Management**:
+        *   Maintains the "Source of Truth" for active nodes.
+        *   If a node changes its configuration (e.g., updates `flow` requirement), the Accounts Service updates the template, and both Console (on next refresh) and Agent (on next sync) receive the new state, keeping them in lockstep.
+
 *   **API**: `/api/agent/nodes` (`api/user_agents.go`)
-*   **Responsibility**:
-    *   Authenticates the user.
-    *   Returns the list of available agent nodes.
-    *   **Injects User Identity**: returns the current user's UUID as part of the node/user data (mapped to keys like `id` or implicit user context).
-    *   **Defines Node Properies**: Sets default transport, port (`1443`), and flow (`xtls-rprx-vision`) based on server templates.
+    *   **Injects User Identity**: returns the current user's UUID as part of the node/user data.
+    *   **Defines Node Properies**: Sets default transport, port (`1443`), and flow (`xtls-rprx-vision`).
 
 ### 3. Agent: Agent Service (`agent.svc.plus`)
 

@@ -112,5 +112,25 @@ graph TD
 | **部署自动化** | `cloudrun` (MCP) | 直接操作 GCP 资源，查询服务状态与日志摘要。 |
 
 ---
+
+## 9. 当前状态与已知问题 (Current Status & Known Issues)
+
+### 状态摘要
+目前项目正处于从全量认证向细分 Admin 权限迁移的过渡期。本地环境已完成路由重构，但线上环境尚待同步部署。
+
+### 已知问题 (待部署验证)
+1. **API 404/502 (线上)**: 
+   - `DELETE /api/admin/users/:id` 线上返回 404，原因为后端路由尚未更新至 `/api/admin`（目前线上仍位于 `/api/auth/admin`）。
+   - `/api/admin/users/metrics` 出现 502 错误，通常与后端 MetricsProvider 未在生产环境正确初始化或超时有关。
+2. **Next.js RSC Data 404**: 前端控制台出现部分 `?rsc=...` 数据的 404，需同步 Vercel 部署。
+3. **MFA 容控**: 管理员通过命令行关闭 MFA 后，需确保 Session 及时更新。
+
+### 优化建议
+- **后端部署**: 执行 `gcloud run deploy accounts-svc-plus` 以生效最新的路由、Metrics 适配器及 OAuth 自动绑定逻辑。
+- **前端部署**: 在 Vercel 后台触发重新部署，确保 RSC 数据链路与最新 API 匹配。
+
+---
+
+---
 **更新日期**: 2026-02-02
 **维护者**: Cloud Neutral Toolkit 核心组

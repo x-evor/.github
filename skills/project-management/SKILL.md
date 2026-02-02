@@ -58,5 +58,8 @@ graph TD
 
 ## 6. Project References
 
-- **[OVERVIEW.md](../../OVERVIEW.md)**: Main project landscape and topology.
-- **[DEPLOYMENT_SUMMARY.md](../../docs/DEPLOYMENT_SUMMARY.md)**: Detailed Cloud Run setup instructions.
+## 7. Continuous Validation
+
+- **Status Check**: Always consult `PROJECT_OVERVIEW.md` Section 9 before starting new features to avoid conflicts with known production/SIT discrepancies.
+- **Error Pattern Recognition**: If 404/502/503 errors appear in the Management Panel, verify if the backend routes (e.g., `/api/admin` vs `/api/auth/admin`) match the frontend expectations in the documentation.
+- **Multi-Cloud Sync**: Remember that Vercel (Frontend) and Cloud Run (Backend) require synchronized deployments to avoid RSC data mismatches.

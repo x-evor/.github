@@ -1,0 +1,61 @@
+---
+name: Project Management
+description: Comprehensive guide for managing the Cloud Neutral Toolkit, including environments, deployment, and security standards.
+version: 1.0.0
+author: Cloud Neutral Toolkit
+tags: [management, devops, architecture, gcp, domains]
+---
+
+# Project Management Skill
+
+This skill documents the standard management procedures and project architecture for the Cloud Neutral Toolkit ecosystem.
+
+## 1. Environment & Infrastructure
+
+### Local / SIT Environment
+- **Registry**: Local builds using `Makefile`.
+- **Database**: PostgreSQL accessible via `stunnel` on `localhost:15432`.
+- **Secrets**: Managed via local `.env` and `.env.local` files (git-ignored).
+
+### Production (GCP)
+- **Deployment**: Google Cloud Run (asia-northeast1).
+- **Domain**: `*.svc.plus`.
+- **Secrets**: Google Secret Manager.
+
+## 2. Authentication Models
+
+### Service-to-Service (S2S)
+All internal requests between `console`, `accounts`, `rag-server`, and `page-reading-agent` must include:
+- Header: `X-Service-Token: <INTERNAL_SERVICE_TOKEN>`
+
+### User-to-Service
+- **Public**: OAuth2 (GitHub/Google) with mandatory email verification.
+- **Session**: `xc_session` cookie for shared subdomain authentication.
+- **Admin**: Role-based access control (RBAC) enforced on `/api/admin/*` endpoints.
+
+## 3. Deployment Topology
+
+```mermaid
+graph TD
+    Console[console.svc.plus] --> Accounts[accounts.svc.plus]
+    Console --> RAG[rag-server.svc.plus]
+    Accounts --> Postgres[(Cloud SQL)]
+    RAG --> Postgres
+```
+
+## 4. Delivery & Verification Checklist
+
+- [ ] **Standardization**: Use `Makefile` for all build/test/run operations.
+- [ ] **Auth**: New endpoints must be wrapped in `AuthMiddleware` and `InternalAuthMiddleware`.
+- [ ] **Validation**: Cross-service authentication tests must pass before production deployment.
+- [ ] **Security**: No secrets in source code; use GCP Secret Manager in prod.
+
+## 5. Related Skills
+
+- **[Security Audit](../security-audit/SKILL.md)**: Detects vulnerabilities and hardcoded secrets.
+- **[Git Standards](../git.conventional-commits.v1.md)**: Ensures clean commit history.
+
+## 6. Project References
+
+- **[OVERVIEW.md](../../OVERVIEW.md)**: Main project landscape and topology.
+- **[DEPLOYMENT_SUMMARY.md](../../docs/DEPLOYMENT_SUMMARY.md)**: Detailed Cloud Run setup instructions.

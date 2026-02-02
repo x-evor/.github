@@ -14,12 +14,13 @@
 ### Online / Prod 环境
 | 维度 | 配置详情 |
 | :--- | :--- |
-| **云平台** | Google Cloud Platform (GCP) |
-| **计算引擎** | Google Cloud Run (Serverless 自动伸缩) |
-| **托管区域** | `asia-northeast1` (Tokyo) |
+| **云平台** | Google Cloud Platform (GCP) + Vercel |
+| **计算引擎** | Cloud Run (Backend) + Vercel (Frontend Hosting) |
+| **托管区域** | `asia-northeast1` (GCP) / Global Edge (Vercel) |
 | **数据存储** | Cloud SQL for PostgreSQL, pgvector 扩展 |
-| **敏感信息** | GCP Secret Manager (管理数据库密码、OAuth Secrets、Service Tokens) |
-| **部署模式** | 容器化部署 (Artifact Registry), GitHub Actions 触发 |
+| **敏感信息** | GCP Secret Manager / Vercel Env Variables |
+| **部署模式** | 容器化部署 (Artifact Registry) + Vercel Git Integration |
+| **部署地址** | [Vercel svc-designs-projects](https://vercel.com/svc-designs-projects) |
 
 ---
 
@@ -70,7 +71,7 @@ graph TD
 1. **代码审查**: 遵循 Conventional Commits 规范。
 2. **构建验证**: 执行 `make build` 确保多语言环境兼容性。
 3. **集成测试**: 运行 `service-auth-integration-test.sh` 验证链路完整性。
-4. **CI 部署**: 推送至主分支触发 Cloud Run 自动部署。
+4. **CI 部署**: 推送至主分支触发 Cloud Run 自动部署及 Vercel 前端发布。
 
 ### 验证标准
 - 关键 API 响应延时 < 200ms。

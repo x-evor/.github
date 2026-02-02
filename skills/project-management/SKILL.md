@@ -17,10 +17,11 @@ This skill documents the standard management procedures and project architecture
 - **Database**: PostgreSQL accessible via `stunnel` on `localhost:15432`.
 - **Secrets**: Managed via local `.env` and `.env.local` files (git-ignored).
 
-### Production (GCP)
-- **Deployment**: Google Cloud Run (asia-northeast1).
+### Production (GCP + Vercel)
+- **Backend Deployment**: Google Cloud Run (asia-northeast1).
+- **Frontend Deployment**: [Vercel svc-designs-projects](https://vercel.com/svc-designs-projects).
 - **Domain**: `*.svc.plus`.
-- **Secrets**: Google Secret Manager.
+- **Secrets**: Google Secret Manager / Vercel Environment Variables.
 
 ## 2. Authentication Models
 

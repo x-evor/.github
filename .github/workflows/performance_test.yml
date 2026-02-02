@@ -1,0 +1,39 @@
+name: Performance Testing
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Frontend URL to test'
+        required: true
+        default: 'https://console.svc.plus'
+      accounts_url:
+        description: 'Accounts API URL to test'
+        required: true
+        default: 'https://accounts.svc.plus'
+  schedule:
+    - cron: '0 0 * * 1' # Weekly check on Mondays at UTC 00:00
+
+jobs:
+  k6_test:
+    name: Run k6 Load Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Run k6 Load Test
+        uses: grafana/k6-action@v0.3.1
+        with:
+          filename: test/load/basic_stress_test.js
+          flags: --env BASE_URL=${{ github.event.inputs.base_url || 'https://console.svc.plus' }} --env ACCOUNTS_URL=${{ github.event.inputs.accounts_url || 'https://accounts.svc.plus' }}
+
+      - name: Upload Test Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-test-results
+          path: |
+            *.csv
+            *.json

@@ -1,0 +1,35 @@
+{
+  "mcpServers": {
+    "next-devtools": {
+      "command": "npx",
+      "args": ["-y", "next-devtools-mcp@latest"],
+      "startup_timeout_sec": 30
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "chrome-devtools-mcp@latest"],
+      "env": {
+        "CHROME_DEBUGGING_HOST": "127.0.0.1",
+        "CHROME_DEBUGGING_PORT": "9222"
+      },
+      "startup_timeout_sec": 10
+    },
+    "ssh-manager": {
+      "command": "node",
+      "args": ["/Users/shenlan/workspaces/Cloud-Neutral-Toolkit/mcp-ssh-manager/src/index.js"],
+      "env": {
+        "DOTENV_CONFIG_PATH": ".env"
+      }
+    },
+    "github": {
+      "url": "https://api.githubcopilot.com/mcp/",
+      "bearer_token_env_var": "CODEX_GITHUB_PERSONAL_ACCESS_TOKEN"
+    },
+    "onwalk-site": {
+      "url": "https://www.onwalk.net/mcp",
+      "bearer_token_env_var": "WEB_SITE_MCP_ACCESS_TOKEN",
+      "auth": "Bearer",
+      "status": "enabled"
+    }
+  }
+}

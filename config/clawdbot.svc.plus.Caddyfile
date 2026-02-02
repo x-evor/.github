@@ -1,0 +1,44 @@
+clawdbot.svc.plus {
+	# 0) 不对公网暴露 sourcemap（避免 401 报错 + 避免泄露源码结构）
+	@maps path *.map
+	respond @maps 404
+
+	# 2) 清理外部伪造的转发头（让真实客户端 IP 由 Caddy 统一注入）
+	header {
+		-X-Forwarded-For
+		-X-Forwarded-Proto
+		-X-Forwarded-Host
+		-X-Real-IP
+	}
+
+	# 3) 反代到 Gateway：第二道门由 Caddy 注入 Bearer
+	reverse_proxy 127.0.0.1:18789 {
+		# 强制给 upstream 认证（避免 Basic Auth 占用 Authorization 头导致 gateway 401/4008）
+		header_up Authorization "Bearer xxxxx"
+
+		# 给 upstream 明确传 Host / Proto（有些 UI 会依赖这些拼 ws/url）
+		header_up Host {http.request.host}
+		header_up X-Forwarded-Proto {http.request.scheme}
+		header_up X-Forwarded-Host {http.request.host}
+
+		# WS/SSE 友好
+		flush_interval -1
+	}
+
+	# 4) 安全响应头（建议再加一个 permissions-policy，减少浏览器能力面）
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
+	# 5) 日志：加上 roll（避免文件无限涨）
+	log {
+		output file /var/log/caddy/clawdbot.access.log {
+			roll_size 50MiB
+			roll_keep 10
+			roll_keep_for 720h
+		}
+	}
+}

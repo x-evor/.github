@@ -2,7 +2,7 @@
 
 **Date**: 2026-01-29  
 **Status**: Active  
-**Related**: [Shared Token Authentication Design](./SHARED_TOKEN_AUTH_DESIGN.md) | [Service Chain Audit](./SERVICE_CHAIN_AUTH_AUDIT.md)
+**Related**: [Shared Token Authentication Design](./shared-token-auth-design.md) | [Service Chain Audit](./service-chain-auth-audit.md)
 
 ## Overview
 

@@ -142,5 +142,5 @@ fetch('https://accounts.svc.plus/api/endpoint', {
 - `/page-reading-agent-backend/main.js`
 
 ## Related Documents
-- [Shared Token Authentication Design](./SHARED_TOKEN_AUTH_DESIGN.md)
-- [Internal Auth Usage Guide](./INTERNAL_AUTH_USAGE.md)
+- [Shared Token Authentication Design](./shared-token-auth-design.md)
+- [Internal Auth Usage Guide](./internal-auth-usage.md)

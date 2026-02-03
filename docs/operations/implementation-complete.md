@@ -37,13 +37,13 @@ All service chain authentication implementation is complete, tested, documented,
 ### 3. Documentation (7 documents)
 
 ✅ **Implementation Docs**:
-1. SERVICE_CHAIN_AUTH_AUDIT.md - Security audit report
-2. SHARED_TOKEN_AUTH_DESIGN.md - Authentication design
-3. SERVICE_CHAIN_AUTH_IMPLEMENTATION.md - Implementation plan
-4. INTERNAL_AUTH_USAGE.md - Usage guide
-5. DEPLOYMENT_SUMMARY.md - Deployment instructions
-6. IMPLEMENTATION_COMPLETE.md - Completion summary
-7. SECURITY_AUDIT_TOKEN_TRANSMISSION.md - Security audit
+1. service-chain-auth-audit.md - Security audit report
+2. shared-token-auth-design.md - Authentication design
+3. service-chain-auth-implementation.md - Implementation plan
+4. internal-auth-usage.md - Usage guide
+5. deployment-summary.md - Deployment instructions
+6. implementation-complete.md - Completion summary
+7. security-audit-token-transmission.md - Security audit
 
 ### 4. Testing (2 test suites)
 
@@ -216,13 +216,13 @@ cd /path/to/other/repo
 - `/Users/shenlan/workspaces/Cloud-Neutral-Toolkit/console.svc.plus/src/server/internalServiceAuth.ts`
 
 ### Documentation Files
-- `docs/SERVICE_CHAIN_AUTH_AUDIT.md`
-- `docs/SHARED_TOKEN_AUTH_DESIGN.md`
-- `docs/SERVICE_CHAIN_AUTH_IMPLEMENTATION.md`
-- `docs/INTERNAL_AUTH_USAGE.md`
-- `docs/DEPLOYMENT_SUMMARY.md`
-- `docs/IMPLEMENTATION_COMPLETE.md`
-- `docs/SECURITY_AUDIT_TOKEN_TRANSMISSION.md`
+- `docs/security/service-chain-auth-audit.md`
+- `docs/security/shared-token-auth-design.md`
+- `docs/operations/service-chain-auth-implementation.md`
+- `docs/security/internal-auth-usage.md`
+- `docs/operations/deployment-summary.md`
+- `docs/operations/implementation-complete.md`
+- `docs/security/security-audit-token-transmission.md`
 
 ### Test Files
 - `test/e2e/service-auth-integration-test.sh`

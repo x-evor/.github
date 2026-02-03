@@ -4,7 +4,7 @@
 Complete the shared token authentication system across all backend services by updating frontend API routes to send the `X-Service-Token` header to secure service-to-service communication.
 
 ## Background
-Based on [SERVICE_CHAIN_AUTH_AUDIT.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/SERVICE_CHAIN_AUTH_AUDIT.md) and [SHARED_TOKEN_AUTH_DESIGN.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/SHARED_TOKEN_AUTH_DESIGN.md), backend services already have `InternalAuthMiddleware()` implemented:
+Based on [service-chain-auth-audit.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/security/service-chain-auth-audit.md) and [shared-token-auth-design.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/security/shared-token-auth-design.md), backend services already have `InternalAuthMiddleware()` implemented:
 
 - ✅ `accounts.svc.plus` - Go middleware in place
 - ✅ `rag-server.svc.plus` - Go middleware in place  

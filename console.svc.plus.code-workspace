@@ -1,58 +1,71 @@
 {
-	"folders": [
-		{
-			"name": "github-org-cloud-neutral-toolkit",
-			"path": "cloud-neutral-toolkit/github-org-cloud-neutral-toolkit"
-		},
-		{
-			"name": "console.svc.plus",
-			"path": "Cloud-Neutral-Toolkit/console.svc.plus"
-		},
-		{
-			"name": "postgresql.svc.plus",
-			"path": "Cloud-Neutral-Toolkit/postgresql.svc.plus"
-		},
-		{
-			"name": "accounts.svc.plus",
-			"path": "Cloud-Neutral-Toolkit/accounts.svc.plus"
-		},
-		{
-			"name": "agents.svc.plus",
-			"path": "Cloud-Neutral-Toolkit/agents.svc.plus"
-		},
-		{
-			"name": "rag-server.svc.plus",
-			"path": "Cloud-Neutral-Toolkit/rag-server.svc.plus"
-		},
-		{
-			"name": "knowledge",
-			"path": "Cloud-Neutral-Workshop/knowledge"
-		},
-		{
-			"name": "agent.svc.plus",
-			"path": "Cloud-Neutral-Toolkit/agent.svc.plus"
-		},
-		{
-			"name": "moltbot.svc.plus",
-			"path": "Cloud-Neutral-Toolkit/moltbot.svc.plus"
-		},
-		{
-			"name": "page-reading-agent-backend",
-			"path": "cloud-neutral-toolkit/page-reading-agent-backend"
-		},
-		{
-			"name": "page-reading-agent-dashboard",
-			"path": "cloud-neutral-toolkit/page-reading-agent-dashboard"
-		},
-		{
-			"path": "cloud-neutral-toolkit/gitops"
-		},
-		{
-			"path": "cloud-neutral-toolkit/iac_modules"
-		},
-		{
-			"path": "cloud-neutral-toolkit/observability.svc.plus"
-		}
-	],
-	"settings": {}
+  "folders": [
+    {
+      "name": "github-org-cloud-neutral-toolkit",
+      "path": "cloud-neutral-toolkit/github-org-cloud-neutral-toolkit"
+    },
+    {
+      "name": "console.svc.plus",
+      "path": "Cloud-Neutral-Toolkit/console.svc.plus"
+    },
+    {
+      "name": "accounts.svc.plus",
+      "path": "Cloud-Neutral-Toolkit/accounts.svc.plus"
+    },
+    {
+      "name": "rag-server.svc.plus",
+      "path": "Cloud-Neutral-Toolkit/rag-server.svc.plus"
+    },
+    {
+      "name": "page-reading-agent-backend",
+      "path": "cloud-neutral-toolkit/page-reading-agent-backend"
+    },
+    {
+      "name": "page-reading-agent-dashboard",
+      "path": "cloud-neutral-toolkit/page-reading-agent-dashboard"
+    },
+    {
+      "name": "postgresql.svc.plus",
+      "path": "Cloud-Neutral-Toolkit/postgresql.svc.plus"
+    },
+    {
+      "name": "agent.svc.plus",
+      "path": "Cloud-Neutral-Toolkit/agent.svc.plus"
+    },
+    {
+      "name": "agents.svc.plus",
+      "path": "Cloud-Neutral-Toolkit/agents.svc.plus"
+    },
+    {
+      "name": "moltbot.svc.plus",
+      "path": "Cloud-Neutral-Toolkit/moltbot.svc.plus"
+    },
+    {
+      "name": "observability.svc.plus",
+      "path": "cloud-neutral-toolkit/observability.svc.plus"
+    },
+    {
+      "name": "gitops",
+      "path": "cloud-neutral-toolkit/gitops"
+    },
+    {
+      "name": "iac_modules",
+      "path": "cloud-neutral-toolkit/iac_modules"
+    },
+    {
+      "name": "knowledge",
+      "path": "Cloud-Neutral-Workshop/knowledge"
+    }
+  ],
+  "settings": {
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/.next": true,
+      "**/dist": true,
+      "**/build": true
+    },
+    "files.exclude": {
+      "**/.DS_Store": true
+    }
+  }
 }

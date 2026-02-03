@@ -82,5 +82,5 @@ curl -X GET https://accounts.svc.plus/internal/health \
 ```
 
 ## Related Documents
-- [Service Chain Authentication Audit](./SERVICE_CHAIN_AUTH_AUDIT.md)
-- [Internal Auth Usage Guide](./INTERNAL_AUTH_USAGE.md)
+- [Service Chain Authentication Audit](./service-chain-auth-audit.md)
+- [Internal Auth Usage Guide](./internal-auth-usage.md)

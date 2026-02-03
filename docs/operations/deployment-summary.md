@@ -206,16 +206,16 @@ gcloud logging read "resource.type=cloud_run_revision AND severity>=ERROR" \
 
 ## 📚 Documentation
 
-- [SERVICE_CHAIN_AUTH_IMPLEMENTATION.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/SERVICE_CHAIN_AUTH_IMPLEMENTATION.md) - Implementation plan
-- [INTERNAL_AUTH_USAGE.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/INTERNAL_AUTH_USAGE.md) - Usage guide
-- [SERVICE_CHAIN_AUTH_AUDIT.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/SERVICE_CHAIN_AUTH_AUDIT.md) - Security audit
-- [SHARED_TOKEN_AUTH_DESIGN.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/SHARED_TOKEN_AUTH_DESIGN.md) - Design document
+- [service-chain-auth-implementation.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/operations/service-chain-auth-implementation.md) - Implementation plan
+- [internal-auth-usage.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/security/internal-auth-usage.md) - Usage guide
+- [service-chain-auth-audit.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/security/service-chain-auth-audit.md) - Security audit
+- [shared-token-auth-design.md](file:///Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/security/shared-token-auth-design.md) - Design document
 
 ## ⚠️ Important Notes
 
 1. **DO NOT commit .env files to git** - They now contain sensitive token
 2. **Use different tokens for different environments** - This token is for development only
-3. **Rotate tokens quarterly** - Follow the rotation procedure in INTERNAL_AUTH_USAGE.md
+3. **Rotate tokens quarterly** - Follow the rotation procedure in internal-auth-usage.md
 4. **Monitor authentication failures** - Set up alerts for 401 errors related to service tokens
 
 ## Next Steps

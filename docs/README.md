@@ -21,6 +21,7 @@ Docs are organized by engineering lifecycle domains.
 - `operations-governance/cross-repo-tasks.md`: cross-repo backlog and execution templates.
 - `operations-governance/deployment-summary.md`: deployment summary and operational validation.
 - `operations-governance/implementation-complete.md`: implementation completion and delivery report.
+- `operations-governance/observability-monitoring-chain.md`: node -> vector -> ingest -> metrics/logs/traces monitoring chain.
 
 ## Testing
 

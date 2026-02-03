@@ -2,59 +2,59 @@
   "folders": [
     {
       "name": "github-org-cloud-neutral-toolkit",
-      "path": "cloud-neutral-toolkit/github-org-cloud-neutral-toolkit"
+      "path": "."
     },
     {
       "name": "console.svc.plus",
-      "path": "Cloud-Neutral-Toolkit/console.svc.plus"
+      "path": "../console.svc.plus"
     },
     {
       "name": "accounts.svc.plus",
-      "path": "Cloud-Neutral-Toolkit/accounts.svc.plus"
+      "path": "../accounts.svc.plus"
     },
     {
       "name": "rag-server.svc.plus",
-      "path": "Cloud-Neutral-Toolkit/rag-server.svc.plus"
+      "path": "../rag-server.svc.plus"
     },
     {
       "name": "page-reading-agent-backend",
-      "path": "cloud-neutral-toolkit/page-reading-agent-backend"
+      "path": "../page-reading-agent-backend"
     },
     {
       "name": "page-reading-agent-dashboard",
-      "path": "cloud-neutral-toolkit/page-reading-agent-dashboard"
+      "path": "../page-reading-agent-dashboard"
     },
     {
       "name": "postgresql.svc.plus",
-      "path": "Cloud-Neutral-Toolkit/postgresql.svc.plus"
+      "path": "../postgresql.svc.plus"
     },
     {
       "name": "agent.svc.plus",
-      "path": "Cloud-Neutral-Toolkit/agent.svc.plus"
+      "path": "../agent.svc.plus"
     },
     {
       "name": "agents.svc.plus",
-      "path": "Cloud-Neutral-Toolkit/agents.svc.plus"
+      "path": "../agent.svc.plus"
     },
     {
       "name": "moltbot.svc.plus",
-      "path": "Cloud-Neutral-Toolkit/moltbot.svc.plus"
+      "path": "../openclawdbot.svc.plus"
     },
     {
       "name": "observability.svc.plus",
-      "path": "cloud-neutral-toolkit/observability.svc.plus"
+      "path": "../observability.svc.plus"
     },
     {
       "name": "gitops",
-      "path": "cloud-neutral-toolkit/gitops"
+      "path": "../gitops"
     },
     {
       "name": "iac_modules",
-      "path": "cloud-neutral-toolkit/iac_modules"
+      "path": "../iac_modules"
     },
     {
       "name": "knowledge",
-      "path": "Cloud-Neutral-Workshop/knowledge"
+      "path": "../knowledge"
     }
   ],
   "settings": {

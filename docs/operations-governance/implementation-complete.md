@@ -216,13 +216,13 @@ cd /path/to/other/repo
 - `/Users/shenlan/workspaces/Cloud-Neutral-Toolkit/console.svc.plus/src/server/internalServiceAuth.ts`
 
 ### Documentation Files
-- `docs/安全/service-chain-auth-audit.md`
-- `docs/安全/shared-token-auth-design.md`
-- `docs/设计开发/service-chain-auth-implementation.md`
-- `docs/安全/internal-auth-usage.md`
-- `docs/运维治理/deployment-summary.md`
-- `docs/运维治理/implementation-complete.md`
-- `docs/安全/security-audit-token-transmission.md`
+- `docs/security/service-chain-auth-audit.md`
+- `docs/security/shared-token-auth-design.md`
+- `docs/design-development/service-chain-auth-implementation.md`
+- `docs/security/internal-auth-usage.md`
+- `docs/operations-governance/deployment-summary.md`
+- `docs/operations-governance/implementation-complete.md`
+- `docs/security/security-audit-token-transmission.md`
 
 ### Test Files
 - `test/e2e/service-auth-integration-test.sh`

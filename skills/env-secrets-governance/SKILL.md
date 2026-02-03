@@ -14,7 +14,7 @@ Standardize environment variable handling and prevent secret leaks across all re
 ## When changing env vars
 
 - Add/remove key names in `.env.example`.
-- Update `docs/运维治理/release-checklist.md` env checks if process changes.
+- Update `docs/operations-governance/release-checklist.md` env checks if process changes.
 - Mention env impact in PR Scope/Risk/Rollback.
 
 ## Review checklist

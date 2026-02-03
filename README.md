@@ -5,18 +5,18 @@ This repository is the management hub for a multi-repo project under the `cloud-
 ## Quick Start
 
 - Open the workspace: `console.svc.plus.code-workspace`
-- Read architecture and ownership: `docs/架构/project-overview.md`
-- Follow unified rules: `AGENTS.md` and `docs/运维治理/governance.md`
-- Run release flow from checklist: `docs/运维治理/release-checklist.md`
-- Track cross-repo work: `docs/运维治理/cross-repo-tasks.md`
+- Read architecture and ownership: `docs/architecture/project-overview.md`
+- Follow unified rules: `AGENTS.md` and `docs/operations-governance/governance.md`
+- Run release flow from checklist: `docs/operations-governance/release-checklist.md`
+- Track cross-repo work: `docs/operations-governance/cross-repo-tasks.md`
 
 ## Control Documents
 
-- Project overview: [`docs/架构/project-overview.md`](docs/架构/project-overview.md)
+- Project overview: [`docs/architecture/project-overview.md`](docs/architecture/project-overview.md)
 - Agent operating rules: [`AGENTS.md`](AGENTS.md)
-- Governance standard: [`docs/运维治理/governance.md`](docs/运维治理/governance.md)
-- Release checklist: [`docs/运维治理/release-checklist.md`](docs/运维治理/release-checklist.md)
-- Cross-repo task board: [`docs/运维治理/cross-repo-tasks.md`](docs/运维治理/cross-repo-tasks.md)
+- Governance standard: [`docs/operations-governance/governance.md`](docs/operations-governance/governance.md)
+- Release checklist: [`docs/operations-governance/release-checklist.md`](docs/operations-governance/release-checklist.md)
+- Cross-repo task board: [`docs/operations-governance/cross-repo-tasks.md`](docs/operations-governance/cross-repo-tasks.md)
 - Docs index: [`docs/README.md`](docs/README.md)
 - Workspace file: [`console.svc.plus.code-workspace`](console.svc.plus.code-workspace)
 - Env template: [`.env.example`](.env.example)

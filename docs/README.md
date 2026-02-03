@@ -2,38 +2,38 @@
 
 Docs are organized by engineering lifecycle domains.
 
-## 架构
+## Architecture
 
-- `架构/project-overview.md`: multi-repo architecture, ownership, topology, and operating model.
+- `architecture/project-overview.md`: multi-repo architecture, ownership, topology, and operating model.
 
-## 设计开发
+## Design & Development
 
-- `设计开发/service-chain-auth-implementation.md`: service chain auth implementation design and execution playbook.
+- `design-development/service-chain-auth-implementation.md`: service chain auth implementation design and execution playbook.
 
-## 功能流程
+## Feature Flows
 
-- `功能流程/vless-qr-code-flow.md`: VLESS QR code functional flow.
+- `feature-flows/vless-qr-code-flow.md`: VLESS QR code functional flow.
 
-## 运维治理
+## Operations & Governance
 
-- `运维治理/governance.md`: branch, commit, PR, version, and release governance.
-- `运维治理/release-checklist.md`: release gates, sequence, and rollback order.
-- `运维治理/cross-repo-tasks.md`: cross-repo backlog and execution templates.
-- `运维治理/deployment-summary.md`: deployment summary and operational validation.
-- `运维治理/implementation-complete.md`: implementation completion and delivery report.
+- `operations-governance/governance.md`: branch, commit, PR, version, and release governance.
+- `operations-governance/release-checklist.md`: release gates, sequence, and rollback order.
+- `operations-governance/cross-repo-tasks.md`: cross-repo backlog and execution templates.
+- `operations-governance/deployment-summary.md`: deployment summary and operational validation.
+- `operations-governance/implementation-complete.md`: implementation completion and delivery report.
 
-## 测试
+## Testing
 
-- `测试/full-stack-test-plan.md`: full-stack test strategy and test plan.
+- `testing/full-stack-test-plan.md`: full-stack test strategy and test plan.
 
-## 安全
+## Security
 
-- `安全/shared-token-auth-design.md`: service token auth design.
-- `安全/internal-auth-usage.md`: internal auth usage guide.
-- `安全/service-chain-auth-audit.md`: service chain auth audit report.
-- `安全/security-audit-token-transmission.md`: token transmission security audit.
+- `security/shared-token-auth-design.md`: service token auth design.
+- `security/internal-auth-usage.md`: internal auth usage guide.
+- `security/service-chain-auth-audit.md`: service chain auth audit report.
+- `security/security-audit-token-transmission.md`: token transmission security audit.
 
-## 计划
+## Plans
 
-- `计划/oauth2-integration-plan.md`: OAuth2 integration plan.
-- `计划/management-page-plan.md`: management page delivery plan.
+- `plans/oauth2-integration-plan.md`: OAuth2 integration plan.
+- `plans/management-page-plan.md`: management page delivery plan.

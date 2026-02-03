@@ -47,7 +47,7 @@ Use the default template in `.github/pull_request_template.md`.
 
 1. Freeze impacted repos for release scope.
 2. Verify CI and dependency compatibility.
-3. Release in dependency order (see `docs/governance/release-checklist.md`).
+3. Release in dependency order (see `docs/运维治理/release-checklist.md`).
 4. Run smoke/integration checks across impacted service chain.
 5. Announce release + known limitations + rollback entrypoint.
 

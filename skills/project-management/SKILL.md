@@ -60,6 +60,6 @@ graph TD
 
 ## 7. Continuous Validation
 
-- **Status Check**: Always consult `docs/architecture/project-overview.md` Section 9 before starting new features to avoid conflicts with known production/SIT discrepancies.
+- **Status Check**: Always consult `docs/架构/project-overview.md` Section 9 before starting new features to avoid conflicts with known production/SIT discrepancies.
 - **Error Pattern Recognition**: If 404/502/503 errors appear in the Management Panel, verify if the backend routes (e.g., `/api/admin` vs `/api/auth/admin`) match the frontend expectations in the documentation.
 - **Multi-Cloud Sync**: Remember that Vercel (Frontend) and Cloud Run (Backend) require synchronized deployments to avoid RSC data mismatches.

@@ -41,9 +41,9 @@ graph TD
 ## 4) Control Documents
 
 - Unified agent operating rules: `AGENTS.md`
-- Unified standards (branch/PR/commit/version/release): `docs/governance/governance.md`
-- Release checklist (ordered by repo): `docs/governance/release-checklist.md`
-- Cross-repo task board and templates: `docs/governance/cross-repo-tasks.md`
+- Unified standards (branch/PR/commit/version/release): `docs/运维治理/governance.md`
+- Release checklist (ordered by repo): `docs/运维治理/release-checklist.md`
+- Cross-repo task board and templates: `docs/运维治理/cross-repo-tasks.md`
 - Workspace aggregation: `console.svc.plus.code-workspace`
 
 ## 5) Codex Operating Model (Cross-Repo Change)

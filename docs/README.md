@@ -1,39 +1,39 @@
 # Documentation Index
 
-This directory is organized like a standard engineering project handbook.
+Docs are organized by engineering lifecycle domains.
 
-## architecture/
+## 架构
 
-- `architecture/project-overview.md`: multi-repo architecture, ownership, topology, and operating model.
+- `架构/project-overview.md`: multi-repo architecture, ownership, topology, and operating model.
 
-## governance/
+## 设计开发
 
-- `governance/governance.md`: branch, commit, PR, version, and release governance.
-- `governance/release-checklist.md`: release gates, sequence, and rollback order.
-- `governance/cross-repo-tasks.md`: backlog and cross-repo execution templates.
+- `设计开发/service-chain-auth-implementation.md`: service chain auth implementation design and execution playbook.
 
-## security/
+## 功能流程
 
-- `security/shared-token-auth-design.md`: service token auth design.
-- `security/internal-auth-usage.md`: internal auth usage guide.
-- `security/service-chain-auth-audit.md`: service chain auth audit report.
-- `security/security-audit-token-transmission.md`: token transmission security audit.
+- `功能流程/vless-qr-code-flow.md`: VLESS QR code functional flow.
 
-## operations/
+## 运维治理
 
-- `operations/service-chain-auth-implementation.md`: implementation playbook.
-- `operations/deployment-summary.md`: deployment summary and validation.
-- `operations/implementation-complete.md`: delivery completion report.
+- `运维治理/governance.md`: branch, commit, PR, version, and release governance.
+- `运维治理/release-checklist.md`: release gates, sequence, and rollback order.
+- `运维治理/cross-repo-tasks.md`: cross-repo backlog and execution templates.
+- `运维治理/deployment-summary.md`: deployment summary and operational validation.
+- `运维治理/implementation-complete.md`: implementation completion and delivery report.
 
-## testing/
+## 测试
 
-- `testing/full-stack-test-plan.md`: full-stack test strategy and cases.
+- `测试/full-stack-test-plan.md`: full-stack test strategy and test plan.
 
-## plans/
+## 安全
 
-- `plans/oauth2-integration-plan.md`: OAuth2 implementation plan.
-- `plans/management-page-plan.md`: management page execution plan.
+- `安全/shared-token-auth-design.md`: service token auth design.
+- `安全/internal-auth-usage.md`: internal auth usage guide.
+- `安全/service-chain-auth-audit.md`: service chain auth audit report.
+- `安全/security-audit-token-transmission.md`: token transmission security audit.
 
-## features/
+## 计划
 
-- `features/vless-qr-code-flow.md`: VLESS QR code flow notes.
+- `计划/oauth2-integration-plan.md`: OAuth2 integration plan.
+- `计划/management-page-plan.md`: management page delivery plan.

@@ -47,10 +47,10 @@ Before merge/release, check:
 
 ## 6) Source of Truth
 
-- `docs/architecture/project-overview.md`: architecture and ownership
-- `docs/governance/governance.md`: branch/PR/commit/version/release policy
-- `docs/governance/release-checklist.md`: publish order and release gate checks
-- `docs/governance/cross-repo-tasks.md`: active backlog + execution templates
+- `docs/架构/project-overview.md`: architecture and ownership
+- `docs/运维治理/governance.md`: branch/PR/commit/version/release policy
+- `docs/运维治理/release-checklist.md`: publish order and release gate checks
+- `docs/运维治理/cross-repo-tasks.md`: active backlog + execution templates
 - `skills/env-secrets-governance/SKILL.md`: env/secrets handling standard
 
 ## 7) Skill Rule for Env/Secret Changes

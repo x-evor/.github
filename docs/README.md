@@ -13,6 +13,8 @@ Docs are organized by engineering lifecycle domains.
 ## Feature Flows
 
 - `feature-flows/vless-qr-code-flow.md`: VLESS QR code functional flow.
+- `feature-flows/accounts-oauth-binding-spec.md`: accounts social OAuth login/bind/unbind API and data model spec.
+- `feature-flows/console-oauth-integration-spec.md`: console social OAuth login/bind UI and callback integration spec.
 
 ## Operations & Governance
 
@@ -36,5 +38,6 @@ Docs are organized by engineering lifecycle domains.
 
 ## Plans
 
+- `plans/oauth-social-login-rollout.md`: phased rollout plan for GitHub/Google login and account binding.
 - `plans/oauth2-integration-plan.md`: OAuth2 integration plan.
 - `plans/management-page-plan.md`: management page delivery plan.

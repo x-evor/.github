@@ -26,6 +26,7 @@ Docs are organized by engineering lifecycle domains.
 - `operations-governance/deployment-summary.md`: deployment summary and operational validation.
 - `operations-governance/implementation-complete.md`: implementation completion and delivery report.
 - `operations-governance/observability-monitoring-chain.md`: node -> vector -> ingest -> metrics/logs/traces monitoring chain.
+- `operations-governance/db-migration-runbook.md`: PostgreSQL migration runbook (backup/restore, stop-write, online).
 
 ## Testing
 

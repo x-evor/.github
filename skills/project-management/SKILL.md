@@ -55,6 +55,7 @@ graph TD
 
 - **[Security Audit](../security-audit/SKILL.md)**: Detects vulnerabilities and hardcoded secrets.
 - **[Git Standards](../git.conventional-commits.v1.md)**: Ensures clean commit history.
+- **[Agent Controller API Compat](../agent-controller-api-compat/SKILL.md)**: Prevents API path drift incidents between agent and controller.
 
 ## 6. Project References
 

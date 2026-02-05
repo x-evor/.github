@@ -165,3 +165,16 @@
 - `panel` 扩展路由缺少 `[...]` 分发页导致 **404 次生故障**（单仓）
 
 已通过补齐 `accounts` auth-admin 接口 + 补齐 `console` BFF + 新增 `panel/[...segments]` 分发页完成修复。
+
+
+---
+
+## 8. 追溯提交（2026-02-05 更新）
+
+- `accounts.svc.plus`
+  - `6084f07` `fix(admin): complete management APIs for console integration`
+- `console.svc.plus`（该问题相关能力已存在于分支提交）
+  - `2b87797` `feat: Add DELETE endpoint to remove a user's role.`
+  - `58271a7` `management: add root-only custom UUID user creation with groups`
+
+> 说明：本回溯文档用于复盘与门禁改进，发布时仍需按“accounts 先、console 后、再 smoke”执行。

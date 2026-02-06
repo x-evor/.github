@@ -110,6 +110,48 @@ The script checks:
 
 ## Resolution Steps
 
+### Root Cause Update (2026-02-06 08:30)
+
+**New Finding**: Stunnel server is running and accepting connections, but SSL handshake is failing.
+
+**Error from Server Logs**:
+```
+SSL_accept: error:0A000126:SSL routines::unexpected eof while reading
+```
+
+This indicates:
+1. ✅ Stunnel server is running on port 443
+2. ✅ Connections are being accepted
+3. ❌ SSL handshake fails - certificate issue
+
+**Certificate Analysis**:
+- Certificates are managed by Caddy (Let's Encrypt ACME)
+- Certificate path: `/var/lib/docker/volumes/caddy_data/_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/postgresql.svc.plus/`
+- Possible issues:
+  - Certificate expired
+  - Certificate not mounted correctly in stunnel container
+  - Hostname mismatch
+
+### Script Bug Fix
+
+**Issue Found**: The `init_vhost.sh` script has a compatibility bug on lines 354 and 358.
+
+**Problem**:
+```bash
+sed -i "/^STUNNEL_CRT_FILE=/d" deploy/docker/.env || true
+```
+
+This syntax works on Linux but **fails on macOS** (requires `sed -i ''`). Since the script runs on a Linux server, this should work, but the script should be OS-agnostic.
+
+**Fix Applied**:
+```bash
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    sed -i '' "/^STUNNEL_CRT_FILE=/d" deploy/docker/.env || true
+else
+    sed -i "/^STUNNEL_CRT_FILE=/d" deploy/docker/.env || true
+fi
+```
+
 ### Option 1: Restart Stunnel Service
 
 ```bash
@@ -152,6 +194,80 @@ This will:
 - Configure stunnel server on port 443
 - Set up Let's Encrypt TLS certificates
 - Start all services
+
+### Option 4: SSL Certificate Diagnosis and Fix (RECOMMENDED)
+
+If stunnel is running but SSL handshake fails, diagnose certificate issues:
+
+#### Step 1: Run SSL Certificate Diagnostic
+
+```bash
+cd ~/postgresql.svc.plus
+bash scripts/diagnose_ssl_cert.sh postgresql.svc.plus
+```
+
+This script checks:
+- Certificate file existence and location
+- Certificate validity and expiration
+- Hostname match
+- Certificate mount in stunnel container
+- SSL connection test
+
+#### Step 2: Common Certificate Issues and Fixes
+
+**Issue 1: Certificate Expired**
+```bash
+cd ~/postgresql.svc.plus/deploy/docker
+docker compose -f docker-compose.bootstrap.yml up -d
+# Wait 60-120 seconds for certificate renewal
+docker compose -f docker-compose.bootstrap.yml down
+docker compose -f docker-compose.yml -f docker-compose.tunnel.yml restart stunnel
+```
+
+**Issue 2: Certificate Not Mounted**
+```bash
+# Check .env file
+cat ~/postgresql.svc.plus/deploy/docker/.env | grep STUNNEL
+
+# Should show:
+# STUNNEL_CRT_FILE=/var/lib/docker/volumes/caddy_data/_data/caddy/certificates/.../postgresql.svc.plus.crt
+# STUNNEL_KEY_FILE=/var/lib/docker/volumes/caddy_data/_data/caddy/certificates/.../postgresql.svc.plus.key
+
+# If missing, re-run init script
+curl -fsSL https://raw.githubusercontent.com/cloud-neutral-toolkit/postgresql.svc.plus/main/scripts/init_vhost.sh \
+  | bash -s -- 17 postgresql.svc.plus
+```
+
+**Issue 3: Hostname Mismatch**
+```bash
+# Verify certificate is for correct domain
+openssl x509 -in /var/lib/docker/volumes/caddy_data/_data/caddy/certificates/acme-v02.api.letsencrypt.org-directory/postgresql.svc.plus/postgresql.svc.plus.crt \
+  -noout -text | grep -A2 "Subject Alternative Name"
+
+# Should show: DNS:postgresql.svc.plus
+```
+
+#### Step 3: Force Certificate Regeneration
+
+If all else fails, regenerate certificates from scratch:
+
+```bash
+cd ~/postgresql.svc.plus/deploy/docker
+
+# Stop all services
+docker compose -f docker-compose.yml -f docker-compose.tunnel.yml down
+
+# Remove old certificates (Caddy will regenerate)
+docker volume rm caddy_data
+
+# Recreate volume
+docker volume create caddy_data
+
+# Re-run initialization
+cd ~/postgresql.svc.plus
+curl -fsSL https://raw.githubusercontent.com/cloud-neutral-toolkit/postgresql.svc.plus/main/scripts/init_vhost.sh \
+  | bash -s -- 17 postgresql.svc.plus
+```
 
 ## Verification
 
@@ -225,11 +341,72 @@ Ensure all team members know:
 
 ## Action Items
 
-- [ ] Add stunnel health monitoring
-- [ ] Create alerts for port 443 availability
+- [x] Add stunnel health monitoring
+- [x] Create diagnostic scripts (diagnose_stunnel.sh, diagnose_ssl_cert.sh)
+- [x] Fix init_vhost.sh sed compatibility bug
+- [ ] Add alerts for port 443 availability
 - [ ] Document stunnel architecture in team wiki
 - [ ] Add automated stunnel restart on failure
 - [ ] Consider Cloud SQL as alternative to reduce complexity
+- [ ] Set up certificate expiration monitoring
+
+## Investigation Timeline
+
+**2026-02-06 08:16** - Initial report: Login failing with 500 errors
+
+**2026-02-06 08:18** - Investigated Cloud Run configuration
+- Found DB_HOST=127.0.0.1, DB_PORT=15432
+- Confirmed stunnel sidecar running
+
+**2026-02-06 08:20** - Analyzed Cloud Run logs
+- Discovered connection timeout to postgresql.svc.plus:443
+- Identified stunnel architecture
+
+**2026-02-06 08:22** - Attempted fix (failed)
+- Changed DB_HOST to postgresql.svc.plus
+- Deployment failed - direct connection not possible
+
+**2026-02-06 08:24** - Rolled back configuration
+- Restored DB_HOST=127.0.0.1, DB_PORT=15432
+- Created diagnostic scripts
+
+**2026-02-06 08:30** - Server-side investigation
+- Found stunnel server running but SSL handshake failing
+- Error: `SSL_accept: error:0A000126:SSL routines::unexpected eof while reading`
+- Identified certificate issue
+
+**2026-02-06 08:32** - Script bug discovery
+- Found sed compatibility issue in init_vhost.sh
+- Fixed lines 354 and 358 for OS-agnostic operation
+
+**2026-02-06 08:34** - Resolution in progress
+- User re-running init_vhost.sh to regenerate certificates
+- Awaiting verification
+
+**2026-02-06 09:17** - **RESOLVED** ✅
+- Certificates regenerated successfully
+- Stunnel SSL handshake working
+- Login functionality fully restored
+- No 500 errors observed
+- MFA enforcement working correctly
+
+## Resolution Confirmation
+
+**Status**: ✅ **RESOLVED**
+
+**Date**: 2026-02-06 09:17
+
+**Resolution Method**: Re-ran `init_vhost.sh` script to regenerate Caddy certificates and properly mount them in stunnel container.
+
+**Verification**:
+- ✅ Login page loads successfully
+- ✅ Authentication flow works end-to-end
+- ✅ Database connection established
+- ✅ No SSL handshake errors
+- ✅ No 500 Internal Server Errors
+- ✅ MFA (TOTP) enforcement working
+
+**Total Downtime**: ~1 hour
 
 ## References
 

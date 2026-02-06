@@ -4,10 +4,9 @@
 
 ## 📚 文档分类
 
-### 🔧 部署相关
-- 部署流程
-- 环境配置
-- 依赖管理
+### 🔧 部署与配置 (Setup & Config)
+- [Sandbox Mode & Agent Sync Setup](./Setup-Sandbox-Mode-and-Agent-Sync.md) - 配置 Sandbox 模式与解决 Agent 同步稳定性问题。
+- [CloudRun Stunnel Startup](./Fix-CloudRun-Stunnel-Startup-Failure.md) - 解决 Cloud Run 环境下 Stunnel 启动失败问题。
 
 ### 🚨 故障排查
 - 常见问题

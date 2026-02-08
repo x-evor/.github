@@ -41,3 +41,16 @@ For cross-repo requests, use one objective per task and require this output form
 
 - Secrets stay in local `.env` (gitignored) and production secret managers.
 - This repo holds standards and coordination docs, not service runtime code.
+
+## StackFlow GitHub Actions Secrets
+
+This repo includes `.github/workflows/stackflow.yaml` which plans/validates StackFlow configs stored in the `cloud-neutral-toolkit/gitops` repo (e.g. `gitops/StackFlow/svc-plus.yaml`).
+
+Secrets (by phase):
+- Plan/Validate (today):
+  - `GITOPS_CHECKOUT_TOKEN` (optional): needed only if `cloud-neutral-toolkit/gitops` is private or default `GITHUB_TOKEN` cannot read it.
+- Future phases (not enabled in this workflow yet):
+  - `CLOUDFLARE_API_TOKEN`: dns-apply (cloudflare).
+  - `ALIYUN_AK`, `ALIYUN_SK`: dns-apply (alicloud).
+  - `GCP_*`: iac/deploy; prefer Workload Identity Federation (OIDC) and avoid long-lived JSON keys.
+  - `VERCEL_TOKEN`: optional vercel-side validation/config via API.

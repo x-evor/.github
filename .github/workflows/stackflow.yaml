@@ -1,0 +1,149 @@
+name: StackFlow (GitOps Plan/Validate)
+
+on:
+  workflow_dispatch:
+    inputs:
+      gitops_ref:
+        description: "gitops repo ref (branch/tag/sha)"
+        required: true
+        default: "main"
+        type: string
+      config_path:
+        description: "Path inside gitops repo (e.g. StackFlow/svc-plus.yaml)"
+        required: true
+        default: "StackFlow/svc-plus.yaml"
+        type: string
+      env:
+        description: "Optional StackFlow env (global.environments.*)"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+# Secrets planning:
+# - Plan/Validate (this workflow today):
+#   - GITOPS_CHECKOUT_TOKEN (optional): Fine-grained PAT / GitHub App token that can read cloud-neutral-toolkit/gitops.
+#     Required only if gitops repo is private or the default GITHUB_TOKEN cannot access cross-repo checkout.
+# - Future phases (not implemented/enabled in this workflow yet):
+#   - CLOUDFLARE_API_TOKEN: dns-apply (cloudflare)
+#   - ALIYUN_AK / ALIYUN_SK: dns-apply (alicloud)
+#   - GCP_*: iac/deploy (recommended: Workload Identity Federation via OIDC; avoid long-lived keys)
+#   - VERCEL_TOKEN: optional vercel-side validation/config via API
+
+concurrency:
+  group: stackflow-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  plan-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout This Repo
+        uses: actions/checkout@v4
+
+      - name: Checkout gitops Repo
+        uses: actions/checkout@v4
+        with:
+          repository: cloud-neutral-toolkit/gitops
+          ref: ${{ inputs.gitops_ref }}
+          token: ${{ secrets.GITOPS_CHECKOUT_TOKEN || github.token }}
+          path: gitops
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps (gitops runner)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r gitops/scripts/stackflow/requirements.txt
+
+      - name: Resolve env arg
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -n "${{ inputs.env }}" ]]; then
+            echo "STACKFLOW_ENV_ARG=--env" >> "$GITHUB_ENV"
+            echo "STACKFLOW_ENV_VAL=${{ inputs.env }}" >> "$GITHUB_ENV"
+          else
+            echo "STACKFLOW_ENV_ARG=" >> "$GITHUB_ENV"
+            echo "STACKFLOW_ENV_VAL=" >> "$GITHUB_ENV"
+          fi
+
+      - name: Validate
+        shell: bash
+        run: |
+          set -euo pipefail
+          python gitops/scripts/stackflow/runner.py \
+            --config "gitops/${{ inputs.config_path }}" \
+            --phase validate \
+            ${STACKFLOW_ENV_ARG:-} ${STACKFLOW_ENV_VAL:-}
+          | tee stackflow.validate.json
+
+      - name: DNS Plan
+        shell: bash
+        run: |
+          set -euo pipefail
+          python gitops/scripts/stackflow/runner.py \
+            --config "gitops/${{ inputs.config_path }}" \
+            --phase dns-plan \
+            ${STACKFLOW_ENV_ARG:-} ${STACKFLOW_ENV_VAL:-}
+          | tee stackflow.dns-plan.json
+
+      - name: Summarize Targets (Repo Links)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY' > stackflow.summary.md
+          import json
+          import pathlib
+          import sys
+
+          import yaml
+
+          cfg_path = pathlib.Path("gitops") / "${{ inputs.config_path }}"
+          cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+          g = cfg.get("global", {}) or {}
+          md = cfg.get("metadata", {}) or {}
+          root_domain = g.get("domain", "")
+          name = md.get("name", "")
+          targets = cfg.get("targets", []) or []
+
+          lines = []
+          lines.append(f"## StackFlow Summary")
+          lines.append(f"- stack: `{name}`")
+          lines.append(f"- domain: `{root_domain}`")
+          lines.append(f"- gitops_ref: `${{{{ inputs.gitops_ref }}}}`")
+          lines.append(f"- config_path: `${{{{ inputs.config_path }}}}`")
+          if "${{ inputs.env }}".strip():
+            lines.append(f"- env: `${{{{ inputs.env }}}}`")
+          lines.append("")
+          lines.append("### Targets")
+          if not targets:
+            lines.append("- (none)")
+          else:
+            for t in targets:
+              tid = t.get("id","")
+              ttype = t.get("type","")
+              domains = t.get("domains", []) or []
+              repo = t.get("repo") or (t.get("deploy", {}) or {}).get("repository","")
+              project_url = (t.get("vercel", {}) or {}).get("project_url","")
+              lines.append(f"- `{tid}` ({ttype}) domains={len(domains)} repo=`{repo}` vercel=`{project_url}`")
+
+          print("\n".join(lines))
+          PY
+
+          cat stackflow.summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: stackflow-${{ inputs.config_path }}
+          path: |
+            stackflow.validate.json
+            stackflow.dns-plan.json
+            stackflow.summary.md

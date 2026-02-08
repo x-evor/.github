@@ -54,3 +54,32 @@ Secrets (by phase):
   - `ALIYUN_AK`, `ALIYUN_SK`: dns-apply (alicloud).
   - `GCP_*`: iac/deploy; prefer Workload Identity Federation (OIDC) and avoid long-lived JSON keys.
   - `VERCEL_TOKEN`: optional vercel-side validation/config via API.
+
+### How To Create `GITOPS_CHECKOUT_TOKEN` (Fine-grained PAT)
+
+Use a fine-grained PAT with least privilege, scoped to only the `cloud-neutral-toolkit/gitops` repository.
+
+Steps:
+1. GitHub: `Settings` -> `Developer settings` -> `Personal access tokens` -> `Fine-grained tokens`
+2. Click `Generate new token`
+3. `Resource owner`: select `cloud-neutral-toolkit`
+4. `Repository access`: select `Only select repositories`, then choose only `cloud-neutral-toolkit/gitops`
+5. `Permissions`:
+   - `Repository permissions` -> `Contents: Read`
+   - Keep everything else as `No access`
+6. Generate token and copy it
+7. In `cloud-neutral-toolkit/github-org-cloud-neutral-toolkit`:
+   - `Settings` -> `Secrets and variables` -> `Actions` -> `New repository secret`
+   - Name: `GITOPS_CHECKOUT_TOKEN`
+   - Value: the token
+8. Verify:
+   - Run GitHub Actions workflow `StackFlow (GitOps Plan/Validate)`
+   - If you no longer see `repository not found` / `permission denied`, the token is working
+
+### Alternative: GitHub App (Long-Term)
+
+For long-term governance, use a GitHub App installed on the org with:
+- Repository: only `cloud-neutral-toolkit/gitops`
+- Permission: `Contents: Read`
+
+Then update the workflow to use the App installation token for checkout.

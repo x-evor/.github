@@ -1,5 +1,12 @@
 # Multi-Repo Governance Standard
 
+## 0) Branch Roles
+
+- `main`: preview environment branch (fast iteration; merges normally)
+- `release/*`: production release lines (protected; updates are "cherry-pick only" as a process rule)
+
+See: `docs/operations-governance/release-branch-policy.md`
+
 ## 1) Branching Convention
 
 - Feature: `codex/feat/<topic>`

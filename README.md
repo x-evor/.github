@@ -23,6 +23,7 @@ This repository is the management hub for a multi-repo project under the `cloud-
 - Env/secret skill: [`skills/env-secrets-governance/SKILL.md`](skills/env-secrets-governance/SKILL.md)
 - Root README skill: [`skills/readme-root-standard/SKILL.md`](skills/readme-root-standard/SKILL.md)
 - Unified setup.sh skill: [`skills/unified-setup-sh/SKILL.md`](skills/unified-setup-sh/SKILL.md)
+- Release branch policy skill: [`skills/release-branch-policy/SKILL.md`](skills/release-branch-policy/SKILL.md)
 
 ## Codex Working Pattern
 

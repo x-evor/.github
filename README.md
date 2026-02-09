@@ -21,6 +21,7 @@ This repository is the management hub for a multi-repo project under the `cloud-
 - Workspace file: [`console.svc.plus.code-workspace`](console.svc.plus.code-workspace)
 - Env template: [`.env.example`](.env.example)
 - Env/secret skill: [`skills/env-secrets-governance/SKILL.md`](skills/env-secrets-governance/SKILL.md)
+- Root README skill: [`skills/readme-root-standard/SKILL.md`](skills/readme-root-standard/SKILL.md)
 
 ## Codex Working Pattern
 

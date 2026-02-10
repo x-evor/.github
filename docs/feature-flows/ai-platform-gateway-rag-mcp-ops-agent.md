@@ -1,8 +1,6 @@
 # AI Platform Division & Integration Flow (AI Gateway + RAG + MCP Hub + Ops Agent + GitOps StackFlow)
 
-This document defines the platform-level division of responsibilities and the integration route for:
-
-- Primary language: zh-CN (with English service identifiers)
+This document defines the platform-level division of responsibilities and the integration route for (zh-CN, with English service identifiers):
 
 - **AI Gateway**: `openclawbot.svc.plus`
 - **RAG**: `rag-server.svc.plus`
@@ -38,6 +36,17 @@ Then return results to the UI:
 - Direct UI-to-tool access (UI must never call SSH/Cloud Run/Vercel/Cloudflare tools directly).
 - Embedding long-lived privileged secrets in browsers.
 - Replacing existing service-to-service auth patterns without an explicit migration plan.
+
+## Guiding Principles (Platform Contract)
+
+- **One entrypoint**: `console.svc.plus` only talks to `openclawbot.svc.plus` for AI execution.
+- **GitOps-first for writes**: write changes are proposed as StackFlow diffs and applied via GitOps (auditable and reversible).
+- **Separation of concerns**:
+  - `rag-server`: retrieval + citations
+  - `x-scope-hub`: tools + observability queries (redaction + allowlist)
+  - `x-ops-agent`: runbooks/workflows (diagnose -> plan -> verify -> rollback)
+  - `x-cloud-flow`: apply phases (dns/iac/deploy) with strict policy gates
+- **Plan/Confirm/Apply**: any write-capable action must have explicit confirmation and a rollback plan.
 
 ## Component Responsibilities
 
@@ -123,7 +132,7 @@ Then return results to the UI:
   - GitHub Actions / CI runner (recommended for plan/validate)
   - Cloud Run Jobs / internal runner (optional for apply, with strict approvals)
 
-## Standard Integration Route
+## Dialogue Flow (Read/Plan)
 
 ```mermaid
 flowchart LR
@@ -131,9 +140,22 @@ flowchart LR
   GW --> RAG["rag-server.svc.plus (RAG)"]
   GW --> HUB["x-scope-hub.svc.plus (Observability MCP Hub)"]
   GW --> OPS["x-ops-agent.svc.plus (Ops Agent)"]
-  GW --> FLOW["x-cloud-flow.svc.plus (GitOps Runner)"]
   OPS --> HUB
-  OPS --> FLOW
+  GW --> UI
+```
+
+## Ops/Change Flow (Confirm-required Apply)
+
+```mermaid
+flowchart LR
+  UI["console.svc.plus"] --> GW["openclawbot.svc.plus"]
+  GW --> OPS["x-ops-agent.svc.plus"]
+  OPS --> GIT["cloud-neutral-toolkit/gitops (StackFlow PR)"]
+  GIT --> CI["GitHub Actions (stackflow validate/plan)"]
+  CI --> FLOW["x-cloud-flow.svc.plus (apply phases)"]
+  FLOW --> HUB["x-scope-hub.svc.plus (tools/providers)"]
+  HUB --> FLOW
+  FLOW --> GW
   GW --> UI
 ```
 
@@ -170,9 +192,19 @@ sequenceDiagram
   GIT-->>FLOW: Merge/dispatch triggers apply (policy gated)
   FLOW->>HUB: Execute tools/providers (dns-apply/iac-apply)
   HUB-->>FLOW: Results (redacted)
-  FLOW-->>GW: Apply result + verification signals
+  FLOW-->>GW: Apply result + verification signals (post-check)
   GW-->>UI: Final summary + links + rollback handle
 ```
+
+### Verification loop (Observability close-the-loop)
+
+After apply, treat verification as a first-class phase (owned by `x-ops-agent`, executed via `x-scope-hub`):
+
+- **Deploy/Config verification**: expected revision, expected DNS records, expected certificates.
+- **Service health**: error rate, latency, saturation, restart loops.
+- **User-facing checks**: key endpoints smoke test.
+- **Decision (pass)**: mark operation as verified.
+- **Decision (fail)**: propose rollback (StackFlow revert or previous revision) and require confirm.
 
 ### StackFlow spec (illustrative snippet)
 
@@ -267,6 +299,16 @@ Use a single “tool invocation” envelope:
 - `actor` fields
 - `timeoutMs`
 
+## Policy & Permissions (Minimal)
+
+- `openclawbot` is the policy gate:
+  - environment allowlists (dev/sit/prod)
+  - actor RBAC (who can request apply)
+  - confirm-required semantics
+- `x-scope-hub` enforces tool-level policy:
+  - read-only tools callable from read-only mode
+  - write tools callable only from apply phase (preferably initiated by `x-cloud-flow`)
+
 ## Observability & Audit Requirements
 
 ### Trace context propagation
@@ -298,14 +340,6 @@ Follow `skills/env-secrets-governance/SKILL.md`:
 - Prod/SIT secrets live in Secret Manager / platform env.
 - Never return secrets in tool results; redact by default.
 
-## Open Questions (to lock down next)
-
-- Who owns “PR creation into gitops repo”: `openclawbot` (gateway) or `x-ops-agent` (recommended)?
-- Apply execution: GitHub Actions vs `x-cloud-flow` Cloud Run Job. If Cloud Run Job, what is the approval/auth mechanism?
-- Tool allowlist boundaries:
-  - which tools must only be callable by `x-cloud-flow` (apply phases)
-  - which tools can be invoked in read-only by `x-scope-hub`
-
 ## Rollout Plan (Recommended)
 
 1. **MVP (Read-only)**
@@ -317,11 +351,16 @@ Follow `skills/env-secrets-governance/SKILL.md`:
    - execution enabled for a small allowlist of tools (start with safe domains)
    - enforce rollback plan field as mandatory
 
-## Open Questions (To Resolve Before Implementation)
+## Open Questions
 
-- Which authentication mechanism does console use to call the Gateway (session cookie vs bearer token)?
+- Ownership: who creates PRs into `cloud-neutral-toolkit/gitops` (gateway vs ops-agent)?
+- Apply executor: GitHub Actions vs `x-cloud-flow` Cloud Run Job. If Cloud Run Job, what is the approval/auth mechanism?
+- Tool allowlist boundaries:
+  - which tools must only be callable by `x-cloud-flow` (apply phases)
+  - which tools can be invoked in read-only by `x-scope-hub`
+- Console -> Gateway auth: session cookie vs bearer token?
 - Tenant boundaries:
   - does RAG index per-tenant or shared with labels?
   - does observability query scope by tenant/project?
-- Where does the confirmation UX live (console vs gateway)?
-- What is the minimum set of write tools allowed in prod for v1?
+- Confirmation UX: does confirm UI live in console or gateway?
+- Prod v1: minimum set of write tools allowed?

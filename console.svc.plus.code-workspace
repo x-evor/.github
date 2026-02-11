@@ -33,10 +33,6 @@
       "path": "../agent.svc.plus"
     },
     {
-      "name": "agents.svc.plus",
-      "path": "../agent.svc.plus"
-    },
-    {
       "name": "moltbot.svc.plus",
       "path": "../openclawdbot.svc.plus"
     },
@@ -55,6 +51,12 @@
     {
       "name": "knowledge",
       "path": "../knowledge"
+    },
+    {
+      "path": "../x-scope-hub.svc.plus"
+    },
+    {
+      "path": "../openclawbot.svc.plus"
     }
   ],
   "settings": {

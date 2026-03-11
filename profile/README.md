@@ -1,103 +1,70 @@
-
 # ☁️ Cloud-Neutral Toolkit
-----
-Cloud-Neutral Toolkit is a cloud-native, vendor-agnostic, and portable AI infrastructure & DevOps toolkit.
-It enables teams to build, deploy, and operate AI systems without being locked into any single cloud provider.
 
-Build once. Run anywhere. Move anytime.
----
+Cloud-Neutral Toolkit is building a connected productivity stack across network acceleration, AI assistance, and cloud services.
+
+From **Xstream** acceleration, to the **Xworkmate** AI assistant, to **console.svc.plus** cloud services, the toolkit provides one connected workflow for secure access, faster connectivity, and online operations.
+
+**Flow:** Xstream acceleration -> Xworkmate AI assistant -> console.svc.plus cloud services
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloud-neutral-toolkit/rag-server.svc.plus)](https://goreportcard.com/report/github.com/cloud-neutral-toolkit/rag-server.svc.plus)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Our core vision is to liberate your applications and data from specific cloud platforms, making them truly **Cloud-Agnostic**.
+## Product Overview
 
-### ⚡ Core Capabilities
+- **Xstream**: network acceleration and connectivity layer for stable access, routing, and performance.
+- **Xworkmate**: AI assistant application built on top of the accelerated connection layer for daily work, collaboration, and intelligent workflows.
+- **console.svc.plus**: cloud-hosted online services for account access, management, configuration, and future service orchestration.
 
-Streamline your development and deployment pipeline with our key services:
+Together, they form a complete path from local connectivity to intelligent interaction and then to cloud-side service delivery.
 
-| Feature Module | Description | Action |
+## Ecosystem Repositories
+
+| Repository | Role | Quick Access |
 | :--- | :--- | :--- |
-| **🔐 Authentication** | Secure, flexible identity verification supporting multiple login methods. | [Register App](https://console.svc.plus/) |
-| **🛡️ Authorization** | Granular permission control and access management (RBAC/ABAC). | [Learn More](https://docs.svc.plus/auth) |
-| **🤖 Machine-to-Machine** | Dedicated security mechanisms for service-to-service (M2M) communication. | [M2M Guide](https://docs.svc.plus/m2m) |
-| **🔌 REST & Admin APIs** | Robust programmatic interfaces for deep system integration. | [API Docs](https://docs.svc.plus/api) |
-| **💻 CLI Connect** | Manage your environment instantly via terminal. | [Get CLI](https://docs.svc.plus/cli) |
+| **xstream.svc.plus** | Connectivity, proxy, and acceleration foundation. | [Source](https://github.com/cloud-neutral-toolkit/xstream.svc.plus) |
+| **xworkmate.svc.plus** | AI assistant app and experience layer. | [Source](https://github.com/cloud-neutral-toolkit/xworkmate.svc.plus) |
+| **console.svc.plus** | Online console and cloud service portal. | [Visit Console](https://console.svc.plus/) |
+| **rag-server.svc.plus** | Retrieval-Augmented Generation backend services. | [Source](https://github.com/cloud-neutral-toolkit/rag-server.svc.plus) |
+| **accounts.svc.plus** | Identity, login, and account infrastructure. | [Source](https://github.com/cloud-neutral-toolkit/accounts.svc.plus) |
 
-### 📦 Ecosystem Components
+## Experience Snapshot
 
-| Repository | Lang | Role | Quick Access |
-| :--- | :--- | :--- | :--- |
-| **console.svc.plus** | `TS` | **Frontend Console**: Manage apps, users, and configs with a sleek UI. | [Visit Console](https://console.svc.plus/) |
-| **rag-server.svc.plus** | `Go` | **RAG Backend**: Retrieval-Augmented Generation service for AI knowledge. | [Source](https://github.com/cloud-neutral-toolkit/rag-server.svc.plus) |
-| **accounts.svc.plus** | `Go` | **Identity Core**: Handles registration, login, and session management. | [Source](https://github.com/cloud-neutral-toolkit/accounts.svc.plus) |
-| **agent.svc.plus** | `N/A` | **Smart Agent**: Core logic for multi-cloud automation (Private Beta). | [Request Access](mailto:contact@svc.plus) |
+### Login and Cloud Console
 
-### 🚀 Quick Start
+<p align="center">
+  <img src="../images/login.png" alt="Login" width="45%" />
+  <img src="../images/website.jpeg" alt="Website" width="45%" />
+</p>
 
-Ready to break free from vendor lock-in?
+### Apps and Client Experience
 
-1.  **Create App**: Start your journey at the [Console](https://console.svc.plus/).
-2.  **Read Docs**: Full integration guides available at [docs.svc.plus](https://docs.svc.plus/).
-3.  **Connect**:
+<p align="center">
+  <img src="../images/xstream-app.png" alt="Xstream app" width="45%" />
+  <img src="../images/Xworkmate-app.png" alt="Xworkmate app" width="45%" />
+</p>
 
-```bash
-# Install the CLI and login
-cn login
+## How It Fits Together
 
-# Initialize your first cloud-neutral app
-cn app create my-first-app
-```
+1. **Start with Xstream** to establish accelerated and reliable network access.
+2. **Use Xworkmate** on top of that connection to interact with AI capabilities in a smoother, more dependable environment.
+3. **Manage everything through console.svc.plus** for cloud-side access, service control, and online operations.
+
+This makes the overall platform suitable for users who need a practical path from connectivity, to AI productivity, to managed cloud services.
+
+## Quick Start
+
+1. Visit [console.svc.plus](https://console.svc.plus/) to access the online service entry point.
+2. Explore [xworkmate.svc.plus](https://github.com/cloud-neutral-toolkit/xworkmate.svc.plus) for the AI assistant experience.
+3. Use [xstream.svc.plus](https://github.com/cloud-neutral-toolkit/xstream.svc.plus) for the acceleration and connectivity layer.
 
 ---
 
 <div align="center">
 
 🤝 Community & License
-We welcome all contributions! | 我们欢迎所有形式的贡献！
-
-Discussions • Contributing Guide
+We welcome contributions and collaboration.
 
 Copyright © 2024 Cloud-Neutral Toolkit. Licensed under the Apache 2.0 License.
-
-</div>
-
-<br>
-<div align="center">
-  
-  <hr style="height:1px;border-width:0;color:#3d3d3d;background-color:#3d3d3d;width:80%;margin: 40px auto;">
-
-  <p style="color: #888; font-weight: bold; margin-bottom: 10px;">🚀 DEPLOYED & RUNNING ON</p>
-  
-  <a href="https://vercel.com" target="_blank">
-    <img src="https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Vercel">
-  </a>
-  <a href="https://cloud.google.com/run" target="_blank">
-    <img src="https://img.shields.io/badge/Google_Cloud_Run-4285F4?style=for-the-badge&logo=google-cloud&logoColor=white" alt="GCP Cloud Run">
-  </a>
-  <a href="https://www.cloudflare.com/" target="_blank">
-    <img src="https://img.shields.io/badge/Cloudflare-F38020?style=for-the-badge&logo=cloudflare&logoColor=white" alt="Cloudflare">
-  </a>
-
-  <br><br>
-
-  <p style="color: #888; font-weight: bold; margin-bottom: 10px; margin-top: 20px;">🤖 POWERED BY DEV ASSISTANTS</p>
-  
-  <img src="https://img.shields.io/badge/Codex-AI-00A67E?style=flat-square&logo=openai&logoColor=white" alt="Codex">
-  <img src="https://img.shields.io/badge/OpenCode-Assistant-blue?style=flat-square&logo=github&logoColor=white" alt="OpenCode">
-  <img src="https://img.shields.io/badge/Antigravity-Engine-purple?style=flat-square&logo=python&logoColor=white" alt="Antigravity">
-
-  <br><br><br>
-
-  <p>
-    <a href="https://github.com/cloud-neutral-toolkit/discussions" style="text-decoration: none; color: #0366d6;">Community</a> • 
-    <a href="CONTRIBUTING.md" style="text-decoration: none; color: #0366d6;">Contributing</a> • 
-    <a href="LICENSE" style="text-decoration: none; color: #0366d6;">License</a>
-  </p>
-  
-  <p style="color: #666; font-size: 12px;">
-    Copyright © 2024 Cloud-Neutral Toolkit. Built for the Open Web.
-  </p>
 
 </div>

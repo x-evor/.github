@@ -8,18 +8,26 @@
   vars_files:
     - ../vars/cloudflare_svc_plus_dns.yml
   tasks:
+    - name: Resolve Cloudflare token from environment
+      ansible.builtin.set_fact:
+        cloudflare_api_token: >-
+          {{
+            lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN')
+            | default(lookup('ansible.builtin.env', 'CLOUDFLARE_DNS_API_TOKEN'), true)
+          }}
+
     - name: Validate Cloudflare token is present in environment
       ansible.builtin.assert:
         that:
-          - lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') | length > 0
-        fail_msg: "CLOUDFLARE_API_TOKEN must be exported before running this playbook."
+          - cloudflare_api_token | length > 0
+        fail_msg: "Export CLOUDFLARE_API_TOKEN or CLOUDFLARE_DNS_API_TOKEN before running this playbook."
 
     - name: Resolve Cloudflare zone id
       ansible.builtin.uri:
         url: "{{ cloudflare_api_base }}/zones?name={{ cloudflare_zone_name }}"
         method: GET
         headers:
-          Authorization: "Bearer {{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
+          Authorization: "Bearer {{ cloudflare_api_token }}"
           Content-Type: application/json
         return_content: true
       register: cloudflare_zone_lookup
@@ -54,7 +62,7 @@
         url: "{{ cloudflare_api_base }}/zones/{{ cloudflare_zone_id }}/dns_records?name={{ item.name }}"
         method: GET
         headers:
-          Authorization: "Bearer {{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
+          Authorization: "Bearer {{ cloudflare_api_token }}"
           Content-Type: application/json
         return_content: true
       loop: "{{ cloudflare_dns_records }}"
@@ -67,7 +75,7 @@
         url: "{{ cloudflare_api_base }}/zones/{{ cloudflare_zone_id }}/dns_records/{{ item.1.id }}"
         method: DELETE
         headers:
-          Authorization: "Bearer {{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
+          Authorization: "Bearer {{ cloudflare_api_token }}"
           Content-Type: application/json
       loop: "{{ cloudflare_record_queries.results | subelements('json.result', skip_missing=True) }}"
       loop_control:
@@ -79,7 +87,7 @@
         url: "{{ cloudflare_api_base }}/zones/{{ cloudflare_zone_id }}/dns_records"
         method: POST
         headers:
-          Authorization: "Bearer {{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
+          Authorization: "Bearer {{ cloudflare_api_token }}"
           Content-Type: application/json
         body_format: raw
         body: >-
@@ -102,7 +110,7 @@
         url: "{{ cloudflare_api_base }}/zones/{{ cloudflare_zone_id }}/dns_records/{{ (item.json.result | selectattr('type', 'equalto', item.item.type) | list | first).id }}"
         method: PUT
         headers:
-          Authorization: "Bearer {{ lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN') }}"
+          Authorization: "Bearer {{ cloudflare_api_token }}"
           Content-Type: application/json
         body_format: raw
         body: >-

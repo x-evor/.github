@@ -12,7 +12,7 @@ docker_compose_lite_db_tls_port: 5443
 docker_compose_lite_dns_provider: ""
 docker_compose_lite_dns_provider_env: {}
 docker_compose_lite_dns_zone: svc.plus
-docker_compose_lite_registry_server: asia-northeast1-docker.pkg.dev
+docker_compose_lite_registry_server: ghcr.io
 docker_compose_lite_registry_username: ""
 docker_compose_lite_registry_password: ""
 docker_compose_lite_pull_images: true

@@ -1,53 +1,42 @@
-# Documentation Index
+# Cloud-Neutral Toolkit Control Repo / Cloud-Neutral Toolkit 控制仓库
 
-Docs are organized by engineering lifecycle domains.
+This `docs/` directory now has a bilingual canonical layer for the current repository state.
 
-## Architecture
+本 `docs/` 目录现已补齐双语规范层，用于承接当前仓库状态下的核心文档。
 
-- `architecture/project-overview.md`: multi-repo architecture, ownership, topology, and operating model.
-- `architecture/rbac-plan-quota-architecture.md`: role/plan/quota 三层权限与套餐总体架构。
+## Quick Entry / 快速入口
 
-## Design & Development
+- Coverage checklist / 覆盖检查矩阵: `docs/DOC_COVERAGE.md`
+- English index / 英文入口: `docs/en/README.md`
+- 中文入口 / Chinese index: `docs/zh/README.md`
 
-- `design-development/service-chain-auth-implementation.md`: service chain auth implementation design and execution playbook.
+## Canonical Bilingual Pages / 双语规范页
 
-## Feature Flows
+- `docs/en/architecture.md` / `docs/zh/architecture.md`
+- `docs/en/design.md` / `docs/zh/design.md`
+- `docs/en/deployment.md` / `docs/zh/deployment.md`
+- `docs/en/user-guide.md` / `docs/zh/user-guide.md`
+- `docs/en/developer-guide.md` / `docs/zh/developer-guide.md`
+- `docs/en/vibe-coding-reference.md` / `docs/zh/vibe-coding-reference.md`
 
-- `feature-flows/vless-qr-code-flow.md`: VLESS QR code functional flow.
-- `feature-flows/accounts-plan-quota-policy-spec.md`: accounts 套餐能力、配额、邀请续期与升级策略说明。
-- `feature-flows/accounts-oauth-binding-spec.md`: accounts social OAuth login/bind/unbind API and data model spec.
-- `feature-flows/console-oauth-integration-spec.md`: console social OAuth login/bind UI and callback integration spec.
+## Current Repo Context / 当前仓库背景
 
-## Operations & Governance
+- Root README: `Cloud-Neutral Toolkit Control Repo`
+- Previous docs index: `Documentation Index`
+- Manifest evidence / 构建清单: repository structure and scripts only
+- Active code and ops directories / 当前主要目录: `cmd/`, `deploy/`, `ansible/`, `scripts/`, `test/`, `config/`
 
-- `operations-governance/governance.md`: branch, commit, PR, version, and release governance.
-- `operations-governance/release-checklist.md`: release gates, sequence, and rollback order.
-- `operations-governance/cross-repo-tasks.md`: cross-repo backlog and execution templates.
-- `operations-governance/deployment-summary.md`: deployment summary and operational validation.
-- `operations-governance/implementation-complete.md`: implementation completion and delivery report.
-- `operations-governance/observability-monitoring-chain.md`: node -> vector -> ingest -> metrics/logs/traces monitoring chain.
-- `operations-governance/db-migration-runbook.md`: PostgreSQL migration runbook (backup/restore, stop-write, online).
-- `operations-governance/ollama-cheap-model-execution-rule.md`: low-cost local model execution rule for migration verification tasks.
+## Existing Docs To Reconcile / 需要继续归并的现有文档
 
-## Runbook
-
-- `Runbook/Migrate-CloudRun-Core-To-SingleNode-K3s-2C4G.md`: `accounts / rag-server / x-scope-hub / x-cloud-flow / x-ops-agent` 迁移到单机 `2C4G` K3s 的执行手册。
-- `Runbook/Migrate-CloudRun-Core-To-DockerCompose-2C2G.md`: `accounts / rag-server` 迁移到单机 `2C2G` Docker Compose 轻量栈的执行手册。
-
-## Testing
-
-- `testing/full-stack-test-plan.md`: full-stack test strategy and test plan.
-
-## Security
-
-- `security/shared-token-auth-design.md`: service token auth design.
-- `security/internal-auth-usage.md`: internal auth usage guide.
-- `security/service-chain-auth-audit.md`: service chain auth audit report.
-- `security/security-audit-token-transmission.md`: token transmission security audit.
-
-## Plans
-
-- `plans/oauth-social-login-rollout.md`: phased rollout plan for GitHub/Google login and account binding.
-- `plans/accounts-rbac-plan-quota-implementation-plan.md`: accounts RBAC + 套餐 + 配额实施计划。
-- `plans/oauth2-integration-plan.md`: OAuth2 integration plan.
-- `plans/management-page-plan.md`: management page delivery plan.
+- `Runbook/Fix-Agent-404-And-UUID-Change.md`
+- `Runbook/Fix-CloudRun-Stunnel-Startup-Failure.md`
+- `Runbook/Fix-Rotating-UUID-Sync-Archive-2026-02-06.md`
+- `Runbook/Migrate-CloudRun-Core-To-DockerCompose-2C2G.md`
+- `Runbook/Migrate-CloudRun-Core-To-SingleNode-K3s-2C4G.md`
+- `Runbook/README.md`
+- `Runbook/Security-Scrubbing-Archive-2026-02-06.md`
+- `Runbook/Setup-Sandbox-Mode-and-Agent-Sync.md`
+- `architecture/project-overview.md`
+- `architecture/rbac-plan-quota-architecture.md`
+- `design-development/service-chain-auth-implementation.md`
+- `feature-flows/accounts-oauth-binding-spec.md`

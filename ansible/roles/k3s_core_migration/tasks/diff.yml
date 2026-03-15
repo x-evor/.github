@@ -1,0 +1,68 @@
+- name: Preview rendered manifest files
+  ansible.builtin.shell: |
+    set -euo pipefail
+    find "{{ k3s_core_workdir }}" -maxdepth 1 -type f | sort
+  args:
+    executable: /bin/bash
+  changed_when: false
+
+- name: Diff ExternalDNS secret manifest
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export KUBECONFIG="{{ k3s_core_kubeconfig }}"
+    kubectl diff -f "{{ k3s_core_workdir }}/externaldns-secret.yaml" || test $? -eq 1
+  args:
+    executable: /bin/bash
+  register: k3s_core_diff_externaldns
+  changed_when: k3s_core_diff_externaldns.rc == 1
+  failed_when: k3s_core_diff_externaldns.rc not in [0, 1]
+  when: k3s_core_dns_secret.string_data | length > 0
+
+- name: Diff shared stunnel manifests
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export KUBECONFIG="{{ k3s_core_kubeconfig }}"
+    kubectl diff -f "{{ k3s_core_workdir }}/stunnel-configmap.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/stunnel-deployment.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/stunnel-service.yaml" || test $? -eq 1
+  args:
+    executable: /bin/bash
+  register: k3s_core_diff_stunnel
+  changed_when: k3s_core_diff_stunnel.rc == 1
+  failed_when: k3s_core_diff_stunnel.rc not in [0, 1]
+  when: k3s_core_shared_stunnel.enabled
+
+- name: Diff stable manifests
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export KUBECONFIG="{{ k3s_core_kubeconfig }}"
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-configmap.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-secret.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-deployment.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-service.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-ingress.yaml" || test $? -eq 1
+  args:
+    executable: /bin/bash
+  register: k3s_core_diff_stable
+  changed_when: k3s_core_diff_stable.rc == 1
+  failed_when: k3s_core_diff_stable.rc not in [0, 1]
+  loop: "{{ k3s_core_services }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+- name: Diff preview manifests
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export KUBECONFIG="{{ k3s_core_kubeconfig }}"
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-preview-deployment.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-preview-service.yaml" || test $? -eq 1
+    kubectl diff -f "{{ k3s_core_workdir }}/{{ item.name }}-preview-ingress.yaml" || test $? -eq 1
+  args:
+    executable: /bin/bash
+  register: k3s_core_diff_preview
+  changed_when: k3s_core_diff_preview.rc == 1
+  failed_when: k3s_core_diff_preview.rc not in [0, 1]
+  loop: "{{ k3s_core_services }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: k3s_core_apply_preview

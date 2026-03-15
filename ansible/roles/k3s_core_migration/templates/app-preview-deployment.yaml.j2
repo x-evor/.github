@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ manifest.service.name }}-preview
+  namespace: {{ manifest.service.namespace }}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 1
+  selector:
+    matchLabels:
+      app: {{ manifest.service.name }}
+      track: preview
+  template:
+    metadata:
+      labels:
+        app: {{ manifest.service.name }}
+        track: preview
+    spec:
+      containers:
+        - name: app
+          image: {{ manifest.service.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ manifest.service.port }}
+          resources:
+            requests:
+              cpu: "{{ manifest.service.request_cpu }}"
+              memory: "{{ manifest.service.request_memory }}"
+            limits:
+              cpu: "{{ manifest.service.limit_cpu }}"
+              memory: "{{ manifest.service.limit_memory }}"
+          envFrom:
+            - configMapRef:
+                name: {{ manifest.service.name }}-config
+            - secretRef:
+                name: {{ manifest.service.name }}-env

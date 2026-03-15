@@ -1,0 +1,59 @@
+- name: Ensure render workspace exists
+  ansible.builtin.file:
+    path: "{{ k3s_core_workdir }}"
+    state: directory
+    mode: "0755"
+
+- name: Ensure namespaces exist
+  ansible.builtin.shell: |
+    set -euo pipefail
+    export KUBECONFIG="{{ k3s_core_kubeconfig }}"
+    kubectl get namespace {{ item }} >/dev/null 2>&1 || kubectl create namespace {{ item }}
+  args:
+    executable: /bin/bash
+  loop:
+    - "{{ k3s_core_infra_namespace }}"
+    - "{{ k3s_core_namespace }}"
+  when: not ansible_check_mode
+
+- name: Render ExternalDNS secret manifest
+  ansible.builtin.template:
+    src: externaldns-secret.yaml.j2
+    dest: "{{ k3s_core_workdir }}/externaldns-secret.yaml"
+    mode: "0600"
+  when: k3s_core_dns_secret.string_data | length > 0
+
+- name: Render shared stunnel manifests
+  ansible.builtin.template:
+    src: "{{ item }}.j2"
+    dest: "{{ k3s_core_workdir }}/{{ item }}"
+    mode: "0644"
+  loop:
+    - stunnel-configmap.yaml
+    - stunnel-deployment.yaml
+    - stunnel-service.yaml
+  when: k3s_core_shared_stunnel.enabled
+
+- name: Render app manifests
+  ansible.builtin.template:
+    src: "{{ manifest.template }}"
+    dest: "{{ k3s_core_workdir }}/{{ manifest.service.name }}-{{ manifest.suffix }}.yaml"
+    mode: "0644"
+  loop: "{{ query('ansible.builtin.nested', k3s_core_services, manifest_suffixes) }}"
+  loop_control:
+    loop_var: manifest_item
+    label: "{{ manifest_item.0.name }}-{{ manifest_item.1.suffix }}"
+  vars:
+    manifest_suffixes:
+      - { suffix: "configmap", template: "app-configmap.yaml.j2" }
+      - { suffix: "secret", template: "app-secret.yaml.j2" }
+      - { suffix: "deployment", template: "app-deployment.yaml.j2" }
+      - { suffix: "service", template: "app-service.yaml.j2" }
+      - { suffix: "ingress", template: "app-ingress.yaml.j2" }
+      - { suffix: "preview-deployment", template: "app-preview-deployment.yaml.j2" }
+      - { suffix: "preview-service", template: "app-preview-service.yaml.j2" }
+      - { suffix: "preview-ingress", template: "app-preview-ingress.yaml.j2" }
+    manifest:
+      service: "{{ manifest_item.0 }}"
+      suffix: "{{ manifest_item.1.suffix }}"
+      template: "{{ manifest_item.1.template }}"

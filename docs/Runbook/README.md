@@ -7,6 +7,8 @@
 ### 🔧 部署与配置 (Setup & Config)
 - [Sandbox Mode & Agent Sync Setup](./Setup-Sandbox-Mode-and-Agent-Sync.md) - 配置 Sandbox 模式与解决 Agent 同步稳定性问题。
 - [CloudRun Stunnel Startup](./Fix-CloudRun-Stunnel-Startup-Failure.md) - 解决 Cloud Run 环境下 Stunnel 启动失败问题。
+- [Cloud Run Core To Single-Node K3s](./Migrate-CloudRun-Core-To-SingleNode-K3s-2C4G.md) - 核心服务迁移到单机 `2C4G` K3s 的资源评估、步骤、验证与回滚。
+- [Cloud Run Core To Docker Compose](./Migrate-CloudRun-Core-To-DockerCompose-2C2G.md) - 在单机 `2C2G` VPS 上用 `Docker Compose` 承载 `accounts + rag-server + APISIX + shared stunnel-client`。
 
 ### 🚨 故障排查
 - 常见问题

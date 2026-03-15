@@ -1,0 +1,72 @@
+{
+  "version": 1,
+  "managers": {
+    "codex_app": {
+      "role": "chief_engineer",
+      "responsibilities": [
+        "analyze objectives",
+        "create execution plan",
+        "assign worker prompts",
+        "accept or reject worker results",
+        "fallback to direct execution when all worker paths fail"
+      ],
+      "execution_policy": "planner_and_acceptance_gate"
+    },
+    "codex_cli": {
+      "role": "direct_executor",
+      "responsibilities": [
+        "run the smallest blocked step directly",
+        "perform final validation when delegated execution fails",
+        "execute bounded implementation or verification tasks"
+      ],
+      "execution_policy": "fallback_only"
+    },
+    "opencode": {
+      "role": "orchestration_manager",
+      "responsibilities": [
+        "prepare bounded worker prompts",
+        "split tasks into repo-aware subtasks",
+        "propose exact run_worker.sh commands"
+      ],
+      "execution_policy": "manager_optional"
+    },
+    "antigravity": {
+      "role": "automation_manager",
+      "responsibilities": [
+        "run orchestration loops",
+        "control retries",
+        "hand blocked work back to Codex"
+      ],
+      "execution_policy": "manager_optional"
+    }
+  },
+  "workers": {
+    "opencode_cli": {
+      "role": "bounded_editor",
+      "responsibilities": [
+        "perform bounded repo-aware edits",
+        "fix playbooks workflows and docs in explicit paths",
+        "return structured change summaries"
+      ],
+      "execution_policy": "worker"
+    },
+    "gemini_cli": {
+      "role": "independent_auditor",
+      "responsibilities": [
+        "perform short read-only audits",
+        "cross-check plans and risks",
+        "report missing prerequisites"
+      ],
+      "execution_policy": "worker"
+    },
+    "ollama": {
+      "role": "cheap_reviewer",
+      "responsibilities": [
+        "perform low-cost read-only review",
+        "repeat smoke checks",
+        "review compose and config changes"
+      ],
+      "execution_policy": "worker"
+    }
+  }
+}

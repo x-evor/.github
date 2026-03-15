@@ -1,0 +1,121 @@
+- name: Compute release metadata for {{ deploy_target.name | default(deploy_target.deploy_subdomain_prefix) }}
+  ansible.builtin.set_fact:
+    service_compose_release_name: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-{{ service_compose_git_short_commit }}"
+    service_compose_release_dir: "{{ service_compose_project_root }}/{{ service_compose_service_slug }}/{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-{{ service_compose_git_short_commit }}"
+    service_compose_release_fqdn: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-{{ service_compose_git_short_commit }}.{{ service_compose_zone }}"
+    service_compose_release_domains: "{{ ((deploy_target.stable_domains | default([])) + [deploy_target.deploy_subdomain_prefix ~ '-' ~ service_compose_deploy_hostname ~ '-' ~ service_compose_git_short_commit ~ '.' ~ service_compose_zone]) | unique }}"
+
+- name: Ensure release directories exist for {{ service_compose_release_name }}
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ service_compose_release_dir }}"
+    - "{{ service_compose_release_dir }}/env"
+
+- name: Render docker compose manifest for {{ service_compose_release_name }}
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ service_compose_release_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Render env file for {{ service_compose_release_name }}
+  ansible.builtin.template:
+    src: app.env.j2
+    dest: "{{ service_compose_release_dir }}/env/app.env"
+    mode: "0600"
+  no_log: true
+
+- name: Start release {{ service_compose_release_name }}
+  ansible.builtin.shell: |
+    set -euo pipefail
+    docker compose -f "{{ service_compose_release_dir }}/docker-compose.yml" pull
+    docker compose -f "{{ service_compose_release_dir }}/docker-compose.yml" up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Wait for loopback health endpoint on {{ service_compose_release_name }}
+  ansible.builtin.uri:
+    url: "http://127.0.0.1:{{ deploy_target.host_port }}{{ deploy_target.healthcheck_path | default(service_compose_healthcheck_path) }}"
+    method: GET
+    status_code: [200, 204]
+  register: service_compose_health_result
+  retries: "{{ deploy_target.health_retries | default(20) }}"
+  delay: "{{ deploy_target.health_delay_seconds | default(3) }}"
+  until: service_compose_health_result.status in [200, 204]
+  when: not ansible_check_mode
+
+- name: Discover legacy Caddy site files for {{ deploy_target.deploy_subdomain_prefix }}
+  ansible.builtin.find:
+    paths: "{{ service_compose_caddy_conf_dir }}"
+    patterns: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-*.caddy"
+    file_type: file
+  register: service_compose_existing_caddy_files
+
+- name: Remove superseded Caddy site files for {{ deploy_target.deploy_subdomain_prefix }}
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ service_compose_existing_caddy_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - service_compose_remove_previous_caddy | bool
+    - item.path != service_compose_caddy_conf_dir ~ '/' ~ service_compose_release_name ~ '.caddy'
+
+- name: Render Caddy site file for {{ service_compose_release_name }}
+  ansible.builtin.template:
+    src: site.caddy.j2
+    dest: "{{ service_compose_caddy_conf_dir }}/{{ service_compose_release_name }}.caddy"
+    mode: "0644"
+
+- name: Validate Caddy configuration after updating {{ service_compose_release_name }}
+  ansible.builtin.command: caddy validate --config /etc/caddy/Caddyfile
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Reload Caddy after updating {{ service_compose_release_name }}
+  ansible.builtin.shell: "{{ service_compose_caddy_reload_command }}"
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Discover legacy release directories for {{ deploy_target.deploy_subdomain_prefix }}
+  ansible.builtin.find:
+    paths: "{{ service_compose_project_root }}/{{ service_compose_service_slug }}"
+    patterns: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-*"
+    file_type: directory
+    recurse: false
+  register: service_compose_existing_release_dirs
+
+- name: Stop superseded releases for {{ deploy_target.deploy_subdomain_prefix }}
+  ansible.builtin.shell: |
+    set -euo pipefail
+    if [ -f "{{ item.path }}/docker-compose.yml" ]; then
+      docker compose -f "{{ item.path }}/docker-compose.yml" down --remove-orphans || true
+    fi
+  args:
+    executable: /bin/bash
+  loop: "{{ service_compose_existing_release_dirs.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - service_compose_remove_previous_releases | bool
+    - item.path != service_compose_release_dir
+    - not ansible_check_mode
+  changed_when: true
+
+- name: Remove superseded release directories for {{ deploy_target.deploy_subdomain_prefix }}
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ service_compose_existing_release_dirs.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - service_compose_remove_previous_releases | bool
+    - item.path != service_compose_release_dir

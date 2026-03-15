@@ -1,0 +1,394 @@
+name: Single-Node Service Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Logical service to release"
+        required: true
+        type: choice
+        options:
+          - accounts
+          - accounts-preview
+          - rag-server
+          - x-cloud-flow
+          - x-ops-agent
+          - x-scope-hub
+      service_ref:
+        description: "Service repository ref (branch/tag/sha)"
+        required: true
+        default: "main"
+        type: string
+      run_apply:
+        description: "Run the final ansible apply stage"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  CONTROL_REPO_DIR: github-org-cloud-neutral-toolkit
+  GHCR_REGISTRY: ghcr.io
+  SERVICE_REPO_OWNER: ${{ github.repository_owner }}
+  ACCOUNTS_ANSIBLE_VARS_YAML: ${{ secrets.ACCOUNTS_ANSIBLE_VARS_YAML }}
+  RAG_SERVER_ANSIBLE_VARS_YAML: ${{ secrets.RAG_SERVER_ANSIBLE_VARS_YAML }}
+  X_CLOUD_FLOW_ANSIBLE_VARS_YAML: ${{ secrets.X_CLOUD_FLOW_ANSIBLE_VARS_YAML }}
+  X_OPS_AGENT_ANSIBLE_VARS_YAML: ${{ secrets.X_OPS_AGENT_ANSIBLE_VARS_YAML }}
+  X_SCOPE_HUB_ANSIBLE_VARS_YAML: ${{ secrets.X_SCOPE_HUB_ANSIBLE_VARS_YAML }}
+
+concurrency:
+  group: ghcr-release-${{ inputs.service }}
+  cancel-in-progress: false
+
+jobs:
+  stage-1-build-image:
+    name: "1. Build And Push Image"
+    runs-on: ubuntu-latest
+    outputs:
+      repo_name: ${{ steps.meta.outputs.repo_name }}
+      service_repository: ${{ steps.meta.outputs.service_repository }}
+      service_checkout_path: ${{ steps.meta.outputs.service_checkout_path }}
+      playbook_path: ${{ steps.meta.outputs.playbook_path }}
+      dockerfile_path: ${{ steps.meta.outputs.dockerfile_path }}
+      build_context: ${{ steps.meta.outputs.build_context }}
+      image_name: ${{ steps.meta.outputs.image_name }}
+      deploy_subdomain_prefix: ${{ steps.meta.outputs.deploy_subdomain_prefix }}
+      stable_domain: ${{ steps.meta.outputs.stable_domain }}
+      host_port: ${{ steps.meta.outputs.host_port }}
+      healthcheck_path: ${{ steps.meta.outputs.healthcheck_path }}
+      deploy_server_alias: ${{ steps.meta.outputs.deploy_server_alias }}
+      deploy_hostname: ${{ steps.meta.outputs.deploy_hostname }}
+      git_short_commit: ${{ steps.image.outputs.git_short_commit }}
+      image_ref: ${{ steps.image.outputs.image_ref }}
+      release_domain: ${{ steps.image.outputs.release_domain }}
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.CONTROL_REPO_DIR }}
+
+      - name: Resolve service metadata
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          metadata="$("${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/release-service-metadata.sh" \
+            "${{ inputs.service }}" \
+            "${{ env.SERVICE_REPO_OWNER }}" \
+            "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini")"
+          while IFS='=' read -r key value; do
+            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
+          done <<< "${metadata}"
+
+      - name: Checkout Service Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ steps.meta.outputs.service_repository }}
+          ref: ${{ inputs.service_ref }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: ${{ steps.meta.outputs.service_checkout_path }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login To GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Build And Push Image
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          short_sha="$(git -C "${{ steps.meta.outputs.service_checkout_path }}" rev-parse --short HEAD)"
+          image_ref="${{ env.GHCR_REGISTRY }}/${{ env.SERVICE_REPO_OWNER }}/${{ steps.meta.outputs.image_name }}:${short_sha}"
+          release_domain="${{ steps.meta.outputs.deploy_subdomain_prefix }}-${{ steps.meta.outputs.deploy_hostname }}-${short_sha}.svc.plus"
+
+          echo "git_short_commit=${short_sha}" >> "$GITHUB_OUTPUT"
+          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
+          echo "release_domain=${release_domain}" >> "$GITHUB_OUTPUT"
+
+          docker buildx build \
+            --platform linux/amd64 \
+            --file "${{ steps.meta.outputs.service_checkout_path }}/${{ steps.meta.outputs.dockerfile_path }}" \
+            --tag "${image_ref}" \
+            --push \
+            "${{ steps.meta.outputs.service_checkout_path }}/${{ steps.meta.outputs.build_context }}"
+
+      - name: Summarize Stage 1
+        shell: bash
+        run: |
+          {
+            echo "## Stage 1"
+            echo "- service: \`${{ inputs.service }}\`"
+            echo "- repo: \`${{ steps.meta.outputs.service_repository }}\`"
+            echo "- image: \`${{ steps.image.outputs.image_ref }}\`"
+            echo "- release domain: \`${{ steps.image.outputs.release_domain }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  stage-2-update-release-dns:
+    name: "2. Update Release DNS"
+    runs-on: ubuntu-latest
+    needs: stage-1-build-image
+    env:
+      CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.CONTROL_REPO_DIR }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install "ansible-core==2.18.3"
+
+      - name: Update DNS For Release Domain
+        shell: bash
+        working-directory: ${{ env.CONTROL_REPO_DIR }}
+        run: |
+          set -euo pipefail
+          export RELEASE_DOMAIN="${{ needs.stage-1-build-image.outputs.release_domain }}"
+          export DEPLOY_SERVER_ALIAS="${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
+          dns_payload="$(python -c 'import json, os; print(json.dumps({"cloudflare_dns_records":[{"type":"CNAME","name":os.environ["RELEASE_DOMAIN"],"content":os.environ["DEPLOY_SERVER_ALIAS"],"ttl":1,"proxied":False}]}))')"
+
+          ansible-playbook ansible/playbooks/update_cloudflare_dns.yml -e "${dns_payload}"
+
+      - name: Summarize Stage 2
+        shell: bash
+        run: |
+          {
+            echo "## Stage 2"
+            echo "- updated release DNS: \`${{ needs.stage-1-build-image.outputs.release_domain }}\`"
+            echo "- cname target: \`${{ needs.stage-1-build-image.outputs.deploy_server_alias }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  stage-3-ansible-dry-run:
+    name: "3. Ansible Dry Run"
+    runs-on: ubuntu-latest
+    needs: stage-1-build-image
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.CONTROL_REPO_DIR }}
+
+      - name: Checkout Service Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.stage-1-build-image.outputs.service_repository }}
+          ref: ${{ inputs.service_ref }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install "ansible-core==2.18.3"
+
+      - name: Materialize vars files
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${{ inputs.service }}" in
+            accounts|accounts-preview)
+              service_secret="${ACCOUNTS_ANSIBLE_VARS_YAML}"
+              ;;
+            rag-server)
+              service_secret="${RAG_SERVER_ANSIBLE_VARS_YAML}"
+              ;;
+            x-cloud-flow)
+              service_secret="${X_CLOUD_FLOW_ANSIBLE_VARS_YAML}"
+              ;;
+            x-ops-agent)
+              service_secret="${X_OPS_AGENT_ANSIBLE_VARS_YAML}"
+              ;;
+            x-scope-hub)
+              service_secret="${X_SCOPE_HUB_ANSIBLE_VARS_YAML}"
+              ;;
+            *)
+              echo "unsupported service" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ -z "${service_secret}" ]]; then
+            echo "Missing GitHub secret for ${{ inputs.service }} ansible vars" >&2
+            exit 1
+          fi
+
+          secret_vars_file="$(mktemp)"
+          runtime_vars_file="$(mktemp)"
+
+          printf '%s\n' "${service_secret}" > "${secret_vars_file}"
+
+          export RUNTIME_VARS_FILE="${runtime_vars_file}"
+          export SERVICE_COMPOSE_IMAGE="${{ needs.stage-1-build-image.outputs.image_ref }}"
+          export SERVICE_DEPLOY_PREFIX="${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}"
+          export SERVICE_STABLE_DOMAIN="${{ needs.stage-1-build-image.outputs.stable_domain }}"
+          export SERVICE_HOST_PORT="${{ needs.stage-1-build-image.outputs.host_port }}"
+          export SERVICE_HEALTHCHECK_PATH="${{ needs.stage-1-build-image.outputs.healthcheck_path }}"
+          export SERVICE_LOGICAL_NAME="${{ inputs.service }}"
+
+          python -c 'import os, yaml; payload = {"service_compose_image": os.environ["SERVICE_COMPOSE_IMAGE"], "service_compose_registry_server": "ghcr.io", "service_compose_registry_username": os.environ["GHCR_USERNAME"], "service_compose_registry_password": os.environ["GHCR_TOKEN"], "service_compose_deploy_targets": [{"name": os.environ["SERVICE_LOGICAL_NAME"], "deploy_subdomain_prefix": os.environ["SERVICE_DEPLOY_PREFIX"], "stable_domains": [os.environ["SERVICE_STABLE_DOMAIN"]], "host_port": int(os.environ["SERVICE_HOST_PORT"]), "healthcheck_path": os.environ["SERVICE_HEALTHCHECK_PATH"], "env": {}}]}; yaml.safe_dump(payload, open(os.environ["RUNTIME_VARS_FILE"], "w", encoding="utf-8"), sort_keys=False)'
+
+          echo "secret_vars_file=${secret_vars_file}" >> "$GITHUB_OUTPUT"
+          echo "runtime_vars_file=${runtime_vars_file}" >> "$GITHUB_OUTPUT"
+
+      - name: Run ansible dry run with diff
+        shell: bash
+        working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+        run: |
+          set -euo pipefail
+          export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
+          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' \
+          ansible-playbook -D -C "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
+            -e "@${{ steps.vars.outputs.secret_vars_file }}" \
+            -e "@${{ steps.vars.outputs.runtime_vars_file }}"
+
+      - name: Summarize Stage 3
+        shell: bash
+        run: |
+          {
+            echo "## Stage 3"
+            echo "- playbook: \`${{ needs.stage-1-build-image.outputs.playbook_path }}\`"
+            echo "- mode: \`ansible-playbook -D -C\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  stage-4-ansible-apply:
+    name: "4. Ansible Apply"
+    runs-on: ubuntu-latest
+    needs:
+      - stage-1-build-image
+      - stage-2-update-release-dns
+      - stage-3-ansible-dry-run
+    if: ${{ inputs.run_apply }}
+    env:
+      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
+      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@v4
+        with:
+          path: ${{ env.CONTROL_REPO_DIR }}
+
+      - name: Checkout Service Repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ needs.stage-1-build-image.outputs.service_repository }}
+          ref: ${{ inputs.service_ref }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install "ansible-core==2.18.3"
+
+      - name: Materialize vars files
+        id: vars
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          case "${{ inputs.service }}" in
+            accounts|accounts-preview)
+              service_secret="${ACCOUNTS_ANSIBLE_VARS_YAML}"
+              ;;
+            rag-server)
+              service_secret="${RAG_SERVER_ANSIBLE_VARS_YAML}"
+              ;;
+            x-cloud-flow)
+              service_secret="${X_CLOUD_FLOW_ANSIBLE_VARS_YAML}"
+              ;;
+            x-ops-agent)
+              service_secret="${X_OPS_AGENT_ANSIBLE_VARS_YAML}"
+              ;;
+            x-scope-hub)
+              service_secret="${X_SCOPE_HUB_ANSIBLE_VARS_YAML}"
+              ;;
+            *)
+              echo "unsupported service" >&2
+              exit 1
+              ;;
+          esac
+
+          if [[ -z "${service_secret}" ]]; then
+            echo "Missing GitHub secret for ${{ inputs.service }} ansible vars" >&2
+            exit 1
+          fi
+
+          secret_vars_file="$(mktemp)"
+          runtime_vars_file="$(mktemp)"
+
+          printf '%s\n' "${service_secret}" > "${secret_vars_file}"
+
+          export RUNTIME_VARS_FILE="${runtime_vars_file}"
+          export SERVICE_COMPOSE_IMAGE="${{ needs.stage-1-build-image.outputs.image_ref }}"
+          export SERVICE_DEPLOY_PREFIX="${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}"
+          export SERVICE_STABLE_DOMAIN="${{ needs.stage-1-build-image.outputs.stable_domain }}"
+          export SERVICE_HOST_PORT="${{ needs.stage-1-build-image.outputs.host_port }}"
+          export SERVICE_HEALTHCHECK_PATH="${{ needs.stage-1-build-image.outputs.healthcheck_path }}"
+          export SERVICE_LOGICAL_NAME="${{ inputs.service }}"
+
+          python -c 'import os, yaml; payload = {"service_compose_image": os.environ["SERVICE_COMPOSE_IMAGE"], "service_compose_registry_server": "ghcr.io", "service_compose_registry_username": os.environ["GHCR_USERNAME"], "service_compose_registry_password": os.environ["GHCR_TOKEN"], "service_compose_deploy_targets": [{"name": os.environ["SERVICE_LOGICAL_NAME"], "deploy_subdomain_prefix": os.environ["SERVICE_DEPLOY_PREFIX"], "stable_domains": [os.environ["SERVICE_STABLE_DOMAIN"]], "host_port": int(os.environ["SERVICE_HOST_PORT"]), "healthcheck_path": os.environ["SERVICE_HEALTHCHECK_PATH"], "env": {}}]}; yaml.safe_dump(payload, open(os.environ["RUNTIME_VARS_FILE"], "w", encoding="utf-8"), sort_keys=False)'
+
+          echo "secret_vars_file=${secret_vars_file}" >> "$GITHUB_OUTPUT"
+          echo "runtime_vars_file=${runtime_vars_file}" >> "$GITHUB_OUTPUT"
+
+      - name: Run ansible apply with diff
+        shell: bash
+        working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+        run: |
+          set -euo pipefail
+          export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
+          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' \
+          ansible-playbook -D "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
+            -e "@${{ steps.vars.outputs.secret_vars_file }}" \
+            -e "@${{ steps.vars.outputs.runtime_vars_file }}"
+
+      - name: Summarize Stage 4
+        shell: bash
+        run: |
+          {
+            echo "## Stage 4"
+            echo "- playbook: \`${{ needs.stage-1-build-image.outputs.playbook_path }}\`"
+            echo "- mode: \`ansible-playbook -D\`"
+            echo "- release domain: \`${{ needs.stage-1-build-image.outputs.release_domain }}\`"
+            echo ""
+            echo "After the workflow succeeds, switch the stable entry domain CNAME manually to:"
+            echo "- \`${{ needs.stage-1-build-image.outputs.release_domain }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

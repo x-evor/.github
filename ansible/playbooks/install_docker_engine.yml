@@ -9,6 +9,10 @@
           - ansible_os_family == "Debian"
         fail_msg: "This playbook currently supports Debian-family hosts only."
 
+    - name: Select Docker apt repository by distribution
+      ansible.builtin.set_fact:
+        docker_apt_repo_os: "{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}"
+
     - name: Install base dependencies
       ansible.builtin.apt:
         name:
@@ -35,7 +39,7 @@
         dest: /etc/apt/sources.list.d/docker.list
         mode: "0644"
         content: |
-          deb [arch={{ 'amd64' if ansible_architecture in ['x86_64', 'amd64'] else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/debian {{ ansible_distribution_release }} stable
+          deb [arch={{ 'amd64' if ansible_architecture in ['x86_64', 'amd64'] else ansible_architecture }} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/{{ docker_apt_repo_os }} {{ ansible_distribution_release }} stable
 
     - name: Install Docker packages
       ansible.builtin.apt:
@@ -53,19 +57,23 @@
         name: docker
         state: started
         enabled: yes
+      when: not ansible_check_mode
 
     - name: Verify docker version
       ansible.builtin.command: docker --version
       register: docker_version
       changed_when: false
+      when: not ansible_check_mode
 
     - name: Verify docker compose plugin
       ansible.builtin.command: docker compose version
       register: docker_compose_version
       changed_when: false
+      when: not ansible_check_mode
 
     - name: Show installed Docker versions
       ansible.builtin.debug:
         msg:
           - "{{ docker_version.stdout }}"
           - "{{ docker_compose_version.stdout }}"
+      when: not ansible_check_mode

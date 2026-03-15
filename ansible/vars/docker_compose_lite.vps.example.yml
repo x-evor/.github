@@ -2,9 +2,9 @@ docker_compose_lite_apply: true
 docker_compose_lite_db_tls_host: postgresql-aws.svc.plus
 docker_compose_lite_db_tls_port: 5443
 
-docker_compose_lite_accounts_image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/accounts.svc.plus/accounts-svc-plus:latest
-docker_compose_lite_preview_accounts_image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/preview-accounts.svc.plus/preview-accounts-svc-plus:latest
-docker_compose_lite_rag_image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/rag-server.svc.plus/rag-server-svc-plus:646e539f8f7388f3d08980a6ace505ea1fd9b5db
+docker_compose_lite_accounts_image: ghcr.io/YOUR_GITHUB_ORG/accounts:latest
+docker_compose_lite_preview_accounts_image: ghcr.io/YOUR_GITHUB_ORG/accounts-preview:latest
+docker_compose_lite_rag_image: ghcr.io/YOUR_GITHUB_ORG/rag-server:latest
 
 docker_compose_lite_accounts_env:
   CONFIG_TEMPLATE: /app/config/account.cloudrun.yaml

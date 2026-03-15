@@ -62,6 +62,9 @@
     },
     {
       "path": "../openclaw-deploy-example"
+    },
+    {
+      "path": "../x-cloud-flow.svc.plus"
     }
   ],
   "settings": {

@@ -1,0 +1,25 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ manifest.service.name }}
+  namespace: {{ manifest.service.namespace }}
+  annotations:
+    kubernetes.io/ingress.class: apisix
+    cert-manager.io/cluster-issuer: {{ k3s_core_cluster_issuer }}
+    external-dns.alpha.kubernetes.io/hostname: {{ manifest.service.stable_host }}
+spec:
+  tls:
+    - hosts:
+        - {{ manifest.service.stable_host }}
+      secretName: {{ manifest.service.name }}-tls
+  rules:
+    - host: {{ manifest.service.stable_host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ manifest.service.name }}
+                port:
+                  number: 80

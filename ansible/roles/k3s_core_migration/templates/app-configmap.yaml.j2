@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ manifest.service.name }}-config
+  namespace: {{ manifest.service.namespace }}
+data:
+{% if manifest.service.config | length == 0 %}
+  APP_MODE: "production"
+{% else %}
+{% for key, value in manifest.service.config.items() %}
+  {{ key }}: "{{ value }}"
+{% endfor %}
+{% endif %}

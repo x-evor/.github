@@ -13,6 +13,7 @@
 - [ ] New env vars are documented in `.env.example` (keys only, no secret values)
 - [ ] Local run uses `.env`; runtime/prod uses Secret Manager or platform env vars
 - [ ] PR diff contains no real secret material (token/password/private key)
+- [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos
 - [ ] API contracts are validated (path, payload, auth headers)
 
@@ -43,6 +44,7 @@ Release from lower-level dependencies upward:
 - [ ] Main user journey smoke test passed
 - [ ] Rollback scripts/commands are ready
 - [ ] Release notes include impact and fallback
+- [ ] Cross-repo release manifest is updated/committed in the control repo (`releases/<version>.yaml`)
 
 ## F. Rollback Order (if needed)
 

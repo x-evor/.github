@@ -1,0 +1,5 @@
+{{ service_compose_release_domains | join(", ") }} {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:{{ deploy_target.host_port }}
+}
+

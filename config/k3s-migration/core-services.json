@@ -1,0 +1,130 @@
+{
+  "target_host": {
+    "name": "single-node-k3s-2c4g",
+    "cpu_millicores": 2000,
+    "memory_mib": 4096
+  },
+  "infrastructure": [
+    {
+      "name": "k3s-system",
+      "request_cpu_m": 350,
+      "request_memory_mib": 700,
+      "limit_cpu_m": 600,
+      "limit_memory_mib": 1024
+    },
+    {
+      "name": "apisix",
+      "request_cpu_m": 200,
+      "request_memory_mib": 256,
+      "limit_cpu_m": 500,
+      "limit_memory_mib": 384
+    },
+    {
+      "name": "cert-manager",
+      "request_cpu_m": 80,
+      "request_memory_mib": 96,
+      "limit_cpu_m": 200,
+      "limit_memory_mib": 160
+    },
+    {
+      "name": "external-dns",
+      "request_cpu_m": 30,
+      "request_memory_mib": 48,
+      "limit_cpu_m": 100,
+      "limit_memory_mib": 80
+    },
+    {
+      "name": "shared-stunnel-client",
+      "request_cpu_m": 50,
+      "request_memory_mib": 64,
+      "limit_cpu_m": 100,
+      "limit_memory_mib": 128
+    },
+    {
+      "name": "node-buffer",
+      "request_cpu_m": 0,
+      "request_memory_mib": 384,
+      "limit_cpu_m": 0,
+      "limit_memory_mib": 384
+    }
+  ],
+  "services": [
+    {
+      "name": "accounts",
+      "repo_path": "/Users/shenlan/workspaces/cloud-neutral-toolkit/accounts.svc.plus",
+      "hostname": "stable-accounts.svc.plus",
+      "preview_hostname_pattern": "preview-<sha>.svc.plus",
+      "namespace": "core-platform",
+      "container_port": 8080,
+      "cloud_run_limit_cpu_m": 1200,
+      "cloud_run_limit_memory_mib": 640,
+      "recommended_request_cpu_m": 220,
+      "recommended_request_memory_mib": 320,
+      "recommended_limit_cpu_m": 700,
+      "recommended_limit_memory_mib": 512,
+      "cloud_run_desc": "config/accounts_desc.json",
+      "notes": "Point DB_HOST/DB_PORT at the shared stunnel-client Service instead of running a sidecar."
+    },
+    {
+      "name": "rag-server",
+      "repo_path": "/Users/shenlan/workspaces/cloud-neutral-toolkit/rag-server.svc.plus",
+      "hostname": "stable-rag-server.svc.plus",
+      "preview_hostname_pattern": "preview-<sha>.svc.plus",
+      "namespace": "core-platform",
+      "container_port": 8080,
+      "cloud_run_limit_cpu_m": 1000,
+      "cloud_run_limit_memory_mib": 512,
+      "recommended_request_cpu_m": 180,
+      "recommended_request_memory_mib": 224,
+      "recommended_limit_cpu_m": 500,
+      "recommended_limit_memory_mib": 448,
+      "cloud_run_desc": "config/rag_server_desc.json",
+      "notes": "Point DB_HOST/DB_PORT at the shared stunnel-client Service and remove local stunnel bootstrap where possible."
+    },
+    {
+      "name": "x-scope-hub",
+      "repo_path": "/Users/shenlan/workspaces/cloud-neutral-toolkit/x-scope-hub.svc.plus",
+      "hostname": "stable-x-scope-hub.svc.plus",
+      "preview_hostname_pattern": "preview-<sha>.svc.plus",
+      "namespace": "core-platform",
+      "container_port": 8080,
+      "cloud_run_limit_cpu_m": 1000,
+      "cloud_run_limit_memory_mib": 512,
+      "recommended_request_cpu_m": 200,
+      "recommended_request_memory_mib": 256,
+      "recommended_limit_cpu_m": 400,
+      "recommended_limit_memory_mib": 384,
+      "notes": "Estimate based on current control-plane usage; validate with live profiling after cutover."
+    },
+    {
+      "name": "x-cloud-flow",
+      "repo_path": "/Users/shenlan/workspaces/cloud-neutral-toolkit/x-cloud-flow.svc.plus",
+      "hostname": "stable-x-cloud-flow.svc.plus",
+      "preview_hostname_pattern": "preview-<sha>.svc.plus",
+      "namespace": "core-platform",
+      "container_port": 8080,
+      "cloud_run_limit_cpu_m": 1000,
+      "cloud_run_limit_memory_mib": 512,
+      "recommended_request_cpu_m": 150,
+      "recommended_request_memory_mib": 192,
+      "recommended_limit_cpu_m": 400,
+      "recommended_limit_memory_mib": 320,
+      "notes": "Start in read-only plan mode; delay apply workloads until node memory behavior is stable."
+    },
+    {
+      "name": "x-ops-agent",
+      "repo_path": "/Users/shenlan/workspaces/cloud-neutral-toolkit/x-ops-agent.svc.plus",
+      "hostname": "stable-x-ops-agent.svc.plus",
+      "preview_hostname_pattern": "preview-<sha>.svc.plus",
+      "namespace": "core-platform",
+      "container_port": 8080,
+      "cloud_run_limit_cpu_m": 1000,
+      "cloud_run_limit_memory_mib": 512,
+      "recommended_request_cpu_m": 150,
+      "recommended_request_memory_mib": 192,
+      "recommended_limit_cpu_m": 400,
+      "recommended_limit_memory_mib": 320,
+      "notes": "Estimate based on current repo shape and helm defaults; validate with one replica only."
+    }
+  ]
+}

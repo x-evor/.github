@@ -27,6 +27,12 @@ Docs are organized by engineering lifecycle domains.
 - `operations-governance/implementation-complete.md`: implementation completion and delivery report.
 - `operations-governance/observability-monitoring-chain.md`: node -> vector -> ingest -> metrics/logs/traces monitoring chain.
 - `operations-governance/db-migration-runbook.md`: PostgreSQL migration runbook (backup/restore, stop-write, online).
+- `operations-governance/ollama-cheap-model-execution-rule.md`: low-cost local model execution rule for migration verification tasks.
+
+## Runbook
+
+- `Runbook/Migrate-CloudRun-Core-To-SingleNode-K3s-2C4G.md`: `accounts / rag-server / x-scope-hub / x-cloud-flow / x-ops-agent` 迁移到单机 `2C4G` K3s 的执行手册。
+- `Runbook/Migrate-CloudRun-Core-To-DockerCompose-2C2G.md`: `accounts / rag-server` 迁移到单机 `2C2G` Docker Compose 轻量栈的执行手册。
 
 ## Testing
 

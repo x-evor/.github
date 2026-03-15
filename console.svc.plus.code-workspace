@@ -33,14 +33,6 @@
       "path": "../agent.svc.plus"
     },
     {
-      "name": "agents.svc.plus",
-      "path": "../agent.svc.plus"
-    },
-    {
-      "name": "moltbot.svc.plus",
-      "path": "../openclawdbot.svc.plus"
-    },
-    {
       "name": "observability.svc.plus",
       "path": "../observability.svc.plus"
     },
@@ -55,6 +47,24 @@
     {
       "name": "knowledge",
       "path": "../knowledge"
+    },
+    {
+      "path": "../x-scope-hub.svc.plus"
+    },
+    {
+      "path": "../openclaw.svc.plus"
+    },
+    {
+      "path": "../xstream.svc.plus"
+    },
+    {
+      "path": "../MemOS"
+    },
+    {
+      "path": "../openclaw-deploy-example"
+    },
+    {
+      "path": "../x-cloud-flow.svc.plus"
     }
   ],
   "settings": {

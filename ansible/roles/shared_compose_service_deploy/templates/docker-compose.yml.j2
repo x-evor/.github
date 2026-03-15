@@ -1,0 +1,45 @@
+services:
+  app:
+    image: {{ (deploy_target.image | default(service_compose_image)) | to_json }}
+    container_name: {{ service_compose_release_name }}
+    restart: unless-stopped
+    pull_policy: {{ service_compose_pull_policy }}
+    env_file:
+      - ./env/app.env
+    environment:
+      PORT: "{{ service_compose_container_port }}"
+    ports:
+      - "127.0.0.1:{{ deploy_target.host_port }}:{{ service_compose_container_port }}"
+{% if service_compose_entrypoint | length > 0 %}
+    entrypoint:
+{% for value in service_compose_entrypoint %}
+      - {{ value | to_json }}
+{% endfor %}
+{% endif %}
+{% if service_compose_command | length > 0 %}
+    command:
+{% for value in service_compose_command %}
+      - {{ value | to_json }}
+{% endfor %}
+{% endif %}
+{% if service_compose_working_dir | length > 0 %}
+    working_dir: {{ service_compose_working_dir | to_json }}
+{% endif %}
+{% if service_compose_user | length > 0 %}
+    user: {{ service_compose_user | to_json }}
+{% endif %}
+{% if service_compose_network_mode | length > 0 %}
+    network_mode: {{ service_compose_network_mode | to_json }}
+{% endif %}
+{% if service_compose_volumes | length > 0 %}
+    volumes:
+{% for value in service_compose_volumes %}
+      - {{ value | to_json }}
+{% endfor %}
+{% endif %}
+{% if service_compose_extra_hosts | length > 0 %}
+    extra_hosts:
+{% for value in service_compose_extra_hosts %}
+      - {{ value | to_json }}
+{% endfor %}
+{% endif %}

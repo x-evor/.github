@@ -1,0 +1,24 @@
+docker_compose_lite_apply: true
+docker_compose_lite_db_tls_host: postgresql-aws.svc.plus
+docker_compose_lite_db_tls_port: 5443
+
+docker_compose_lite_accounts_image: ghcr.io/YOUR_GITHUB_ORG/accounts:latest
+docker_compose_lite_preview_accounts_image: ghcr.io/YOUR_GITHUB_ORG/accounts-preview:latest
+docker_compose_lite_rag_image: ghcr.io/YOUR_GITHUB_ORG/rag-server:latest
+
+docker_compose_lite_accounts_env:
+  CONFIG_TEMPLATE: /app/config/account.cloudrun.yaml
+  DB_USER: postgres
+  DB_NAME: account
+  DB_PASSWORD: CHANGE_ME
+  SMTP_HOST: smtp.qq.com
+  SMTP_PORT: "587"
+  SMTP_FROM: XControl Account <example@example.com>
+  SMTP_USERNAME: CHANGE_ME
+  SMTP_PASSWORD: CHANGE_ME
+
+docker_compose_lite_rag_env:
+  DB_USER: postgres
+  DB_NAME: knowledge_db
+  DB_PASSWORD: CHANGE_ME
+  NVIDIA_API_KEY: CHANGE_ME

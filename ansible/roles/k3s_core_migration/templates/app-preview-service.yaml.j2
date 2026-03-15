@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ manifest.service.name }}-preview
+  namespace: {{ manifest.service.namespace }}
+spec:
+  selector:
+    app: {{ manifest.service.name }}
+    track: preview
+  ports:
+    - port: 80
+      targetPort: {{ manifest.service.port }}
+      protocol: TCP

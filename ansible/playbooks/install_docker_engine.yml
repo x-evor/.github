@@ -13,6 +13,21 @@
       ansible.builtin.set_fact:
         docker_apt_repo_os: "{{ 'ubuntu' if ansible_distribution == 'Ubuntu' else 'debian' }}"
 
+    - name: Find apt source list files
+      ansible.builtin.find:
+        paths: /etc/apt/sources.list.d
+        patterns: "*.list"
+        file_type: file
+      register: apt_source_list_files
+
+    - name: Remove conflicting Docker apt source entries from existing files
+      ansible.builtin.lineinfile:
+        path: "{{ item }}"
+        regexp: '^\s*deb\s+(\[[^]]*\]\s+)?https://download\.docker\.com/linux/.*$'
+        state: absent
+      loop: "{{ ['/etc/apt/sources.list'] + (apt_source_list_files.files | map(attribute='path') | list) }}"
+      failed_when: false
+
     - name: Install base dependencies
       ansible.builtin.apt:
         name:

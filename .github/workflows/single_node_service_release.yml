@@ -33,6 +33,10 @@ env:
   CONTROL_REPO_DIR: cloud-neutral-toolkit
   GHCR_REGISTRY: ghcr.io
   SERVICE_REPO_OWNER: ${{ github.repository_owner }}
+  SINGLE_NODE_VPS_SSH_HOST: ${{ vars.SINGLE_NODE_VPS_SSH_HOST }}
+  SINGLE_NODE_VPS_SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER }}
+  SINGLE_NODE_VPS_SSH_PORT: ${{ vars.SINGLE_NODE_VPS_SSH_PORT }}
+  SINGLE_NODE_VPS_SSH_KNOWN_HOSTS: ${{ vars.SINGLE_NODE_VPS_SSH_KNOWN_HOSTS }}
   ACCOUNTS_ANSIBLE_VARS_YAML: ${{ secrets.ACCOUNTS_ANSIBLE_VARS_YAML }}
   RAG_SERVER_ANSIBLE_VARS_YAML: ${{ secrets.RAG_SERVER_ANSIBLE_VARS_YAML }}
   X_CLOUD_FLOW_ANSIBLE_VARS_YAML: ${{ secrets.X_CLOUD_FLOW_ANSIBLE_VARS_YAML }}
@@ -184,6 +188,7 @@ jobs:
     env:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
     steps:
       - name: Checkout Control Repo
         uses: actions/checkout@v4
@@ -209,6 +214,14 @@ jobs:
           set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install "ansible-core==2.18.3"
+
+      - name: Prepare SSH access
+        id: ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-ssh.sh" \
+            "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
       - name: Materialize vars files
         id: vars
@@ -264,11 +277,13 @@ jobs:
       - name: Run ansible dry run with diff
         shell: bash
         working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "True"
         run: |
           set -euo pipefail
           export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
           ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' \
-          ansible-playbook -D -C "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
+          ansible-playbook -i "${{ steps.ssh.outputs.inventory_file }}" -D -C "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
             -e "@${{ steps.vars.outputs.secret_vars_file }}" \
             -e "@${{ steps.vars.outputs.runtime_vars_file }}"
 
@@ -292,6 +307,7 @@ jobs:
     env:
       GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
+      SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
     steps:
       - name: Checkout Control Repo
         uses: actions/checkout@v4
@@ -317,6 +333,14 @@ jobs:
           set -euo pipefail
           python -m pip install --upgrade pip
           python -m pip install "ansible-core==2.18.3"
+
+      - name: Prepare SSH access
+        id: ssh
+        shell: bash
+        run: |
+          set -euo pipefail
+          "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-ssh.sh" \
+            "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
       - name: Materialize vars files
         id: vars
@@ -372,11 +396,13 @@ jobs:
       - name: Run ansible apply with diff
         shell: bash
         working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+        env:
+          ANSIBLE_HOST_KEY_CHECKING: "True"
         run: |
           set -euo pipefail
           export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
           ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' \
-          ansible-playbook -D "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
+          ansible-playbook -i "${{ steps.ssh.outputs.inventory_file }}" -D "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
             -e "@${{ steps.vars.outputs.secret_vars_file }}" \
             -e "@${{ steps.vars.outputs.runtime_vars_file }}"
 

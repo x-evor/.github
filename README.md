@@ -45,6 +45,113 @@ For cross-repo requests, use one objective per task and require this output form
 - Secrets stay in local `.env` (gitignored) and production secret managers.
 - This repo holds standards and coordination docs, not service runtime code.
 
+## Single-Node Release
+
+This repo coordinates single-node VPS releases for the `svc.plus` services.
+
+Reference docs:
+
+- Ansible overview: [`ansible/README.md`](ansible/README.md)
+- Workflow details: [`docs/operations-governance/single-node-service-release-workflow.md`](docs/operations-governance/single-node-service-release-workflow.md)
+
+### Local Deploy Commands
+
+Run these commands from the repository root:
+
+1. Validate the control-plane playbooks:
+
+```bash
+ansible-playbook --syntax-check ansible/playbooks/update_cloudflare_dns.yml
+ansible-playbook -i ansible/inventory.ini ansible/playbooks/install_docker_engine.yml -D -C
+```
+
+2. Update the release DNS record:
+
+```bash
+export CLOUDFLARE_DNS_API_TOKEN="..."
+
+ansible-playbook ansible/playbooks/update_cloudflare_dns.yml \
+  -e '{"cloudflare_dns_records":[{"type":"CNAME","name":"accounts-us-xhttp-abc1234.svc.plus","content":"us-xhttp.svc.plus","proxied":false}]}'
+```
+
+3. Run the service-repo Ansible dry-run and apply:
+
+```bash
+cd /Users/shenlan/workspaces/cloud-neutral-toolkit/<service-repo>
+export GIT_SHORT_COMMIT="$(git rev-parse --short HEAD)"
+
+ansible-playbook -D -C ansible/playbooks/<service-playbook>.yml \
+  -e @/secure/path/<service>.vault.yml \
+  -e @/secure/path/<service>.runtime.yml
+
+ansible-playbook -D ansible/playbooks/<service-playbook>.yml \
+  -e @/secure/path/<service>.vault.yml \
+  -e @/secure/path/<service>.runtime.yml
+```
+
+### GitHub Actions Manual Release
+
+Workflow file:
+
+- `.github/workflows/single_node_service_release.yml`
+
+Service mapping:
+
+| Service | Repo | Playbook | Workflow `service` |
+| --- | --- | --- | --- |
+| accounts | `accounts.svc.plus` | `ansible/playbooks/deploy_accounts_compose.yml` | `accounts` |
+| accounts-preview | `accounts.svc.plus` | `ansible/playbooks/deploy_accounts_compose.yml` | `accounts-preview` |
+| rag-server | `rag-server.svc.plus` | `ansible/playbooks/deploy_rag_server_compose.yml` | `rag-server` |
+| x-cloud-flow | `x-cloud-flow.svc.plus` | `ansible/playbooks/deploy_x_cloud_flow_compose.yml` | `x-cloud-flow` |
+| x-ops-agent | `x-ops-agent.svc.plus` | `ansible/playbooks/deploy_x_ops_agent_compose.yml` | `x-ops-agent` |
+| x-scope-hub | `x-scope-hub.svc.plus` | `ansible/playbooks/deploy_x_scope_hub_compose.yml` | `x-scope-hub` |
+
+Before running the workflow, configure:
+
+- GitHub Secrets:
+  - `GHCR_USERNAME`
+  - `GHCR_TOKEN`
+  - `CLOUDFLARE_DNS_API_TOKEN`
+  - `WORKSPACE_REPO_TOKEN`
+  - `ACCOUNTS_ANSIBLE_VARS_YAML`
+  - `RAG_SERVER_ANSIBLE_VARS_YAML`
+  - `X_CLOUD_FLOW_ANSIBLE_VARS_YAML`
+  - `X_OPS_AGENT_ANSIBLE_VARS_YAML`
+  - `X_SCOPE_HUB_ANSIBLE_VARS_YAML`
+  - `SINGLE_NODE_VPS_SSH_PRIVATE_KEY`
+- GitHub Variables:
+  - `SINGLE_NODE_VPS_SSH_HOST`
+  - `SINGLE_NODE_VPS_SSH_USER`
+  - `SINGLE_NODE_VPS_SSH_PORT`
+  - `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS`
+
+Manual run in GitHub UI:
+
+1. Open `Actions`
+2. Select `Single-Node Service Release`
+3. Click `Run workflow`
+4. Fill:
+   - `service`: one of `accounts`, `accounts-preview`, `rag-server`, `x-cloud-flow`, `x-ops-agent`, `x-scope-hub`
+   - `service_ref`: branch, tag, or commit SHA from the service repository
+   - `run_apply`: `false` for dry-run only, `true` to continue through the final apply stage
+
+Manual run with GitHub CLI:
+
+```bash
+gh workflow run single_node_service_release.yml \
+  -R cloud-neutral-toolkit/github-org-cloud-neutral-toolkit \
+  -f service=rag-server \
+  -f service_ref=main \
+  -f run_apply=false
+```
+
+Workflow stages:
+
+1. Build and push the image to `ghcr.io`
+2. Update the release DNS record
+3. Run `ansible-playbook -D -C`
+4. Optionally run `ansible-playbook -D`
+
 ## StackFlow GitHub Actions Secrets
 
 This repo includes `.github/workflows/stackflow.yaml` which plans/validates StackFlow configs stored in the `cloud-neutral-toolkit/gitops` repo (e.g. `gitops/StackFlow/svc-plus.yaml`).

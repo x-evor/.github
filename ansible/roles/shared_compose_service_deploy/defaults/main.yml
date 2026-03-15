@@ -1,5 +1,6 @@
 service_compose_service_slug: ""
 service_compose_image: REPLACE_IMAGE
+service_compose_image_archive: ""
 service_compose_git_short_commit: "{{ lookup('ansible.builtin.env', 'GIT_SHORT_COMMIT') | default('manual', true) }}"
 service_compose_zone: svc.plus
 service_compose_project_root: /opt/cloud-neutral
@@ -11,11 +12,15 @@ service_compose_caddy_reload_command: systemctl reload caddy
 service_compose_registry_server: ""
 service_compose_registry_username: ""
 service_compose_registry_password: ""
+service_compose_pull_images: true
 service_compose_env_common: {}
 service_compose_deploy_targets: []
 service_compose_command: []
 service_compose_entrypoint: []
 service_compose_volumes: []
+service_compose_dns:
+  - 1.1.1.1
+  - 8.8.8.8
 service_compose_extra_hosts: []
 service_compose_network_mode: ""
 service_compose_working_dir: ""
@@ -23,4 +28,3 @@ service_compose_user: ""
 service_compose_pull_policy: always
 service_compose_remove_previous_releases: true
 service_compose_remove_previous_caddy: true
-

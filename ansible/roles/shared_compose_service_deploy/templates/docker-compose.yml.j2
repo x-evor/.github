@@ -1,9 +1,9 @@
 services:
   app:
-    image: {{ (deploy_target.image | default(service_compose_image)) | to_json }}
+    image: {{ service_compose_release_image | to_json }}
     container_name: {{ service_compose_release_name }}
     restart: unless-stopped
-    pull_policy: {{ service_compose_pull_policy }}
+    pull_policy: {{ service_compose_release_pull_policy }}
     env_file:
       - ./env/app.env
     environment:
@@ -30,6 +30,13 @@ services:
 {% endif %}
 {% if service_compose_network_mode | length > 0 %}
     network_mode: {{ service_compose_network_mode | to_json }}
+{% endif %}
+{% set compose_dns = deploy_target.dns | default(service_compose_dns) %}
+{% if compose_dns | length > 0 %}
+    dns:
+{% for value in compose_dns %}
+      - {{ value | to_json }}
+{% endfor %}
 {% endif %}
 {% if service_compose_volumes | length > 0 %}
     volumes:

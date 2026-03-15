@@ -33,10 +33,6 @@
       "path": "../agent.svc.plus"
     },
     {
-      "name": "moltbot.svc.plus",
-      "path": "../openclawdbot.svc.plus"
-    },
-    {
       "name": "observability.svc.plus",
       "path": "../observability.svc.plus"
     },
@@ -56,7 +52,16 @@
       "path": "../x-scope-hub.svc.plus"
     },
     {
-      "path": "../openclawbot.svc.plus"
+      "path": "../openclaw.svc.plus"
+    },
+    {
+      "path": "../xstream.svc.plus"
+    },
+    {
+      "path": "../MemOS"
+    },
+    {
+      "path": "../openclaw-deploy-example"
     }
   ],
   "settings": {

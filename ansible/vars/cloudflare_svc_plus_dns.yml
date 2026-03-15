@@ -1,0 +1,34 @@
+cloudflare_dns_records:
+  # VPS A records
+  - type: A
+    name: vps-rag-server.svc.plus
+    content: 167.179.110.129
+    ttl: 1
+    proxied: false
+  - type: A
+    name: vps-accounts.svc.plus
+    content: 167.179.110.129
+    ttl: 1
+    proxied: false
+  - type: A
+    name: vps-preview-accounts.svc.plus
+    content: 167.179.110.129
+    ttl: 1
+    proxied: false
+
+  # CNAME records for services
+  - type: CNAME
+    name: rag-server.svc.plus
+    content: vps-rag-server.svc.plus
+    ttl: 1
+    proxied: false
+  - type: CNAME
+    name: accounts.svc.plus
+    content: vps-accounts.svc.plus
+    ttl: 1
+    proxied: false
+  - type: CNAME
+    name: preview-accounts.svc.plus
+    content: vps-preview-accounts.svc.plus
+    ttl: 1
+    proxied: false

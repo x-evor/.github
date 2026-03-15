@@ -1,0 +1,89 @@
+services:
+  caddy:
+    image: caddy:2
+    container_name: cn-toolkit-caddy
+    restart: unless-stopped
+    depends_on:
+      - apisix
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  apisix:
+    image: apache/apisix:3.9.1-debian
+    container_name: cn-toolkit-apisix
+    restart: unless-stopped
+    depends_on:
+      - accounts
+      - rag-server
+    ports:
+      - "9080:9080"
+      - "9180:9180"
+    environment:
+      APISIX_STAND_ALONE: "true"
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - |
+        cp /opt/apisix-bootstrap/config.yaml /usr/local/apisix/conf/config.yaml &&
+        cp /opt/apisix-bootstrap/apisix.yaml /usr/local/apisix/conf/apisix.yaml &&
+        exec /docker-entrypoint.sh docker-start
+    volumes:
+      - ./apisix/apisix.yaml:/opt/apisix-bootstrap/apisix.yaml:ro
+      - ./apisix/config.yaml:/opt/apisix-bootstrap/config.yaml:ro
+
+  stunnel-client:
+    image: dweomer/stunnel
+    container_name: cn-toolkit-stunnel-client
+    restart: unless-stopped
+    ports:
+      - "15432:15432"
+    environment:
+      - STUNNEL_CLIENT=yes
+      - STUNNEL_SERVICE=postgres-client
+      - STUNNEL_ACCEPT=15432
+      - STUNNEL_CONNECT=postgresql-aws.svc.plus:5443
+      - STUNNEL_VERIFY=2
+      - STUNNEL_VERIFY_CHAIN=yes
+
+  accounts:
+    image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/accounts.svc.plus/accounts-svc-plus:latest
+    container_name: cn-toolkit-accounts
+    restart: unless-stopped
+    env_file:
+      - ./env/accounts.env
+    environment:
+      PORT: "8080"
+      DB_HOST: "stunnel-client"
+      DB_PORT: "15432"
+    expose:
+      - "8080"
+    depends_on:
+      - stunnel-client
+    mem_limit: 512m
+    cpus: 0.70
+
+  rag-server:
+    image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/rag-server.svc.plus/rag-server-svc-plus:646e539f8f7388f3d08980a6ace505ea1fd9b5db
+    container_name: cn-toolkit-rag-server
+    restart: unless-stopped
+    env_file:
+      - ./env/rag-server.env
+    environment:
+      PORT: "8080"
+      DB_HOST: "stunnel-client"
+      DB_PORT: "15432"
+    expose:
+      - "8080"
+    depends_on:
+      - stunnel-client
+    mem_limit: 384m
+    cpus: 0.50
+
+volumes:
+  caddy_data:
+  caddy_config:

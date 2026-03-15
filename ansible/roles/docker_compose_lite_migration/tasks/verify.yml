@@ -1,0 +1,53 @@
+- name: Show compose status
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ docker_compose_lite_project_dir }}"
+    docker compose -p "{{ docker_compose_lite_project_name }}" ps
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - docker_compose_lite_apply | bool
+
+- name: Check APISIX data plane endpoint
+  ansible.builtin.uri:
+    url: http://127.0.0.1:9080/healthz
+    method: GET
+    headers:
+      Host: rag-server.svc.plus
+    status_code: [200]
+  when:
+    - not ansible_check_mode
+    - docker_compose_lite_apply | bool
+
+- name: Check Caddy HTTPS endpoint
+  ansible.builtin.shell: |
+    set -euo pipefail
+    curl -ksS --fail --resolve rag-server.svc.plus:443:127.0.0.1 https://rag-server.svc.plus/healthz >/dev/null
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - docker_compose_lite_apply | bool
+
+- name: Check stunnel port using bash built-in
+  ansible.builtin.shell: |
+    set -euo pipefail
+    # Use bash built-in /dev/tcp for portability (no nc required)
+    if timeout 2 bash -c 'cat < /dev/null > /dev/tcp/127.0.0.1/15432' 2>/dev/null; then
+      echo "stunnel-client port 15432 OK"
+      exit 0
+    else
+      echo "stunnel-client port 15432 FAILED"
+      exit 1
+    fi
+  args:
+    executable: /bin/bash
+  changed_when: false
+  when:
+    - not ansible_check_mode
+    - docker_compose_lite_apply | bool
+  register: stunnel_check
+  failed_when: stunnel_check.rc != 0

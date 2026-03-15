@@ -30,7 +30,7 @@ permissions:
   packages: write
 
 env:
-  CONTROL_REPO_DIR: github-org-cloud-neutral-toolkit
+  CONTROL_REPO_DIR: cloud-neutral-toolkit
   GHCR_REGISTRY: ghcr.io
   SERVICE_REPO_OWNER: ${{ github.repository_owner }}
   ACCOUNTS_ANSIBLE_VARS_YAML: ${{ secrets.ACCOUNTS_ANSIBLE_VARS_YAML }}

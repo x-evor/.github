@@ -1,0 +1,6 @@
+service: accounts
+track: prod
+enabled: true
+stable_domain: accounts.svc.plus
+release_prefix: accounts
+host_port: 18080

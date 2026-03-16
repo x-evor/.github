@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-import json
 import sys
 from pathlib import Path
 
+import json
+import yaml
 
-def load_json(path_str: str) -> dict:
+
+def load_yaml(path_str: str) -> dict:
     path = Path(path_str)
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise SystemExit(f"missing config file: {path}") from exc
+    except yaml.YAMLError as exc:
+        raise SystemExit(f"invalid yaml file: {path}: {exc}") from exc
+    return loaded or {}
 
 
 def first_server_alias(inventory_path: str) -> str:
@@ -32,7 +37,7 @@ def main() -> None:
         raise SystemExit(
             "usage: release-service-metadata.py "
             "<service> <track> <repo-owner> <control-repo-dir> <inventory-path> "
-            "<workspace-path> <services-path> <repositories-path>"
+            "<workspace-path> <services-common-path> <repositories-path>"
         )
 
     service_name = sys.argv[1]
@@ -41,12 +46,12 @@ def main() -> None:
     control_repo_dir = sys.argv[4]
     inventory_path = sys.argv[5]
     workspace_path = sys.argv[6]
-    services_path = sys.argv[7]
+    services_common_path = sys.argv[7]
     repositories_path = sys.argv[8]
 
-    workspace = load_json(workspace_path)
-    services_catalog = load_json(services_path)
-    repository_catalog = load_json(repositories_path)
+    workspace = json.loads(Path(workspace_path).read_text(encoding="utf-8"))
+    services_catalog = load_yaml(services_common_path)
+    repository_catalog = json.loads(Path(repositories_path).read_text(encoding="utf-8"))
 
     workspace_repo_names = {
         folder.get("name") or Path(folder["path"]).name
@@ -58,9 +63,13 @@ def main() -> None:
     if not service:
         raise SystemExit(f"unsupported service: {service_name}")
 
-    tracks = service.get("tracks", {})
-    track_conf = tracks.get(track)
-    if not track_conf or not track_conf.get("enabled", False):
+    track_catalog_path = Path(services_common_path).parent / f"{track}-{service_name}.yaml"
+    track_conf = load_yaml(str(track_catalog_path))
+    if track_conf.get("service") != service_name:
+        raise SystemExit(f"track catalog {track_catalog_path} does not match service '{service_name}'")
+    if track_conf.get("track") != track:
+        raise SystemExit(f"track catalog {track_catalog_path} does not match track '{track}'")
+    if not track_conf.get("enabled", False):
         raise SystemExit(f"unsupported or disabled track '{track}' for service '{service_name}'")
 
     repo_name = service["repo_name"]

@@ -1,0 +1,6 @@
+service: x-scope-hub
+track: preview
+enabled: true
+stable_domain: x-scope-hub-preview.svc.plus
+release_prefix: x-scope-hub-preview
+host_port: 18185

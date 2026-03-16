@@ -1,0 +1,6 @@
+service: accounts
+track: preview
+enabled: true
+stable_domain: accounts-preview.svc.plus
+release_prefix: accounts-preview
+host_port: 18081

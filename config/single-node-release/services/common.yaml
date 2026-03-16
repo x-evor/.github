@@ -1,0 +1,76 @@
+version: 1
+domain: svc.plus
+default_registry: ghcr.io
+default_repo_owner: cloud-neutral-toolkit
+release_domain_format: "<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>"
+track_policy:
+  prod:
+    trigger: push to release/*
+  preview:
+    trigger: pull_request targeting main
+services:
+  accounts:
+    repo_name: accounts.svc.plus
+    repo_category: api
+    repo_url: https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git
+    playbook_path: ansible/playbooks/deploy_accounts_compose.yml
+    public_vars_path: ansible/vars/accounts.release.public.yml
+    secret_env_map:
+      INTERNAL_SERVICE_TOKEN: INTERNAL_SERVICE_TOKEN
+      POSTGRES_PASSWORD: ACCOUNTS_DB_PASSWORD
+      DB_PASSWORD: ACCOUNTS_DB_PASSWORD
+      SMTP_PASSWORD: ACCOUNTS_SMTP_PASSWORD
+    docker:
+      dockerfile_path: Dockerfile
+      build_context: .
+      image_name: accounts
+      container_port: 8080
+    healthcheck_path: /healthz
+  rag-server:
+    repo_name: rag-server.svc.plus
+    repo_category: api
+    repo_url: https://github.com/cloud-neutral-toolkit/rag-server.svc.plus.git
+    ansible_vars_secret_name: RAG_SERVER_ANSIBLE_VARS_YAML
+    playbook_path: ansible/playbooks/deploy_rag_server_compose.yml
+    docker:
+      dockerfile_path: Dockerfile
+      build_context: .
+      image_name: rag-server
+      container_port: 8080
+    healthcheck_path: /healthz
+  x-cloud-flow:
+    repo_name: x-cloud-flow.svc.plus
+    repo_category: api
+    repo_url: https://github.com/cloud-neutral-toolkit/x-cloud-flow.svc.plus.git
+    ansible_vars_secret_name: X_CLOUD_FLOW_ANSIBLE_VARS_YAML
+    playbook_path: ansible/playbooks/deploy_x_cloud_flow_compose.yml
+    docker:
+      dockerfile_path: Dockerfile
+      build_context: .
+      image_name: x-cloud-flow
+      container_port: 8080
+    healthcheck_path: /healthz
+  x-ops-agent:
+    repo_name: x-ops-agent.svc.plus
+    repo_category: api
+    repo_url: https://github.com/cloud-neutral-toolkit/x-ops-agent.svc.plus.git
+    ansible_vars_secret_name: X_OPS_AGENT_ANSIBLE_VARS_YAML
+    playbook_path: ansible/playbooks/deploy_x_ops_agent_compose.yml
+    docker:
+      dockerfile_path: Dockerfile
+      build_context: .
+      image_name: x-ops-agent
+      container_port: 8080
+    healthcheck_path: /healthz
+  x-scope-hub:
+    repo_name: x-scope-hub.svc.plus
+    repo_category: api
+    repo_url: https://github.com/cloud-neutral-toolkit/x-scope-hub.svc.plus.git
+    ansible_vars_secret_name: X_SCOPE_HUB_ANSIBLE_VARS_YAML
+    playbook_path: ansible/playbooks/deploy_x_scope_hub_compose.yml
+    docker:
+      dockerfile_path: mcp-server/Dockerfile
+      build_context: .
+      image_name: x-scope-hub
+      container_port: 8080
+    healthcheck_path: /manifest

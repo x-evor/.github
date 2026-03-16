@@ -65,7 +65,9 @@ Reference docs:
 - Workflow details: [`docs/operations-governance/service-release-control-plane-workflow.md`](docs/operations-governance/service-release-control-plane-workflow.md)
 - Local OrbStack workflow: [`docs/operations-governance/orbstack-local-build-and-tar-deploy.md`](docs/operations-governance/orbstack-local-build-and-tar-deploy.md)
 - Repo catalog: [`config/single-node-release/repositories.json`](config/single-node-release/repositories.json)
-- Service catalog: [`config/single-node-release/services.json`](config/single-node-release/services.json)
+- Service catalog: [`config/single-node-release/services/`](config/single-node-release/services)
+  - Common service config: `config/single-node-release/services/common.yaml`
+  - Track/service overrides: `config/single-node-release/services/<track>-<service>.yaml`
 
 Control-plane boundary:
 
@@ -149,7 +151,7 @@ Core release-enabled services:
 
 Workflow input model:
 
-- `service`: logical service key from `config/single-node-release/services.json`
+- `service`: logical service key from `config/single-node-release/services/common.yaml`
 - `track`: `prod` or `preview`
 - `service_ref`: branch, tag, or commit SHA in the service repo
 - `run_apply`: `false` for dry-run only, `true` for final apply

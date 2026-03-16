@@ -1,0 +1,6 @@
+service: x-cloud-flow
+track: preview
+enabled: true
+stable_domain: x-cloud-flow-preview.svc.plus
+release_prefix: x-cloud-flow-preview
+host_port: 18183

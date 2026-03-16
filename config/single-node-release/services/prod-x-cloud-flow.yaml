@@ -1,0 +1,6 @@
+service: x-cloud-flow
+track: prod
+enabled: true
+stable_domain: x-cloud-flow.svc.plus
+release_prefix: x-cloud-flow
+host_port: 18083

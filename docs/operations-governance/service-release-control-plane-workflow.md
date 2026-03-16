@@ -45,16 +45,22 @@ The workflow resolves metadata from:
 
 - `console.svc.plus.code-workspace`
 - `config/single-node-release/repositories.json`
-- `config/single-node-release/services.json`
+- `config/single-node-release/services/common.yaml`
+- `config/single-node-release/services/<track>-<service>.yaml`
 
 That metadata replaces hardcoded service definitions in the workflow logic.
+
+Catalog split:
+
+- `common.yaml` stores shared service metadata such as repo, playbook, Docker, and secret mapping
+- `<track>-<service>.yaml` stores track-specific release settings such as stable domain, release prefix, and host port
 
 ## Inputs
 
 ### `workflow_dispatch`
 
 - `service`
-  - Logical service key from `config/single-node-release/services.json`
+  - Logical service key from `config/single-node-release/services/common.yaml`
   - Example: `accounts`
 - `track`
   - One of: `prod`, `preview`
@@ -181,7 +187,7 @@ These checked-in values are not GitHub Variables:
 - host ports
 - Dockerfile/build paths
 
-Those live in `config/single-node-release/*.json`.
+Those live in `config/single-node-release/repositories.json` and `config/single-node-release/services/*.yaml`.
 
 For `accounts.svc.plus`, non-sensitive release defaults are checked in at `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. GitHub Secrets only carry `INTERNAL_SERVICE_TOKEN`, the shared database password, and the SMTP password.
 

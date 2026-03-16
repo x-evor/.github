@@ -34,7 +34,7 @@ The first version intentionally uses four checked-in control-plane sources:
    - Source for the list of related repositories
 2. `config/single-node-release/repositories.json`
    - Repository classification and release eligibility
-3. `config/single-node-release/services.json`
+3. `config/single-node-release/services/common.yaml` and `config/single-node-release/services/<track>-<service>.yaml`
    - Service release catalog, tracks, domains, ports, Dockerfile paths, and secret names
 4. `.github/workflows/service_release_control_plane.yml`
    - The control-plane workflow entrypoint for manual and reusable execution
@@ -173,11 +173,11 @@ Use repository defaults, workflow `env`, GitHub Variables, or checked-in catalog
 | `SINGLE_NODE_VPS_SSH_USER` | GitHub Variable | SSH user |
 | `SINGLE_NODE_VPS_SSH_PORT` | GitHub Variable | SSH port |
 | `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS` | GitHub Variable | strict host verification |
-| `domain=svc.plus` | `services.json` | DNS suffix |
-| `repo_url` | `repositories.json` and `services.json` | source repo URL |
-| `stable_domain` | `services.json` | fixed prod/preview entry domain |
-| `release_prefix` | `services.json` | immutable release domain prefix |
-| `host_port` | `services.json` | fixed track port on the VPS |
+| `domain=svc.plus` | `services/common.yaml` | DNS suffix |
+| `repo_url` | `repositories.json` and `services/common.yaml` | source repo URL |
+| `stable_domain` | `services/<track>-<service>.yaml` | fixed prod/preview entry domain |
+| `release_prefix` | `services/<track>-<service>.yaml` | immutable release domain prefix |
+| `host_port` | `services/<track>-<service>.yaml` | fixed track port on the VPS |
 
 ## CI And CD Split
 

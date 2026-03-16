@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       service:
-        description: "Logical service defined in config/single-node-release/services.json"
+        description: "Logical service defined in config/single-node-release/services/common.yaml"
         required: true
         type: string
       track:
@@ -23,7 +23,7 @@ on:
   workflow_dispatch:
     inputs:
       service:
-        description: "Logical service defined in config/single-node-release/services.json"
+        description: "Logical service defined in config/single-node-release/services/common.yaml"
         required: true
         default: "accounts"
         type: string
@@ -111,6 +111,18 @@ jobs:
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           submodules: recursive
 
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install metadata dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install "PyYAML==6.0.3"
+
       - name: Resolve service metadata
         id: meta
         shell: bash
@@ -123,7 +135,7 @@ jobs:
             "${{ env.CONTROL_REPO_DIR }}" \
             "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini" \
             "${{ env.CONTROL_REPO_DIR }}/console.svc.plus.code-workspace" \
-            "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/services.json" \
+            "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/services/common.yaml" \
             "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/repositories.json")"
           while IFS='=' read -r key value; do
             echo "${key}=${value}" >> "$GITHUB_OUTPUT"

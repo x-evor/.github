@@ -1,0 +1,6 @@
+service: rag-server
+track: preview
+enabled: true
+stable_domain: rag-server-preview.svc.plus
+release_prefix: rag-server-preview
+host_port: 18182

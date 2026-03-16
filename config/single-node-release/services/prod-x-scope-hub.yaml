@@ -1,0 +1,6 @@
+service: x-scope-hub
+track: prod
+enabled: true
+stable_domain: x-scope-hub.svc.plus
+release_prefix: x-scope-hub
+host_port: 18085

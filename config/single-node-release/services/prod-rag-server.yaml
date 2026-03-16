@@ -1,0 +1,6 @@
+service: rag-server
+track: prod
+enabled: true
+stable_domain: rag-server.svc.plus
+release_prefix: rag-server
+host_port: 18082

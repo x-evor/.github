@@ -158,28 +158,21 @@ jobs:
 
       - name: Install metadata dependencies
         shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install "PyYAML==6.0.3"
+        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" metadata
 
       - name: Resolve service metadata
         id: meta
         shell: bash
-        run: |
-          set -euo pipefail
-          metadata="$("${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/release-service-metadata.sh" \
-            "${{ inputs.service }}" \
-            "${{ inputs.track }}" \
-            "${{ env.SERVICE_REPO_OWNER }}" \
-            "${{ env.CONTROL_REPO_DIR }}" \
-            "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini" \
-            "${{ env.CONTROL_REPO_DIR }}/console.svc.plus.code-workspace" \
-            "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/services/common.yaml" \
-            "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/repositories.json")"
-          while IFS='=' read -r key value; do
-            echo "${key}=${value}" >> "$GITHUB_OUTPUT"
-          done <<< "${metadata}"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/resolve-service-metadata-output.sh"
+          "${{ inputs.service }}"
+          "${{ inputs.track }}"
+          "${{ env.SERVICE_REPO_OWNER }}"
+          "${{ env.CONTROL_REPO_DIR }}"
+          "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini"
+          "${{ env.CONTROL_REPO_DIR }}/console.svc.plus.code-workspace"
+          "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/services/common.yaml"
+          "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/repositories.json"
 
       - name: Checkout Service Repo
         if: ${{ steps.meta.outputs.service_source_kind != 'git-submodule' }}
@@ -203,36 +196,27 @@ jobs:
       - name: Build And Push Image
         id: image
         shell: bash
-        run: |
-          set -euo pipefail
-
-          short_sha="$(git -C "${{ steps.meta.outputs.service_checkout_path }}" rev-parse --short HEAD)"
-          image_ref="${{ env.GHCR_REGISTRY }}/${{ env.SERVICE_REPO_OWNER }}/${{ steps.meta.outputs.image_name }}:${short_sha}"
-          release_domain="${{ steps.meta.outputs.deploy_subdomain_prefix }}-${{ steps.meta.outputs.deploy_hostname }}-${short_sha}.${{ steps.meta.outputs.domain }}"
-
-          echo "git_short_commit=${short_sha}" >> "$GITHUB_OUTPUT"
-          echo "image_ref=${image_ref}" >> "$GITHUB_OUTPUT"
-          echo "release_domain=${release_domain}" >> "$GITHUB_OUTPUT"
-
-          docker buildx build \
-            --platform linux/amd64 \
-            --file "${{ steps.meta.outputs.service_checkout_path }}/${{ steps.meta.outputs.dockerfile_path }}" \
-            --tag "${image_ref}" \
-            --push \
-            "${{ steps.meta.outputs.service_checkout_path }}/${{ steps.meta.outputs.build_context }}"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/build-and-push-image.sh"
+          "${{ steps.meta.outputs.service_checkout_path }}"
+          "${{ steps.meta.outputs.dockerfile_path }}"
+          "${{ steps.meta.outputs.build_context }}"
+          "${{ steps.meta.outputs.image_name }}"
+          "${{ steps.meta.outputs.deploy_subdomain_prefix }}"
+          "${{ steps.meta.outputs.deploy_hostname }}"
+          "${{ steps.meta.outputs.domain }}"
 
       - name: Summarize Stage 1
         shell: bash
-        run: |
-          {
-            echo "## Stage 1"
-            echo "- service: \`${{ inputs.service }}\`"
-            echo "- track: \`${{ inputs.track }}\`"
-            echo "- repo: \`${{ steps.meta.outputs.service_repository }}\`"
-            echo "- image: \`${{ steps.image.outputs.image_ref }}\`"
-            echo "- release domain: \`${{ steps.image.outputs.release_domain }}\`"
-            echo "- stable domain: \`${{ steps.meta.outputs.stable_domain }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          stage1
+          "${{ inputs.service }}"
+          "${{ inputs.track }}"
+          "${{ steps.meta.outputs.service_repository }}"
+          "${{ steps.image.outputs.image_ref }}"
+          "${{ steps.image.outputs.release_domain }}"
+          "${{ steps.meta.outputs.stable_domain }}"
 
   stage-2-update-release-dns:
     name: "2. Update Release DNS"
@@ -253,31 +237,25 @@ jobs:
 
       - name: Install Ansible
         shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install "ansible-core==2.18.3"
+        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" ansible
 
       - name: Update DNS For Release Domain
         shell: bash
         working-directory: ${{ env.CONTROL_REPO_DIR }}
-        run: |
-          set -euo pipefail
-          export RELEASE_DOMAIN="${{ needs.stage-1-build-image.outputs.release_domain }}"
-          export DEPLOY_SERVER_ALIAS="${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
-          dns_payload="$(python -c 'import json, os; print(json.dumps({"cloudflare_dns_records":[{"type":"CNAME","name":os.environ["RELEASE_DOMAIN"],"content":os.environ["DEPLOY_SERVER_ALIAS"],"ttl":1,"proxied":False}]}))')"
-
-          ansible-playbook ansible/playbooks/update_cloudflare_dns.yml -e "${dns_payload}"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/update-release-dns.sh"
+          "${{ env.CONTROL_REPO_DIR }}"
+          "${{ needs.stage-1-build-image.outputs.release_domain }}"
+          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
       - name: Summarize Stage 2
         shell: bash
-        run: |
-          {
-            echo "## Stage 2"
-            echo "- track: \`${{ needs.stage-1-build-image.outputs.track }}\`"
-            echo "- updated release DNS: \`${{ needs.stage-1-build-image.outputs.release_domain }}\`"
-            echo "- cname target: \`${{ needs.stage-1-build-image.outputs.deploy_server_alias }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          stage2
+          "${{ needs.stage-1-build-image.outputs.track }}"
+          "${{ needs.stage-1-build-image.outputs.release_domain }}"
+          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
   stage-3-ansible-dry-run:
     name: "3. Ansible Dry Run"
@@ -310,18 +288,15 @@ jobs:
 
       - name: Install Ansible
         shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install "ansible-core==2.18.3"
+        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" ansible
 
-      - name: Prepare SSH access
+      - name: Prepare runner SSH and inventory
         id: ssh
         shell: bash
-        run: |
-          set -euo pipefail
-          "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-ssh.sh" \
-            "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-runtime.sh"
+          "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini.tmpl"
+          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
       - name: Materialize vars files
         id: vars
@@ -336,52 +311,30 @@ jobs:
           SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
           SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
           SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
-        run: |
-          set -euo pipefail
-
-          secret_vars_file="$(mktemp)"
-          runtime_vars_file="$(mktemp)"
-          python "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.py" \
-            "${secret_vars_file}" \
-            "${runtime_vars_file}"
-
-          echo "secret_vars_file=${secret_vars_file}" >> "$GITHUB_OUTPUT"
-          echo "runtime_vars_file=${runtime_vars_file}" >> "$GITHUB_OUTPUT"
+        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.sh"
 
       - name: Run ansible dry run with diff
         shell: bash
         working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
         env:
-          ANSIBLE_HOST_KEY_CHECKING: "True"
-        run: |
-          set -euo pipefail
-          export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
-          args=(
-            ansible-playbook
-            -i "${{ steps.ssh.outputs.inventory_file }}"
-            -D
-            -C
-            "${{ needs.stage-1-build-image.outputs.playbook_path }}"
-          )
-          if [[ -n "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}" ]]; then
-            args+=(-e "@${{ needs.stage-1-build-image.outputs.service_public_vars_path }}")
-          fi
-          args+=(
-            -e "@${{ steps.vars.outputs.secret_vars_file }}"
-            -e "@${{ steps.vars.outputs.runtime_vars_file }}"
-          )
-          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' "${args[@]}"
+          GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/run-service-ansible.sh"
+          dry-run
+          "${{ steps.ssh.outputs.inventory_file }}"
+          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
+          "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}"
+          "${{ steps.vars.outputs.secret_vars_file }}"
+          "${{ steps.vars.outputs.runtime_vars_file }}"
 
       - name: Summarize Stage 3
         shell: bash
-        run: |
-          {
-            echo "## Stage 3"
-            echo "- service: \`${{ needs.stage-1-build-image.outputs.service_name }}\`"
-            echo "- track: \`${{ needs.stage-1-build-image.outputs.track }}\`"
-            echo "- playbook: \`${{ needs.stage-1-build-image.outputs.playbook_path }}\`"
-            echo "- mode: \`ansible-playbook -D -C\`"
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          stage3
+          "${{ needs.stage-1-build-image.outputs.service_name }}"
+          "${{ needs.stage-1-build-image.outputs.track }}"
+          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
 
   stage-4-ansible-apply:
     name: "4. Ansible Apply"
@@ -418,18 +371,15 @@ jobs:
 
       - name: Install Ansible
         shell: bash
-        run: |
-          set -euo pipefail
-          python -m pip install --upgrade pip
-          python -m pip install "ansible-core==2.18.3"
+        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" ansible
 
-      - name: Prepare SSH access
+      - name: Prepare runner SSH and inventory
         id: ssh
         shell: bash
-        run: |
-          set -euo pipefail
-          "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-ssh.sh" \
-            "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-runtime.sh"
+          "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini.tmpl"
+          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
       - name: Materialize vars files
         id: vars
@@ -444,52 +394,29 @@ jobs:
           SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
           SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
           SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
-        run: |
-          set -euo pipefail
-
-          secret_vars_file="$(mktemp)"
-          runtime_vars_file="$(mktemp)"
-          python "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.py" \
-            "${secret_vars_file}" \
-            "${runtime_vars_file}"
-
-          echo "secret_vars_file=${secret_vars_file}" >> "$GITHUB_OUTPUT"
-          echo "runtime_vars_file=${runtime_vars_file}" >> "$GITHUB_OUTPUT"
+        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.sh"
 
       - name: Run ansible apply with diff
         shell: bash
         working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
         env:
-          ANSIBLE_HOST_KEY_CHECKING: "True"
-        run: |
-          set -euo pipefail
-          export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
-          args=(
-            ansible-playbook
-            -i "${{ steps.ssh.outputs.inventory_file }}"
-            -D
-            "${{ needs.stage-1-build-image.outputs.playbook_path }}"
-          )
-          if [[ -n "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}" ]]; then
-            args+=(-e "@${{ needs.stage-1-build-image.outputs.service_public_vars_path }}")
-          fi
-          args+=(
-            -e "@${{ steps.vars.outputs.secret_vars_file }}"
-            -e "@${{ steps.vars.outputs.runtime_vars_file }}"
-          )
-          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' "${args[@]}"
+          GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/run-service-ansible.sh"
+          apply
+          "${{ steps.ssh.outputs.inventory_file }}"
+          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
+          "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}"
+          "${{ steps.vars.outputs.secret_vars_file }}"
+          "${{ steps.vars.outputs.runtime_vars_file }}"
 
       - name: Summarize Stage 4
         shell: bash
-        run: |
-          {
-            echo "## Stage 4"
-            echo "- service: \`${{ needs.stage-1-build-image.outputs.service_name }}\`"
-            echo "- track: \`${{ needs.stage-1-build-image.outputs.track }}\`"
-            echo "- playbook: \`${{ needs.stage-1-build-image.outputs.playbook_path }}\`"
-            echo "- mode: \`ansible-playbook -D\`"
-            echo "- release domain: \`${{ needs.stage-1-build-image.outputs.release_domain }}\`"
-            echo "- stable domain: \`${{ needs.stage-1-build-image.outputs.stable_domain }}\`"
-            echo ""
-            echo "If the stable domain already points to \`${{ needs.stage-1-build-image.outputs.deploy_server_alias }}\`, no further DNS switch is required."
-          } >> "$GITHUB_STEP_SUMMARY"
+        run: >
+          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          stage4
+          "${{ needs.stage-1-build-image.outputs.service_name }}"
+          "${{ needs.stage-1-build-image.outputs.track }}"
+          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
+          "${{ needs.stage-1-build-image.outputs.release_domain }}"
+          "${{ needs.stage-1-build-image.outputs.stable_domain }}"

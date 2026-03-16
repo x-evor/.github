@@ -162,7 +162,7 @@ Release behavior:
 
 - CI builds and pushes the image to `ghcr.io`
 - CI creates the immutable release DNS record
-- CD runs the sub-repo playbook against the single VPS
+- CD writes the deploy key to the runner, renders a temporary inventory from `ansible/inventory.ini.tmpl`, and runs the sub-repo playbook against the single VPS
 - Stable domains stay fixed and should already point to the deploy host
 - Release domains are unique per deployment:
   - `<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>`

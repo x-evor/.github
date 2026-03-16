@@ -127,7 +127,8 @@ Stable domains should already point to the deploy host and should not be switche
 
 ### Stage 3. Ansible Dry Run
 
-- prepare SSH credentials on the runner
+- write the deploy private key to the runner at `~/.ssh/id_rsa`
+- render a temporary runtime inventory from `ansible/inventory.ini.tmpl`
 - materialize:
   - service secret vars from GitHub Secrets
   - runtime vars from the control-plane catalog

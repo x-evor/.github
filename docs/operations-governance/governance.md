@@ -70,3 +70,10 @@ Use the default template in `.github/pull_request_template.md`.
 
 - This governance file is global default.
 - Repo-local docs can extend it but must not conflict on safety gates.
+
+## 8) GitHub Actions YAML Rule
+
+- Workflow YAML must stay orchestration-only.
+- Non-trivial step logic must move to checked-in scripts and templates.
+- See `docs/operations-governance/github-actions-yaml-governance.md`
+- Use `skills/github-actions-yaml-governance/SKILL.md` when designing or refactoring control-plane workflows.

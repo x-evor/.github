@@ -9,10 +9,11 @@ fi
 server_alias="$1"
 
 : "${SINGLE_NODE_VPS_SSH_PRIVATE_KEY:?SINGLE_NODE_VPS_SSH_PRIVATE_KEY is required}"
-: "${SINGLE_NODE_VPS_SSH_HOST:?SINGLE_NODE_VPS_SSH_HOST is required}"
-: "${SINGLE_NODE_VPS_SSH_USER:?SINGLE_NODE_VPS_SSH_USER is required}"
-: "${SINGLE_NODE_VPS_SSH_PORT:?SINGLE_NODE_VPS_SSH_PORT is required}"
-: "${SINGLE_NODE_VPS_SSH_KNOWN_HOSTS:?SINGLE_NODE_VPS_SSH_KNOWN_HOSTS is required}"
+
+ssh_host="${SINGLE_NODE_VPS_SSH_HOST:-${server_alias}}"
+ssh_user="${SINGLE_NODE_VPS_SSH_USER:-root}"
+ssh_port="${SINGLE_NODE_VPS_SSH_PORT:-22}"
+ssh_known_hosts="${SINGLE_NODE_VPS_SSH_KNOWN_HOSTS:-}"
 
 ssh_dir="${HOME}/.ssh"
 private_key_file="${ssh_dir}/id_rsa"
@@ -25,16 +26,20 @@ chmod 700 "${ssh_dir}"
 printf '%s\n' "${SINGLE_NODE_VPS_SSH_PRIVATE_KEY}" > "${private_key_file}"
 chmod 600 "${private_key_file}"
 
-printf '%s\n' "${SINGLE_NODE_VPS_SSH_KNOWN_HOSTS}" > "${known_hosts_file}"
+if [[ -n "${ssh_known_hosts}" ]]; then
+  printf '%s\n' "${ssh_known_hosts}" > "${known_hosts_file}"
+else
+  ssh-keyscan -p "${ssh_port}" -H "${ssh_host}" > "${known_hosts_file}"
+fi
 chmod 644 "${known_hosts_file}"
 
 cat > "${inventory_file}" <<EOF
 [server]
-${server_alias} ansible_host=${SINGLE_NODE_VPS_SSH_HOST} ansible_user=${SINGLE_NODE_VPS_SSH_USER}
+${server_alias} ansible_host=${ssh_host} ansible_user=${ssh_user}
 
 [all:vars]
-ansible_port=${SINGLE_NODE_VPS_SSH_PORT}
-ansible_user=${SINGLE_NODE_VPS_SSH_USER}
+ansible_port=${ssh_port}
+ansible_user=${ssh_user}
 ansible_ssh_private_key_file=${private_key_file}
 ansible_host_key_checking=True
 ansible_ssh_common_args=-o UserKnownHostsFile=${known_hosts_file}

@@ -64,6 +64,8 @@ That metadata replaces hardcoded service definitions in the workflow logic.
   - `false`: stop after stage 3
   - `true`: continue to stage 4
 
+For repositories declared with `source_kind=git-submodule`, the actual source revision comes from the submodule pointer committed in the control repo. In that mode, `service_ref` is informational and is only used for `remote-checkout` services.
+
 CLI example:
 
 ```bash
@@ -93,7 +95,7 @@ The caller repo should pass:
 ### Stage 1. Build And Push Image
 
 - resolve repo/service metadata from workspace + catalogs
-- checkout the target service repo
+- checkout the target service repo or initialize the matching submodule
 - build the service image
 - push to `ghcr.io`
 - compute the immutable release domain
@@ -149,7 +151,9 @@ Sensitive values belong in GitHub Secrets, ideally at org scope if multiple repo
 | `CLOUDFLARE_DNS_API_TOKEN` | immutable release DNS management |
 | `WORKSPACE_REPO_TOKEN` | checkout sibling private repos when needed |
 | `SINGLE_NODE_VPS_SSH_PRIVATE_KEY` | SSH key for Ansible CD stages |
-| `ACCOUNTS_ANSIBLE_VARS_YAML` | `accounts` secret runtime vars |
+| `ACCOUNTS_INTERNAL_SERVICE_TOKEN` | `accounts` internal auth token |
+| `ACCOUNTS_DB_PASSWORD` | `accounts` database password, shared for `POSTGRES_PASSWORD` and `DB_PASSWORD` |
+| `ACCOUNTS_SMTP_PASSWORD` | `accounts` SMTP password |
 | `RAG_SERVER_ANSIBLE_VARS_YAML` | `rag-server` secret runtime vars |
 | `X_CLOUD_FLOW_ANSIBLE_VARS_YAML` | `x-cloud-flow` secret runtime vars |
 | `X_OPS_AGENT_ANSIBLE_VARS_YAML` | `x-ops-agent` secret runtime vars |
@@ -178,6 +182,8 @@ These checked-in values are not GitHub Variables:
 - Dockerfile/build paths
 
 Those live in `config/single-node-release/*.json`.
+
+For `accounts.svc.plus`, non-sensitive release defaults are checked in at `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. GitHub Secrets only carry the internal token, database password, and SMTP password.
 
 ## Example Service-Repo Wrapper
 

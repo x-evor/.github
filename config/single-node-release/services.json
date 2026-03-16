@@ -17,8 +17,14 @@
       "repo_name": "accounts.svc.plus",
       "repo_category": "api",
       "repo_url": "https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git",
-      "ansible_vars_secret_name": "ACCOUNTS_ANSIBLE_VARS_YAML",
       "playbook_path": "ansible/playbooks/deploy_accounts_compose.yml",
+      "public_vars_path": "ansible/vars/accounts.release.public.yml",
+      "secret_env_map": {
+        "INTERNAL_SERVICE_TOKEN": "ACCOUNTS_INTERNAL_SERVICE_TOKEN",
+        "POSTGRES_PASSWORD": "ACCOUNTS_DB_PASSWORD",
+        "DB_PASSWORD": "ACCOUNTS_DB_PASSWORD",
+        "SMTP_PASSWORD": "ACCOUNTS_SMTP_PASSWORD"
+      },
       "docker": {
         "dockerfile_path": "Dockerfile",
         "build_context": ".",

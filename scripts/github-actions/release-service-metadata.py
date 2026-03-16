@@ -28,20 +28,21 @@ def first_server_alias(inventory_path: str) -> str:
 
 
 def main() -> None:
-    if len(sys.argv) != 8:
+    if len(sys.argv) != 9:
         raise SystemExit(
             "usage: release-service-metadata.py "
-            "<service> <track> <repo-owner> <inventory-path> "
+            "<service> <track> <repo-owner> <control-repo-dir> <inventory-path> "
             "<workspace-path> <services-path> <repositories-path>"
         )
 
     service_name = sys.argv[1]
     track = sys.argv[2]
     repo_owner = sys.argv[3]
-    inventory_path = sys.argv[4]
-    workspace_path = sys.argv[5]
-    services_path = sys.argv[6]
-    repositories_path = sys.argv[7]
+    control_repo_dir = sys.argv[4]
+    inventory_path = sys.argv[5]
+    workspace_path = sys.argv[6]
+    services_path = sys.argv[7]
+    repositories_path = sys.argv[8]
 
     workspace = load_json(workspace_path)
     services_catalog = load_json(services_path)
@@ -74,6 +75,24 @@ def main() -> None:
     if not effective_repo_owner:
         raise SystemExit("repo owner is required")
 
+    source_kind = repo_entry.get("source_kind", "remote-checkout")
+    workspace_repo_path = repo_entry["workspace_path"]
+    if source_kind == "git-submodule":
+        service_checkout_path = str(Path(control_repo_dir) / workspace_repo_path)
+    elif source_kind == "remote-checkout":
+        service_checkout_path = repo_name
+    else:
+        raise SystemExit(f"unsupported source_kind '{source_kind}' for repository '{repo_name}'")
+
+    public_vars_path = service.get("public_vars_path", "")
+    if public_vars_path:
+        if source_kind == "git-submodule":
+            resolved_public_vars_path = str(Path(control_repo_dir) / workspace_repo_path / public_vars_path)
+        else:
+            resolved_public_vars_path = str(Path(service_checkout_path) / public_vars_path)
+    else:
+        resolved_public_vars_path = ""
+
     server_alias = first_server_alias(inventory_path)
     deploy_hostname = server_alias.split(".", 1)[0]
     domain = services_catalog["domain"]
@@ -85,12 +104,17 @@ def main() -> None:
         "repo_url": service["repo_url"],
         "service_name": service_name,
         "track": track,
+        "service_source_kind": source_kind,
         "service_repository": f"{effective_repo_owner}/{repo_name}",
-        "service_checkout_path": repo_name,
+        "service_workspace_path": workspace_repo_path,
+        "service_checkout_path": service_checkout_path,
         "playbook_path": service["playbook_path"],
         "dockerfile_path": service["docker"]["dockerfile_path"],
         "build_context": service["docker"]["build_context"],
         "image_name": service["docker"]["image_name"],
+        "service_public_vars_path": resolved_public_vars_path,
+        "ansible_vars_secret_name": service.get("ansible_vars_secret_name", ""),
+        "secret_env_map_json": json.dumps(service.get("secret_env_map", {}), separators=(",", ":")),
         "deploy_subdomain_prefix": track_conf["release_prefix"],
         "stable_domain": track_conf["stable_domain"],
         "host_port": str(track_conf["host_port"]),
@@ -99,7 +123,6 @@ def main() -> None:
         "deploy_server_alias": server_alias,
         "deploy_hostname": deploy_hostname,
         "domain": domain,
-        "ansible_vars_secret_name": service["ansible_vars_secret_name"],
     }
 
     for key, value in output.items():

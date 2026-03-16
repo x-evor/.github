@@ -15,6 +15,8 @@
 - [ ] PR diff contains no real secret material (token/password/private key)
 - [ ] Control-plane release metadata is updated when repo/domain/port/catalog entries change
 - [ ] Required GitHub Actions secrets and variables exist for the single-node release workflow
+- [ ] Service-specific secrets are split correctly: public defaults checked in, secret-only fields in GitHub Secrets
+- [ ] For `git-submodule` services, the submodule pointer in the control repo is updated and pushed before dispatching the release workflow
 - [ ] Stable domains already point to the single deploy host before promoting a new revision
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos

@@ -59,7 +59,9 @@ env:
   SINGLE_NODE_VPS_SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER }}
   SINGLE_NODE_VPS_SSH_PORT: ${{ vars.SINGLE_NODE_VPS_SSH_PORT }}
   SINGLE_NODE_VPS_SSH_KNOWN_HOSTS: ${{ vars.SINGLE_NODE_VPS_SSH_KNOWN_HOSTS }}
-  ACCOUNTS_ANSIBLE_VARS_YAML: ${{ secrets.ACCOUNTS_ANSIBLE_VARS_YAML }}
+  ACCOUNTS_INTERNAL_SERVICE_TOKEN: ${{ secrets.ACCOUNTS_INTERNAL_SERVICE_TOKEN }}
+  ACCOUNTS_DB_PASSWORD: ${{ secrets.ACCOUNTS_DB_PASSWORD }}
+  ACCOUNTS_SMTP_PASSWORD: ${{ secrets.ACCOUNTS_SMTP_PASSWORD }}
   RAG_SERVER_ANSIBLE_VARS_YAML: ${{ secrets.RAG_SERVER_ANSIBLE_VARS_YAML }}
   X_CLOUD_FLOW_ANSIBLE_VARS_YAML: ${{ secrets.X_CLOUD_FLOW_ANSIBLE_VARS_YAML }}
   X_OPS_AGENT_ANSIBLE_VARS_YAML: ${{ secrets.X_OPS_AGENT_ANSIBLE_VARS_YAML }}
@@ -76,16 +78,20 @@ jobs:
     outputs:
       service_name: ${{ steps.meta.outputs.service_name }}
       track: ${{ steps.meta.outputs.track }}
+      service_source_kind: ${{ steps.meta.outputs.service_source_kind }}
       repo_name: ${{ steps.meta.outputs.repo_name }}
       repo_category: ${{ steps.meta.outputs.repo_category }}
       repo_url: ${{ steps.meta.outputs.repo_url }}
       service_repository: ${{ steps.meta.outputs.service_repository }}
+      service_workspace_path: ${{ steps.meta.outputs.service_workspace_path }}
       service_checkout_path: ${{ steps.meta.outputs.service_checkout_path }}
       playbook_path: ${{ steps.meta.outputs.playbook_path }}
       dockerfile_path: ${{ steps.meta.outputs.dockerfile_path }}
       build_context: ${{ steps.meta.outputs.build_context }}
       image_name: ${{ steps.meta.outputs.image_name }}
       ansible_vars_secret_name: ${{ steps.meta.outputs.ansible_vars_secret_name }}
+      secret_env_map_json: ${{ steps.meta.outputs.secret_env_map_json }}
+      service_public_vars_path: ${{ steps.meta.outputs.service_public_vars_path }}
       deploy_subdomain_prefix: ${{ steps.meta.outputs.deploy_subdomain_prefix }}
       stable_domain: ${{ steps.meta.outputs.stable_domain }}
       host_port: ${{ steps.meta.outputs.host_port }}
@@ -102,6 +108,8 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           path: ${{ env.CONTROL_REPO_DIR }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          submodules: recursive
 
       - name: Resolve service metadata
         id: meta
@@ -112,6 +120,7 @@ jobs:
             "${{ inputs.service }}" \
             "${{ inputs.track }}" \
             "${{ env.SERVICE_REPO_OWNER }}" \
+            "${{ env.CONTROL_REPO_DIR }}" \
             "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini" \
             "${{ env.CONTROL_REPO_DIR }}/console.svc.plus.code-workspace" \
             "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/services.json" \
@@ -121,6 +130,7 @@ jobs:
           done <<< "${metadata}"
 
       - name: Checkout Service Repo
+        if: ${{ steps.meta.outputs.service_source_kind != 'git-submodule' }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: ${{ steps.meta.outputs.service_repository }}
@@ -229,8 +239,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           path: ${{ env.CONTROL_REPO_DIR }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          submodules: recursive
 
       - name: Checkout Service Repo
+        if: ${{ needs.stage-1-build-image.outputs.service_source_kind != 'git-submodule' }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: ${{ needs.stage-1-build-image.outputs.service_repository }}
@@ -261,32 +274,24 @@ jobs:
       - name: Materialize vars files
         id: vars
         shell: bash
+        env:
+          SERVICE_ANSIBLE_VARS_SECRET_NAME: ${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}
+          SERVICE_SECRET_ENV_MAP_JSON: ${{ needs.stage-1-build-image.outputs.secret_env_map_json }}
+          SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
+          SERVICE_DEPLOY_PREFIX: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
+          SERVICE_STABLE_DOMAIN: ${{ needs.stage-1-build-image.outputs.stable_domain }}
+          SERVICE_HOST_PORT: ${{ needs.stage-1-build-image.outputs.host_port }}
+          SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
+          SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
+          SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
         run: |
           set -euo pipefail
 
-          service_secret_name="${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}"
-          service_secret="${!service_secret_name:-}"
-
-          if [[ -z "${service_secret}" ]]; then
-            echo "Missing GitHub secret payload for ${service_secret_name}" >&2
-            exit 1
-          fi
-
           secret_vars_file="$(mktemp)"
           runtime_vars_file="$(mktemp)"
-
-          printf '%s\n' "${service_secret}" > "${secret_vars_file}"
-
-          export RUNTIME_VARS_FILE="${runtime_vars_file}"
-          export SERVICE_COMPOSE_IMAGE="${{ needs.stage-1-build-image.outputs.image_ref }}"
-          export SERVICE_DEPLOY_PREFIX="${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}"
-          export SERVICE_STABLE_DOMAIN="${{ needs.stage-1-build-image.outputs.stable_domain }}"
-          export SERVICE_HOST_PORT="${{ needs.stage-1-build-image.outputs.host_port }}"
-          export SERVICE_CONTAINER_PORT="${{ needs.stage-1-build-image.outputs.container_port }}"
-          export SERVICE_HEALTHCHECK_PATH="${{ needs.stage-1-build-image.outputs.healthcheck_path }}"
-          export SERVICE_LOGICAL_NAME="${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}"
-
-          python -c 'import os, yaml; payload = {"service_compose_image": os.environ["SERVICE_COMPOSE_IMAGE"], "service_compose_registry_server": "ghcr.io", "service_compose_registry_username": os.environ["GHCR_USERNAME"], "service_compose_registry_password": os.environ["GHCR_TOKEN"], "service_compose_container_port": int(os.environ["SERVICE_CONTAINER_PORT"]), "service_compose_deploy_targets": [{"name": os.environ["SERVICE_LOGICAL_NAME"], "deploy_subdomain_prefix": os.environ["SERVICE_DEPLOY_PREFIX"], "stable_domains": [os.environ["SERVICE_STABLE_DOMAIN"]], "host_port": int(os.environ["SERVICE_HOST_PORT"]), "healthcheck_path": os.environ["SERVICE_HEALTHCHECK_PATH"], "env": {}}]}; yaml.safe_dump(payload, open(os.environ["RUNTIME_VARS_FILE"], "w", encoding="utf-8"), sort_keys=False)'
+          python "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.py" \
+            "${secret_vars_file}" \
+            "${runtime_vars_file}"
 
           echo "secret_vars_file=${secret_vars_file}" >> "$GITHUB_OUTPUT"
           echo "runtime_vars_file=${runtime_vars_file}" >> "$GITHUB_OUTPUT"
@@ -299,10 +304,21 @@ jobs:
         run: |
           set -euo pipefail
           export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
-          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' \
-          ansible-playbook -i "${{ steps.ssh.outputs.inventory_file }}" -D -C "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
-            -e "@${{ steps.vars.outputs.secret_vars_file }}" \
+          args=(
+            ansible-playbook
+            -i "${{ steps.ssh.outputs.inventory_file }}"
+            -D
+            -C
+            "${{ needs.stage-1-build-image.outputs.playbook_path }}"
+          )
+          if [[ -n "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}" ]]; then
+            args+=(-e "@${{ needs.stage-1-build-image.outputs.service_public_vars_path }}")
+          fi
+          args+=(
+            -e "@${{ steps.vars.outputs.secret_vars_file }}"
             -e "@${{ steps.vars.outputs.runtime_vars_file }}"
+          )
+          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' "${args[@]}"
 
       - name: Summarize Stage 3
         shell: bash
@@ -331,8 +347,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           path: ${{ env.CONTROL_REPO_DIR }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          submodules: recursive
 
       - name: Checkout Service Repo
+        if: ${{ needs.stage-1-build-image.outputs.service_source_kind != 'git-submodule' }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: ${{ needs.stage-1-build-image.outputs.service_repository }}
@@ -363,32 +382,24 @@ jobs:
       - name: Materialize vars files
         id: vars
         shell: bash
+        env:
+          SERVICE_ANSIBLE_VARS_SECRET_NAME: ${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}
+          SERVICE_SECRET_ENV_MAP_JSON: ${{ needs.stage-1-build-image.outputs.secret_env_map_json }}
+          SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
+          SERVICE_DEPLOY_PREFIX: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
+          SERVICE_STABLE_DOMAIN: ${{ needs.stage-1-build-image.outputs.stable_domain }}
+          SERVICE_HOST_PORT: ${{ needs.stage-1-build-image.outputs.host_port }}
+          SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
+          SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
+          SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
         run: |
           set -euo pipefail
 
-          service_secret_name="${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}"
-          service_secret="${!service_secret_name:-}"
-
-          if [[ -z "${service_secret}" ]]; then
-            echo "Missing GitHub secret payload for ${service_secret_name}" >&2
-            exit 1
-          fi
-
           secret_vars_file="$(mktemp)"
           runtime_vars_file="$(mktemp)"
-
-          printf '%s\n' "${service_secret}" > "${secret_vars_file}"
-
-          export RUNTIME_VARS_FILE="${runtime_vars_file}"
-          export SERVICE_COMPOSE_IMAGE="${{ needs.stage-1-build-image.outputs.image_ref }}"
-          export SERVICE_DEPLOY_PREFIX="${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}"
-          export SERVICE_STABLE_DOMAIN="${{ needs.stage-1-build-image.outputs.stable_domain }}"
-          export SERVICE_HOST_PORT="${{ needs.stage-1-build-image.outputs.host_port }}"
-          export SERVICE_CONTAINER_PORT="${{ needs.stage-1-build-image.outputs.container_port }}"
-          export SERVICE_HEALTHCHECK_PATH="${{ needs.stage-1-build-image.outputs.healthcheck_path }}"
-          export SERVICE_LOGICAL_NAME="${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}"
-
-          python -c 'import os, yaml; payload = {"service_compose_image": os.environ["SERVICE_COMPOSE_IMAGE"], "service_compose_registry_server": "ghcr.io", "service_compose_registry_username": os.environ["GHCR_USERNAME"], "service_compose_registry_password": os.environ["GHCR_TOKEN"], "service_compose_container_port": int(os.environ["SERVICE_CONTAINER_PORT"]), "service_compose_deploy_targets": [{"name": os.environ["SERVICE_LOGICAL_NAME"], "deploy_subdomain_prefix": os.environ["SERVICE_DEPLOY_PREFIX"], "stable_domains": [os.environ["SERVICE_STABLE_DOMAIN"]], "host_port": int(os.environ["SERVICE_HOST_PORT"]), "healthcheck_path": os.environ["SERVICE_HEALTHCHECK_PATH"], "env": {}}]}; yaml.safe_dump(payload, open(os.environ["RUNTIME_VARS_FILE"], "w", encoding="utf-8"), sort_keys=False)'
+          python "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.py" \
+            "${secret_vars_file}" \
+            "${runtime_vars_file}"
 
           echo "secret_vars_file=${secret_vars_file}" >> "$GITHUB_OUTPUT"
           echo "runtime_vars_file=${runtime_vars_file}" >> "$GITHUB_OUTPUT"
@@ -401,10 +412,20 @@ jobs:
         run: |
           set -euo pipefail
           export GIT_SHORT_COMMIT="${{ needs.stage-1-build-image.outputs.git_short_commit }}"
-          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' \
-          ansible-playbook -i "${{ steps.ssh.outputs.inventory_file }}" -D "${{ needs.stage-1-build-image.outputs.playbook_path }}" \
-            -e "@${{ steps.vars.outputs.secret_vars_file }}" \
+          args=(
+            ansible-playbook
+            -i "${{ steps.ssh.outputs.inventory_file }}"
+            -D
+            "${{ needs.stage-1-build-image.outputs.playbook_path }}"
+          )
+          if [[ -n "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}" ]]; then
+            args+=(-e "@${{ needs.stage-1-build-image.outputs.service_public_vars_path }}")
+          fi
+          args+=(
+            -e "@${{ steps.vars.outputs.secret_vars_file }}"
             -e "@${{ steps.vars.outputs.runtime_vars_file }}"
+          )
+          ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' "${args[@]}"
 
       - name: Summarize Stage 4
         shell: bash

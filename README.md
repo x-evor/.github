@@ -154,6 +154,8 @@ Workflow input model:
 - `service_ref`: branch, tag, or commit SHA in the service repo
 - `run_apply`: `false` for dry-run only, `true` for final apply
 
+For `git-submodule` services such as `accounts.svc.plus`, the effective source revision is the submodule pointer currently committed in this control repo. `service_ref` only applies to `remote-checkout` services.
+
 Release behavior:
 
 - CI builds and pushes the image to `ghcr.io`
@@ -169,7 +171,9 @@ Before running the workflow, configure:
   - `GHCR_TOKEN`
   - `CLOUDFLARE_DNS_API_TOKEN`
   - `WORKSPACE_REPO_TOKEN`
-  - `ACCOUNTS_ANSIBLE_VARS_YAML`
+  - `ACCOUNTS_INTERNAL_SERVICE_TOKEN`
+  - `ACCOUNTS_DB_PASSWORD`
+  - `ACCOUNTS_SMTP_PASSWORD`
   - `RAG_SERVER_ANSIBLE_VARS_YAML`
   - `X_CLOUD_FLOW_ANSIBLE_VARS_YAML`
   - `X_OPS_AGENT_ANSIBLE_VARS_YAML`
@@ -183,6 +187,8 @@ Before running the workflow, configure:
 
 `GHCR_USERNAME` is defined directly in the workflow env and currently set to `svc-design`. Update it only when the owner of `GHCR_TOKEN` changes.
 
+For `accounts.svc.plus`, non-sensitive release defaults live in the checked-in file `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. Only the three secret values above need to be synced from the local control-repo `.env` into GitHub Organization Secrets.
+
 Manual run in GitHub UI:
 
 1. Open `Actions`
@@ -193,6 +199,8 @@ Manual run in GitHub UI:
    - `track`: `prod` or `preview`
    - `service_ref`: branch, tag, or commit SHA from the service repository
    - `run_apply`: `false` for dry-run only, `true` to continue through the final apply stage
+
+For `accounts.svc.plus`, update and push the control-repo submodule pointer first, then run the workflow. The `service_ref` input is ignored for that `git-submodule` source.
 
 Manual run with GitHub CLI:
 

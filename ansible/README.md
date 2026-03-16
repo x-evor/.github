@@ -41,7 +41,9 @@ Workflow usage reference:
 - `GHCR_TOKEN`
 - `CLOUDFLARE_DNS_API_TOKEN`
 - `WORKSPACE_REPO_TOKEN` (optional fallback when `GITHUB_TOKEN` cannot read sibling repos)
-- `ACCOUNTS_ANSIBLE_VARS_YAML`
+- `ACCOUNTS_INTERNAL_SERVICE_TOKEN`
+- `ACCOUNTS_DB_PASSWORD`
+- `ACCOUNTS_SMTP_PASSWORD`
 - `RAG_SERVER_ANSIBLE_VARS_YAML`
 - `X_CLOUD_FLOW_ANSIBLE_VARS_YAML`
 - `X_OPS_AGENT_ANSIBLE_VARS_YAML`
@@ -49,6 +51,8 @@ Workflow usage reference:
 - `SINGLE_NODE_VPS_SSH_PRIVATE_KEY`
 
 `GHCR_USERNAME` is not stored as a secret. It is defined in the workflow env and should match the GitHub user that owns `GHCR_TOKEN`.
+
+`accounts.svc.plus` public release defaults live in `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`; only the three accounts secrets above are expected in GitHub Secrets.
 
 ## GitHub Actions Variables
 

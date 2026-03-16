@@ -30,18 +30,18 @@ Together, they form a complete path from local connectivity to intelligent inter
 
 ## Experience Snapshot
 
-### Login and Cloud Console
+### Identity and Web Experience
 
 <p align="center">
   <img src="../images/login.png" alt="Login" width="45%" />
-  <img src="../images/website.jpeg" alt="Website" width="45%" />
+  <img src="../images/website.jpeg" alt="console.svc.plus website" width="45%" />
 </p>
 
 ### Apps and Client Experience
 
 <p align="center">
-  <img src="../images/xstream-app.png" alt="Xstream app" width="45%" />
   <img src="../images/Xworkmate-app.png" alt="Xworkmate app" width="45%" />
+  <img src="../images/xstream-app.png" alt="Xstream app" width="45%" />
 </p>
 
 ## How It Fits Together

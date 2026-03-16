@@ -74,11 +74,13 @@ jobs:
 
       - name: Resolve env arg
         shell: bash
+        env:
+          STACKFLOW_INPUT_ENV: ${{ inputs.env }}
         run: |
           set -euo pipefail
-          if [[ -n "${{ inputs.env }}" ]]; then
+          if [[ -n "${STACKFLOW_INPUT_ENV}" ]]; then
             echo "STACKFLOW_ENV_ARG=--env" >> "$GITHUB_ENV"
-            echo "STACKFLOW_ENV_VAL=${{ inputs.env }}" >> "$GITHUB_ENV"
+            echo "STACKFLOW_ENV_VAL=${STACKFLOW_INPUT_ENV}" >> "$GITHUB_ENV"
           else
             echo "STACKFLOW_ENV_ARG=" >> "$GITHUB_ENV"
             echo "STACKFLOW_ENV_VAL=" >> "$GITHUB_ENV"
@@ -121,7 +123,7 @@ jobs:
 
           import yaml
 
-          cfg_path = pathlib.Path("gitops") / "${{ inputs.config_path }}"
+          cfg_path = pathlib.Path("gitops") / os.environ["STACKFLOW_INPUT_CONFIG_PATH"]
           cfg = yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
           g = cfg.get("global", {}) or {}
           md = cfg.get("metadata", {}) or {}

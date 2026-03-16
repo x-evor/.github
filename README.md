@@ -171,7 +171,7 @@ Before running the workflow, configure:
   - `GHCR_TOKEN`
   - `CLOUDFLARE_DNS_API_TOKEN`
   - `WORKSPACE_REPO_TOKEN`
-  - `ACCOUNTS_INTERNAL_SERVICE_TOKEN`
+  - `INTERNAL_SERVICE_TOKEN`
   - `ACCOUNTS_DB_PASSWORD`
   - `ACCOUNTS_SMTP_PASSWORD`
   - `RAG_SERVER_ANSIBLE_VARS_YAML`
@@ -187,7 +187,7 @@ Before running the workflow, configure:
 
 `GHCR_USERNAME` is defined directly in the workflow env and currently set to `svc-design`. Update it only when the owner of `GHCR_TOKEN` changes.
 
-For `accounts.svc.plus`, non-sensitive release defaults live in the checked-in file `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. Only the three secret values above need to be synced from the local control-repo `.env` into GitHub Organization Secrets.
+For `accounts.svc.plus`, non-sensitive release defaults live in the checked-in file `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. Only `INTERNAL_SERVICE_TOKEN`, `ACCOUNTS_DB_PASSWORD`, and `ACCOUNTS_SMTP_PASSWORD` need to be synced from the local control-repo `.env` into GitHub Organization Secrets.
 
 Manual run in GitHub UI:
 

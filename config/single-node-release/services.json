@@ -20,7 +20,7 @@
       "playbook_path": "ansible/playbooks/deploy_accounts_compose.yml",
       "public_vars_path": "ansible/vars/accounts.release.public.yml",
       "secret_env_map": {
-        "INTERNAL_SERVICE_TOKEN": "ACCOUNTS_INTERNAL_SERVICE_TOKEN",
+        "INTERNAL_SERVICE_TOKEN": "INTERNAL_SERVICE_TOKEN",
         "POSTGRES_PASSWORD": "ACCOUNTS_DB_PASSWORD",
         "DB_PASSWORD": "ACCOUNTS_DB_PASSWORD",
         "SMTP_PASSWORD": "ACCOUNTS_SMTP_PASSWORD"

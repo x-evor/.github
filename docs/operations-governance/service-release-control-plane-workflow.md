@@ -151,7 +151,7 @@ Sensitive values belong in GitHub Secrets, ideally at org scope if multiple repo
 | `CLOUDFLARE_DNS_API_TOKEN` | immutable release DNS management |
 | `WORKSPACE_REPO_TOKEN` | checkout sibling private repos when needed |
 | `SINGLE_NODE_VPS_SSH_PRIVATE_KEY` | SSH key for Ansible CD stages |
-| `ACCOUNTS_INTERNAL_SERVICE_TOKEN` | `accounts` internal auth token |
+| `INTERNAL_SERVICE_TOKEN` | shared internal auth token used by `accounts` |
 | `ACCOUNTS_DB_PASSWORD` | `accounts` database password, shared for `POSTGRES_PASSWORD` and `DB_PASSWORD` |
 | `ACCOUNTS_SMTP_PASSWORD` | `accounts` SMTP password |
 | `RAG_SERVER_ANSIBLE_VARS_YAML` | `rag-server` secret runtime vars |
@@ -183,7 +183,7 @@ These checked-in values are not GitHub Variables:
 
 Those live in `config/single-node-release/*.json`.
 
-For `accounts.svc.plus`, non-sensitive release defaults are checked in at `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. GitHub Secrets only carry the internal token, database password, and SMTP password.
+For `accounts.svc.plus`, non-sensitive release defaults are checked in at `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. GitHub Secrets only carry `INTERNAL_SERVICE_TOKEN`, the shared database password, and the SMTP password.
 
 ## Example Service-Repo Wrapper
 

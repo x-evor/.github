@@ -16,15 +16,22 @@ ssh_port="${SINGLE_NODE_VPS_SSH_PORT:-22}"
 ssh_known_hosts="${SINGLE_NODE_VPS_SSH_KNOWN_HOSTS:-}"
 
 ssh_dir="${HOME}/.ssh"
-private_key_file="${ssh_dir}/id_rsa"
+private_key_file="${ssh_dir}/id_deploy"
 known_hosts_file="${ssh_dir}/known_hosts"
 inventory_file="$(mktemp)"
 
+umask 077
 mkdir -p "${ssh_dir}"
 chmod 700 "${ssh_dir}"
 
-printf '%s\n' "${SINGLE_NODE_VPS_SSH_PRIVATE_KEY}" > "${private_key_file}"
+printf '%s' "${SINGLE_NODE_VPS_SSH_PRIVATE_KEY}" | tr -d '\r' > "${private_key_file}"
+printf '\n' >> "${private_key_file}"
 chmod 600 "${private_key_file}"
+
+if ! ssh-keygen -y -f "${private_key_file}" >/dev/null 2>&1; then
+  echo "Invalid SINGLE_NODE_VPS_SSH_PRIVATE_KEY payload" >&2
+  exit 1
+fi
 
 if [[ -n "${ssh_known_hosts}" ]]; then
   printf '%s\n' "${ssh_known_hosts}" > "${known_hosts_file}"

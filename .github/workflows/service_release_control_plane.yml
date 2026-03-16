@@ -242,10 +242,9 @@ jobs:
 
       - name: Update DNS For Release Domain
         shell: bash
-        working-directory: ${{ env.CONTROL_REPO_DIR }}
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/update-release-dns.sh"
-          "${{ env.CONTROL_REPO_DIR }}"
+          "${{ env.CONTROL_REPO_PATH }}"
           "${{ needs.stage-1-build-image.outputs.release_domain }}"
           "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 

@@ -181,13 +181,22 @@ Before running the workflow, configure:
   - `X_OPS_AGENT_ANSIBLE_VARS_YAML`
   - `X_SCOPE_HUB_ANSIBLE_VARS_YAML`
   - `SINGLE_NODE_VPS_SSH_PRIVATE_KEY`
-- GitHub Variables:
-  - `SINGLE_NODE_VPS_SSH_HOST`
-  - `SINGLE_NODE_VPS_SSH_USER`
-  - `SINGLE_NODE_VPS_SSH_PORT`
-  - `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS`
 
 `GHCR_USERNAME` is defined directly in the workflow env and currently set to `svc-design`. Update it only when the owner of `GHCR_TOKEN` changes.
+
+Default SSH connection values are also defined directly in the workflow env:
+
+- `SINGLE_NODE_VPS_SSH_HOST=5.78.45.49`
+- `SINGLE_NODE_VPS_SSH_USER=root`
+- `SINGLE_NODE_VPS_SSH_PORT=22`
+- `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS=` (empty by default; the runner can `ssh-keyscan`)
+
+For manual `workflow_dispatch` runs, these values can be overridden with optional inputs:
+
+- `ssh_host`
+- `ssh_user`
+- `ssh_port`
+- `ssh_known_hosts`
 
 For `accounts.svc.plus`, non-sensitive release defaults live in the checked-in file `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. Only `INTERNAL_SERVICE_TOKEN`, `ACCOUNTS_DB_PASSWORD`, and `ACCOUNTS_SMTP_PASSWORD` need to be synced from the local control-repo `.env` into GitHub Organization Secrets.
 
@@ -201,6 +210,7 @@ Manual run in GitHub UI:
    - `track`: `prod` or `preview`
    - `service_ref`: branch, tag, or commit SHA from the service repository
    - `run_apply`: `false` for dry-run only, `true` to continue through the final apply stage
+   - optional `ssh_host`, `ssh_user`, `ssh_port`, `ssh_known_hosts`: override the built-in SSH target defaults for this run only
 
 For `accounts.svc.plus`, update and push the control-repo submodule pointer first, then run the workflow. The `service_ref` input is ignored for that `git-submodule` source.
 
@@ -212,6 +222,9 @@ gh workflow run service_release_control_plane.yml \
   -f service=accounts \
   -f track=prod \
   -f service_ref=release/2026-03-16 \
+  -f ssh_host=5.78.45.49 \
+  -f ssh_user=root \
+  -f ssh_port=22 \
   -f run_apply=false
 ```
 

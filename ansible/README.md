@@ -54,12 +54,19 @@ Workflow usage reference:
 
 `accounts.svc.plus` public release defaults live in `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`; only `INTERNAL_SERVICE_TOKEN`, `ACCOUNTS_DB_PASSWORD`, and `ACCOUNTS_SMTP_PASSWORD` are expected in GitHub Secrets.
 
-## GitHub Actions Variables
+## Workflow SSH Defaults
 
-- `SINGLE_NODE_VPS_SSH_HOST`
-- `SINGLE_NODE_VPS_SSH_USER`
-- `SINGLE_NODE_VPS_SSH_PORT`
-- `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS`
+- `SINGLE_NODE_VPS_SSH_HOST=5.78.45.49`
+- `SINGLE_NODE_VPS_SSH_USER=root`
+- `SINGLE_NODE_VPS_SSH_PORT=22`
+- `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS=` (empty by default)
+
+Manual `workflow_dispatch` runs may override those values with optional inputs:
+
+- `ssh_host`
+- `ssh_user`
+- `ssh_port`
+- `ssh_known_hosts`
 
 ## Example DNS Update
 

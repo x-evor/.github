@@ -69,6 +69,14 @@ Catalog split:
 - `run_apply`
   - `false`: stop after stage 3
   - `true`: continue to stage 4
+- `ssh_host`
+  - Optional override for the default SSH target host
+- `ssh_user`
+  - Optional override for the default SSH target user
+- `ssh_port`
+  - Optional override for the default SSH target port
+- `ssh_known_hosts`
+  - Optional override for the runner-side `known_hosts` payload
 
 For repositories declared with `source_kind=git-submodule`, the actual source revision comes from the submodule pointer committed in the control repo. In that mode, `service_ref` is informational and is only used for `remote-checkout` services.
 
@@ -79,6 +87,9 @@ gh workflow run service_release_control_plane.yml \
   -f service=accounts \
   -f track=prod \
   -f service_ref=release/2026-03-16 \
+  -f ssh_host=5.78.45.49 \
+  -f ssh_user=root \
+  -f ssh_port=22 \
   -f run_apply=false
 ```
 
@@ -165,16 +176,18 @@ Sensitive values belong in GitHub Secrets, ideally at org scope if multiple repo
 | `X_OPS_AGENT_ANSIBLE_VARS_YAML` | `x-ops-agent` secret runtime vars |
 | `X_SCOPE_HUB_ANSIBLE_VARS_YAML` | `x-scope-hub` secret runtime vars |
 
-## Required GitHub Variables
+## Built-In SSH Defaults
 
-Non-sensitive infrastructure values belong in GitHub Variables or checked-in catalogs.
+The control-plane workflow now carries the default single-node SSH target directly in the checked-in workflow file.
 
-| Variable | Purpose |
+| Key | Default |
 | --- | --- |
-| `SINGLE_NODE_VPS_SSH_HOST` | SSH target IP |
-| `SINGLE_NODE_VPS_SSH_USER` | SSH target user |
-| `SINGLE_NODE_VPS_SSH_PORT` | SSH target port |
-| `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS` | host key pinning |
+| `SINGLE_NODE_VPS_SSH_HOST` | `5.78.45.49` |
+| `SINGLE_NODE_VPS_SSH_USER` | `root` |
+| `SINGLE_NODE_VPS_SSH_PORT` | `22` |
+| `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS` | empty |
+
+Manual `workflow_dispatch` runs can override those values with `ssh_host`, `ssh_user`, `ssh_port`, and `ssh_known_hosts`.
 
 These checked-in values are not GitHub Variables:
 

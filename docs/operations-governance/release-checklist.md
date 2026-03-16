@@ -14,7 +14,7 @@
 - [ ] Local run uses `.env`; runtime/prod uses Secret Manager or platform env vars
 - [ ] PR diff contains no real secret material (token/password/private key)
 - [ ] Control-plane release metadata is updated when repo/domain/port/catalog entries change
-- [ ] Required GitHub Actions secrets and variables exist for the single-node release workflow
+- [ ] Required GitHub Actions secrets exist and any workflow SSH overrides are set correctly for the single-node release workflow
 - [ ] Service-specific secrets are split correctly: public defaults checked in, secret-only fields in GitHub Secrets
 - [ ] For `git-submodule` services, the submodule pointer in the control repo is updated and pushed before dispatching the release workflow
 - [ ] Stable domains already point to the single deploy host before promoting a new revision

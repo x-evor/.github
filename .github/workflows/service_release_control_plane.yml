@@ -20,6 +20,26 @@ on:
         required: false
         default: false
         type: boolean
+      ssh_host:
+        description: "Optional SSH host override"
+        required: false
+        default: ""
+        type: string
+      ssh_user:
+        description: "Optional SSH user override"
+        required: false
+        default: ""
+        type: string
+      ssh_port:
+        description: "Optional SSH port override"
+        required: false
+        default: ""
+        type: string
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
   workflow_dispatch:
     inputs:
       service:
@@ -45,6 +65,26 @@ on:
         required: true
         default: false
         type: boolean
+      ssh_host:
+        description: "Optional SSH host override"
+        required: false
+        default: ""
+        type: string
+      ssh_user:
+        description: "Optional SSH user override"
+        required: false
+        default: ""
+        type: string
+      ssh_port:
+        description: "Optional SSH port override"
+        required: false
+        default: ""
+        type: string
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -55,10 +95,10 @@ env:
   GHCR_REGISTRY: ghcr.io
   GHCR_USERNAME: svc-design
   SERVICE_REPO_OWNER: ${{ github.repository_owner }}
-  SINGLE_NODE_VPS_SSH_HOST: ${{ vars.SINGLE_NODE_VPS_SSH_HOST }}
-  SINGLE_NODE_VPS_SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER }}
-  SINGLE_NODE_VPS_SSH_PORT: ${{ vars.SINGLE_NODE_VPS_SSH_PORT }}
-  SINGLE_NODE_VPS_SSH_KNOWN_HOSTS: ${{ vars.SINGLE_NODE_VPS_SSH_KNOWN_HOSTS }}
+  SINGLE_NODE_VPS_SSH_HOST: ${{ inputs.ssh_host != '' && inputs.ssh_host || '5.78.45.49' }}
+  SINGLE_NODE_VPS_SSH_USER: ${{ inputs.ssh_user != '' && inputs.ssh_user || 'root' }}
+  SINGLE_NODE_VPS_SSH_PORT: ${{ inputs.ssh_port != '' && inputs.ssh_port || '22' }}
+  SINGLE_NODE_VPS_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
   INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
   ACCOUNTS_DB_PASSWORD: ${{ secrets.ACCOUNTS_DB_PASSWORD }}
   ACCOUNTS_SMTP_PASSWORD: ${{ secrets.ACCOUNTS_SMTP_PASSWORD }}

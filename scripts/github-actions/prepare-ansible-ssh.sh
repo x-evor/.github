@@ -31,10 +31,17 @@ import os
 import sys
 
 raw = os.environ["SINGLE_NODE_VPS_SSH_PRIVATE_KEY"].replace("\r", "").strip()
+
+def strip_outer_quotes(value: str) -> str:
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+        return value[1:-1].strip()
+    return value
+
+raw = strip_outer_quotes(raw)
 candidates = [raw]
 
 if "\\n" in raw:
-    candidates.append(raw.replace("\\n", "\n").strip())
+    candidates.append(strip_outer_quotes(raw.replace("\\n", "\n").strip()))
 
 try:
     decoded = base64.b64decode(raw, validate=True).decode("utf-8").replace("\r", "").strip()
@@ -42,7 +49,7 @@ except Exception:
     decoded = ""
 
 if decoded:
-    candidates.append(decoded)
+    candidates.append(strip_outer_quotes(decoded))
 
 for candidate in candidates:
     if "BEGIN " in candidate and "PRIVATE KEY" in candidate:
@@ -57,7 +64,26 @@ printf '%s' "${normalized_private_key}" > "${private_key_file}"
 chmod 600 "${private_key_file}"
 
 if ! ssh-keygen -y -f "${private_key_file}" >/dev/null 2>&1; then
-  echo "Invalid SINGLE_NODE_VPS_SSH_PRIVATE_KEY payload" >&2
+  payload_hint="$(
+    python3 - <<'PY'
+import os
+
+raw = os.environ["SINGLE_NODE_VPS_SSH_PRIVATE_KEY"].replace("\r", "").strip()
+trimmed = raw.strip("'\"").strip()
+
+if trimmed.startswith("ssh-rsa ") or trimmed.startswith("ssh-ed25519 ") or trimmed.startswith("ecdsa-sha2-"):
+    print("looks like a public key, not a private key")
+elif trimmed.startswith("~/.ssh/") or trimmed.startswith("/") or trimmed.endswith(".pem") or trimmed.endswith("id_rsa"):
+    print("looks like a filesystem path, not file contents")
+elif "BEGIN " in trimmed and "PRIVATE KEY" in trimmed:
+    print("contains private-key markers but failed ssh-keygen validation")
+elif "\\n" in raw:
+    print("contains escaped newlines but did not normalize to a valid private key")
+else:
+    print("does not look like a supported private key payload")
+PY
+  )"
+  echo "Invalid SINGLE_NODE_VPS_SSH_PRIVATE_KEY payload: ${payload_hint}" >&2
   exit 1
 fi
 

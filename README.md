@@ -191,6 +191,10 @@ Default SSH connection values are also defined directly in the workflow env:
 - `SINGLE_NODE_VPS_SSH_PORT=22`
 - `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS=` (empty by default; the runner can `ssh-keyscan`)
 
+The SSH private key preparation standard is documented here:
+
+- [pre-github-deploy-key.md](/Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/operations-governance/pre-github-deploy-key.md)
+
 For manual `workflow_dispatch` runs, these values can be overridden with optional inputs:
 
 - `ssh_host`

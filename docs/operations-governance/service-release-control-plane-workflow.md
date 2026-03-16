@@ -189,6 +189,8 @@ The control-plane workflow now carries the default single-node SSH target direct
 
 Manual `workflow_dispatch` runs can override those values with `ssh_host`, `ssh_user`, `ssh_port`, and `ssh_known_hosts`.
 
+For deploy-key preparation and rotation, see [pre-github-deploy-key.md](/Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/operations-governance/pre-github-deploy-key.md).
+
 These checked-in values are not GitHub Variables:
 
 - `GHCR_USERNAME` is defined in the workflow env and currently set to `svc-design`

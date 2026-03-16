@@ -85,13 +85,7 @@ def main() -> None:
         raise SystemExit(f"unsupported source_kind '{source_kind}' for repository '{repo_name}'")
 
     public_vars_path = service.get("public_vars_path", "")
-    if public_vars_path:
-        if source_kind == "git-submodule":
-            resolved_public_vars_path = str(Path(control_repo_dir) / workspace_repo_path / public_vars_path)
-        else:
-            resolved_public_vars_path = str(Path(service_checkout_path) / public_vars_path)
-    else:
-        resolved_public_vars_path = ""
+    resolved_public_vars_path = public_vars_path if public_vars_path else ""
 
     server_alias = first_server_alias(inventory_path)
     deploy_hostname = server_alias.split(".", 1)[0]

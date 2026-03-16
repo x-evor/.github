@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "domain": "svc.plus",
+  "default_registry": "ghcr.io",
+  "default_repo_owner": "cloud-neutral-toolkit",
+  "release_domain_format": "<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>",
+  "track_policy": {
+    "prod": {
+      "trigger": "push to release/*"
+    },
+    "preview": {
+      "trigger": "pull_request targeting main"
+    }
+  },
+  "services": {
+    "accounts": {
+      "repo_name": "accounts.svc.plus",
+      "repo_category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git",
+      "ansible_vars_secret_name": "ACCOUNTS_ANSIBLE_VARS_YAML",
+      "playbook_path": "ansible/playbooks/deploy_accounts_compose.yml",
+      "docker": {
+        "dockerfile_path": "Dockerfile",
+        "build_context": ".",
+        "image_name": "accounts",
+        "container_port": 8080
+      },
+      "healthcheck_path": "/healthz",
+      "tracks": {
+        "prod": {
+          "stable_domain": "accounts.svc.plus",
+          "release_prefix": "accounts",
+          "host_port": 18080,
+          "enabled": true
+        },
+        "preview": {
+          "stable_domain": "accounts-preview.svc.plus",
+          "release_prefix": "accounts-preview",
+          "host_port": 18081,
+          "enabled": true
+        }
+      }
+    },
+    "rag-server": {
+      "repo_name": "rag-server.svc.plus",
+      "repo_category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/rag-server.svc.plus.git",
+      "ansible_vars_secret_name": "RAG_SERVER_ANSIBLE_VARS_YAML",
+      "playbook_path": "ansible/playbooks/deploy_rag_server_compose.yml",
+      "docker": {
+        "dockerfile_path": "Dockerfile",
+        "build_context": ".",
+        "image_name": "rag-server",
+        "container_port": 8080
+      },
+      "healthcheck_path": "/healthz",
+      "tracks": {
+        "prod": {
+          "stable_domain": "rag-server.svc.plus",
+          "release_prefix": "rag-server",
+          "host_port": 18082,
+          "enabled": true
+        },
+        "preview": {
+          "stable_domain": "rag-server-preview.svc.plus",
+          "release_prefix": "rag-server-preview",
+          "host_port": 18182,
+          "enabled": true
+        }
+      }
+    },
+    "x-cloud-flow": {
+      "repo_name": "x-cloud-flow.svc.plus",
+      "repo_category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/x-cloud-flow.svc.plus.git",
+      "ansible_vars_secret_name": "X_CLOUD_FLOW_ANSIBLE_VARS_YAML",
+      "playbook_path": "ansible/playbooks/deploy_x_cloud_flow_compose.yml",
+      "docker": {
+        "dockerfile_path": "Dockerfile",
+        "build_context": ".",
+        "image_name": "x-cloud-flow",
+        "container_port": 8080
+      },
+      "healthcheck_path": "/healthz",
+      "tracks": {
+        "prod": {
+          "stable_domain": "x-cloud-flow.svc.plus",
+          "release_prefix": "x-cloud-flow",
+          "host_port": 18083,
+          "enabled": true
+        },
+        "preview": {
+          "stable_domain": "x-cloud-flow-preview.svc.plus",
+          "release_prefix": "x-cloud-flow-preview",
+          "host_port": 18183,
+          "enabled": true
+        }
+      }
+    },
+    "x-ops-agent": {
+      "repo_name": "x-ops-agent.svc.plus",
+      "repo_category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/x-ops-agent.svc.plus.git",
+      "ansible_vars_secret_name": "X_OPS_AGENT_ANSIBLE_VARS_YAML",
+      "playbook_path": "ansible/playbooks/deploy_x_ops_agent_compose.yml",
+      "docker": {
+        "dockerfile_path": "Dockerfile",
+        "build_context": ".",
+        "image_name": "x-ops-agent",
+        "container_port": 8080
+      },
+      "healthcheck_path": "/healthz",
+      "tracks": {
+        "prod": {
+          "stable_domain": "x-ops-agent.svc.plus",
+          "release_prefix": "x-ops-agent",
+          "host_port": 18084,
+          "enabled": true
+        },
+        "preview": {
+          "stable_domain": "x-ops-agent-preview.svc.plus",
+          "release_prefix": "x-ops-agent-preview",
+          "host_port": 18184,
+          "enabled": true
+        }
+      }
+    },
+    "x-scope-hub": {
+      "repo_name": "x-scope-hub.svc.plus",
+      "repo_category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/x-scope-hub.svc.plus.git",
+      "ansible_vars_secret_name": "X_SCOPE_HUB_ANSIBLE_VARS_YAML",
+      "playbook_path": "ansible/playbooks/deploy_x_scope_hub_compose.yml",
+      "docker": {
+        "dockerfile_path": "mcp-server/Dockerfile",
+        "build_context": ".",
+        "image_name": "x-scope-hub",
+        "container_port": 8080
+      },
+      "healthcheck_path": "/manifest",
+      "tracks": {
+        "prod": {
+          "stable_domain": "x-scope-hub.svc.plus",
+          "release_prefix": "x-scope-hub",
+          "host_port": 18085,
+          "enabled": true
+        },
+        "preview": {
+          "stable_domain": "x-scope-hub-preview.svc.plus",
+          "release_prefix": "x-scope-hub-preview",
+          "host_port": 18185,
+          "enabled": true
+        }
+      }
+    }
+  }
+}

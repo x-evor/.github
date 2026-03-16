@@ -12,8 +12,8 @@
       ansible.builtin.set_fact:
         cloudflare_api_token: >-
           {{
-            lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN')
-            | default(lookup('ansible.builtin.env', 'CLOUDFLARE_DNS_API_TOKEN'), true)
+            lookup('ansible.builtin.env', 'CLOUDFLARE_DNS_API_TOKEN')
+            | default(lookup('ansible.builtin.env', 'CLOUDFLARE_API_TOKEN'), true)
           }}
 
     - name: Validate Cloudflare token is present in environment
@@ -95,7 +95,7 @@
             {
               'type': item.item.type,
               'name': item.item.name,
-              'content': item.item.content,
+              'content': item.item.content | default(item.item.value),
               'ttl': (item.item.ttl | default(1) | int),
               'proxied': (item.item.proxied | default(false) | bool)
             } | to_json
@@ -118,7 +118,7 @@
             {
               'type': item.item.type,
               'name': item.item.name,
-              'content': item.item.content,
+              'content': item.item.content | default(item.item.value),
               'ttl': (item.item.ttl | default(1) | int),
               'proxied': (item.item.proxied | default(false) | bool)
             } | to_json
@@ -128,13 +128,13 @@
         label: "{{ item.item.name }}"
       when:
         - item.json.result | length > 0
-        - item.json.result[0].content != item.item.content
+        - item.json.result[0].content != (item.item.content | default(item.item.value))
           or item.json.result[0].type != item.item.type
           or (item.json.result[0].proxied | default(false)) != (item.item.proxied | default(false))
 
     - name: Show managed DNS records
       ansible.builtin.debug:
-        msg: "{{ item.type }} {{ item.name }} -> {{ item.content }} proxied={{ item.proxied | default(false) }}"
+        msg: "{{ item.type }} {{ item.name }} -> {{ item.content | default(item.value) }} proxied={{ item.proxied | default(false) }}"
       loop: "{{ cloudflare_dns_records }}"
       loop_control:
         label: "{{ item.name }}"

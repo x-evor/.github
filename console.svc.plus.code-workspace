@@ -49,22 +49,32 @@
       "path": "../knowledge"
     },
     {
+      "name": "x-scope-hub.svc.plus",
       "path": "../x-scope-hub.svc.plus"
     },
     {
+      "name": "openclaw.svc.plus",
       "path": "../openclaw.svc.plus"
     },
     {
+      "name": "xstream.svc.plus",
       "path": "../xstream.svc.plus"
     },
     {
+      "name": "MemOS",
       "path": "../MemOS"
     },
     {
+      "name": "openclaw-deploy-example",
       "path": "../openclaw-deploy-example"
     },
     {
+      "name": "x-cloud-flow.svc.plus",
       "path": "../x-cloud-flow.svc.plus"
+    },
+    {
+      "name": "x-ops-agent.svc.plus",
+      "path": "../x-ops-agent.svc.plus"
     }
   ],
   "settings": {

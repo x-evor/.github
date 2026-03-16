@@ -5,7 +5,7 @@ services to the single-node Docker Compose host defined in `inventory.ini`.
 
 Workflow usage reference:
 
-- `docs/operations-governance/single-node-service-release-workflow.md`
+- `docs/operations-governance/service-release-control-plane-workflow.md`
 
 ## Shared Pieces
 
@@ -47,6 +47,14 @@ Workflow usage reference:
 - `X_CLOUD_FLOW_ANSIBLE_VARS_YAML`
 - `X_OPS_AGENT_ANSIBLE_VARS_YAML`
 - `X_SCOPE_HUB_ANSIBLE_VARS_YAML`
+- `SINGLE_NODE_VPS_SSH_PRIVATE_KEY`
+
+## GitHub Actions Variables
+
+- `SINGLE_NODE_VPS_SSH_HOST`
+- `SINGLE_NODE_VPS_SSH_USER`
+- `SINGLE_NODE_VPS_SSH_PORT`
+- `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS`
 
 ## Example DNS Update
 

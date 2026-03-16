@@ -1,0 +1,154 @@
+{
+  "workspace_file": "console.svc.plus.code-workspace",
+  "groups": {
+    "frontend": [
+      "console.svc.plus",
+      "page-reading-agent-dashboard"
+    ],
+    "api": [
+      "accounts.svc.plus",
+      "rag-server.svc.plus",
+      "page-reading-agent-backend",
+      "agent.svc.plus",
+      "openclaw.svc.plus",
+      "x-cloud-flow.svc.plus",
+      "x-ops-agent.svc.plus",
+      "x-scope-hub.svc.plus"
+    ],
+    "db-runtime": [
+      "postgresql.svc.plus",
+      "observability.svc.plus"
+    ],
+    "docs": [
+      "knowledge"
+    ],
+    "control-plane": [
+      "github-org-cloud-neutral-toolkit",
+      "gitops",
+      "iac_modules"
+    ],
+    "runtime-client": [
+      "xstream.svc.plus",
+      "MemOS"
+    ],
+    "examples": [
+      "openclaw-deploy-example"
+    ]
+  },
+  "repositories": {
+    "github-org-cloud-neutral-toolkit": {
+      "category": "control-plane",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit.git",
+      "workspace_path": ".",
+      "release_enabled": true
+    },
+    "console.svc.plus": {
+      "category": "frontend",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/console.svc.plus.git",
+      "workspace_path": "../console.svc.plus",
+      "release_enabled": false
+    },
+    "accounts.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git",
+      "workspace_path": "../accounts.svc.plus",
+      "release_enabled": true
+    },
+    "rag-server.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/rag-server.svc.plus.git",
+      "workspace_path": "../rag-server.svc.plus",
+      "release_enabled": true
+    },
+    "page-reading-agent-backend": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/page-reading-agent-backend.git",
+      "workspace_path": "../page-reading-agent-backend",
+      "release_enabled": false
+    },
+    "page-reading-agent-dashboard": {
+      "category": "frontend",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/page-reading-agent-dashboard.git",
+      "workspace_path": "../page-reading-agent-dashboard",
+      "release_enabled": false
+    },
+    "postgresql.svc.plus": {
+      "category": "db-runtime",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/postgresql.svc.plus.git",
+      "workspace_path": "../postgresql.svc.plus",
+      "release_enabled": false
+    },
+    "agent.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/agent.svc.plus.git",
+      "workspace_path": "../agent.svc.plus",
+      "release_enabled": false
+    },
+    "observability.svc.plus": {
+      "category": "db-runtime",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/observability.svc.plus.git",
+      "workspace_path": "../observability.svc.plus",
+      "release_enabled": false
+    },
+    "gitops": {
+      "category": "control-plane",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/gitops.git",
+      "workspace_path": "../gitops",
+      "release_enabled": false
+    },
+    "iac_modules": {
+      "category": "control-plane",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/iac_modules.git",
+      "workspace_path": "../iac_modules",
+      "release_enabled": false
+    },
+    "knowledge": {
+      "category": "docs",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/knowledge.git",
+      "workspace_path": "../knowledge",
+      "release_enabled": false
+    },
+    "x-scope-hub.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/x-scope-hub.svc.plus.git",
+      "workspace_path": "../x-scope-hub.svc.plus",
+      "release_enabled": true
+    },
+    "openclaw.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/openclaw.svc.plus.git",
+      "workspace_path": "../openclaw.svc.plus",
+      "release_enabled": false
+    },
+    "xstream.svc.plus": {
+      "category": "runtime-client",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/xstream.svc.plus.git",
+      "workspace_path": "../xstream.svc.plus",
+      "release_enabled": false
+    },
+    "MemOS": {
+      "category": "runtime-client",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/MemOS.git",
+      "workspace_path": "../MemOS",
+      "release_enabled": false
+    },
+    "openclaw-deploy-example": {
+      "category": "examples",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/openclaw-deploy-example.git",
+      "workspace_path": "../openclaw-deploy-example",
+      "release_enabled": false
+    },
+    "x-cloud-flow.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/x-cloud-flow.svc.plus.git",
+      "workspace_path": "../x-cloud-flow.svc.plus",
+      "release_enabled": true
+    },
+    "x-ops-agent.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/x-ops-agent.svc.plus.git",
+      "workspace_path": "../x-ops-agent.svc.plus",
+      "release_enabled": true
+    }
+  }
+}

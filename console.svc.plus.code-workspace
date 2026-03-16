@@ -10,7 +10,7 @@
     },
     {
       "name": "accounts.svc.plus",
-      "path": "../accounts.svc.plus"
+      "path": "subrepos/accounts.svc.plus"
     },
     {
       "name": "rag-server.svc.plus",

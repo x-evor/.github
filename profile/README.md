@@ -30,18 +30,18 @@ Together, they form a complete path from local connectivity to intelligent inter
 
 ## Experience Snapshot
 
-### Identity and Web Experience
+### Platform and Delivery View
 
 <p align="center">
-  <img src="../images/login.png" alt="Login" width="45%" />
-  <img src="../images/website.jpeg" alt="console.svc.plus website" width="45%" />
+  <img src="../images/1.png" alt="Cloud-Neutral Toolkit platform overview" width="45%" />
+  <img src="../images/2.png" alt="End-to-end delivery path from local to cloud" width="45%" />
 </p>
 
-### Apps and Client Experience
+### Workflow and Adoption Path
 
 <p align="center">
-  <img src="../images/Xworkmate-app.png" alt="Xworkmate app" width="45%" />
-  <img src="../images/xstream-app.png" alt="Xstream app" width="45%" />
+  <img src="../images/3.png" alt="Layered workflow across Xstream, Xworkmate, and console.svc.plus" width="45%" />
+  <img src="../images/4.png" alt="Three-step onboarding path across the toolkit" width="45%" />
 </p>
 
 ## How It Fits Together

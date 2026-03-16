@@ -37,7 +37,18 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  disabled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Workflow disabled
+        shell: bash
+        run: |
+          echo "stackflow.yaml is temporarily disabled." >&2
+          echo "Use Service Release Control Plane or re-enable this workflow explicitly." >&2
+          exit 1
+
   plan-validate:
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout This Repo
@@ -95,10 +106,15 @@ jobs:
 
       - name: Summarize Targets (Repo Links)
         shell: bash
+        env:
+          STACKFLOW_INPUT_GITOPS_REF: ${{ inputs.gitops_ref }}
+          STACKFLOW_INPUT_CONFIG_PATH: ${{ inputs.config_path }}
+          STACKFLOW_INPUT_ENV: ${{ inputs.env }}
         run: |
           set -euo pipefail
 
           python - <<'PY' > stackflow.summary.md
+          import os
           import json
           import pathlib
           import sys
@@ -117,10 +133,10 @@ jobs:
           lines.append(f"## StackFlow Summary")
           lines.append(f"- stack: `{name}`")
           lines.append(f"- domain: `{root_domain}`")
-          lines.append(f"- gitops_ref: `${{{{ inputs.gitops_ref }}}}`")
-          lines.append(f"- config_path: `${{{{ inputs.config_path }}}}`")
-          if "${{ inputs.env }}".strip():
-            lines.append(f"- env: `${{{{ inputs.env }}}}`")
+          lines.append(f"- gitops_ref: `{os.environ['STACKFLOW_INPUT_GITOPS_REF']}`")
+          lines.append(f"- config_path: `{os.environ['STACKFLOW_INPUT_CONFIG_PATH']}`")
+          if os.environ["STACKFLOW_INPUT_ENV"].strip():
+            lines.append(f"- env: `{os.environ['STACKFLOW_INPUT_ENV']}`")
           lines.append("")
           lines.append("### Targets")
           if not targets:

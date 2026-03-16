@@ -38,7 +38,6 @@ Workflow usage reference:
 
 ## GitHub Actions Secrets
 
-- `GHCR_USERNAME`
 - `GHCR_TOKEN`
 - `CLOUDFLARE_DNS_API_TOKEN`
 - `WORKSPACE_REPO_TOKEN` (optional fallback when `GITHUB_TOKEN` cannot read sibling repos)
@@ -48,6 +47,8 @@ Workflow usage reference:
 - `X_OPS_AGENT_ANSIBLE_VARS_YAML`
 - `X_SCOPE_HUB_ANSIBLE_VARS_YAML`
 - `SINGLE_NODE_VPS_SSH_PRIVATE_KEY`
+
+`GHCR_USERNAME` is not stored as a secret. It is defined in the workflow env and should match the GitHub user that owns `GHCR_TOKEN`.
 
 ## GitHub Actions Variables
 

@@ -166,7 +166,6 @@ Release behavior:
 Before running the workflow, configure:
 
 - GitHub Secrets:
-  - `GHCR_USERNAME`
   - `GHCR_TOKEN`
   - `CLOUDFLARE_DNS_API_TOKEN`
   - `WORKSPACE_REPO_TOKEN`
@@ -181,6 +180,8 @@ Before running the workflow, configure:
   - `SINGLE_NODE_VPS_SSH_USER`
   - `SINGLE_NODE_VPS_SSH_PORT`
   - `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS`
+
+`GHCR_USERNAME` is defined directly in the workflow env and currently set to `svc-design`. Update it only when the owner of `GHCR_TOKEN` changes.
 
 Manual run in GitHub UI:
 

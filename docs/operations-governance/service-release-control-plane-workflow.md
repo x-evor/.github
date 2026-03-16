@@ -145,7 +145,6 @@ Sensitive values belong in GitHub Secrets, ideally at org scope if multiple repo
 
 | Secret | Purpose |
 | --- | --- |
-| `GHCR_USERNAME` | GHCR login username |
 | `GHCR_TOKEN` | GHCR package push/pull |
 | `CLOUDFLARE_DNS_API_TOKEN` | immutable release DNS management |
 | `WORKSPACE_REPO_TOKEN` | checkout sibling private repos when needed |
@@ -168,6 +167,8 @@ Non-sensitive infrastructure values belong in GitHub Variables or checked-in cat
 | `SINGLE_NODE_VPS_SSH_KNOWN_HOSTS` | host key pinning |
 
 These checked-in values are not GitHub Variables:
+
+- `GHCR_USERNAME` is defined in the workflow env and currently set to `svc-design`
 
 - repo URL
 - repo category

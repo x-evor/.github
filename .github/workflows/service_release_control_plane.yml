@@ -53,6 +53,7 @@ permissions:
 env:
   CONTROL_REPO_DIR: cloud-neutral-toolkit
   GHCR_REGISTRY: ghcr.io
+  GHCR_USERNAME: svc-design
   SERVICE_REPO_OWNER: ${{ github.repository_owner }}
   SINGLE_NODE_VPS_SSH_HOST: ${{ vars.SINGLE_NODE_VPS_SSH_HOST }}
   SINGLE_NODE_VPS_SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER }}
@@ -134,7 +135,7 @@ jobs:
         uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
         with:
           registry: ${{ env.GHCR_REGISTRY }}
-          username: ${{ secrets.GHCR_USERNAME }}
+          username: ${{ env.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
 
       - name: Build And Push Image
@@ -221,7 +222,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: stage-1-build-image
     env:
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
     steps:
@@ -324,7 +324,6 @@ jobs:
       - stage-3-ansible-dry-run
     if: ${{ inputs.run_apply }}
     env:
-      GHCR_USERNAME: ${{ secrets.GHCR_USERNAME }}
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
     steps:

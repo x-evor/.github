@@ -92,6 +92,7 @@ permissions:
 
 env:
   CONTROL_REPO_DIR: cloud-neutral-toolkit
+  CONTROL_REPO_PATH: ${{ github.workspace }}/cloud-neutral-toolkit
   GHCR_REGISTRY: ghcr.io
   GHCR_USERNAME: svc-design
   SERVICE_REPO_OWNER: ${{ github.repository_owner }}
@@ -158,13 +159,13 @@ jobs:
 
       - name: Install metadata dependencies
         shell: bash
-        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" metadata
+        run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/install-python-tools.sh" metadata
 
       - name: Resolve service metadata
         id: meta
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/resolve-service-metadata-output.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/resolve-service-metadata-output.sh"
           "${{ inputs.service }}"
           "${{ inputs.track }}"
           "${{ env.SERVICE_REPO_OWNER }}"
@@ -197,7 +198,7 @@ jobs:
         id: image
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/build-and-push-image.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/build-and-push-image.sh"
           "${{ steps.meta.outputs.service_checkout_path }}"
           "${{ steps.meta.outputs.dockerfile_path }}"
           "${{ steps.meta.outputs.build_context }}"
@@ -209,7 +210,7 @@ jobs:
       - name: Summarize Stage 1
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/summarize-service-release-stage.sh"
           stage1
           "${{ inputs.service }}"
           "${{ inputs.track }}"
@@ -237,13 +238,13 @@ jobs:
 
       - name: Install Ansible
         shell: bash
-        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" ansible
+        run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/install-python-tools.sh" ansible
 
       - name: Update DNS For Release Domain
         shell: bash
         working-directory: ${{ env.CONTROL_REPO_DIR }}
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/update-release-dns.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/update-release-dns.sh"
           "${{ env.CONTROL_REPO_DIR }}"
           "${{ needs.stage-1-build-image.outputs.release_domain }}"
           "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
@@ -251,7 +252,7 @@ jobs:
       - name: Summarize Stage 2
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/summarize-service-release-stage.sh"
           stage2
           "${{ needs.stage-1-build-image.outputs.track }}"
           "${{ needs.stage-1-build-image.outputs.release_domain }}"
@@ -288,14 +289,14 @@ jobs:
 
       - name: Install Ansible
         shell: bash
-        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" ansible
+        run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/install-python-tools.sh" ansible
 
       - name: Prepare runner SSH and inventory
         id: ssh
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-runtime.sh"
-          "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini.tmpl"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/prepare-ansible-runtime.sh"
+          "${{ env.CONTROL_REPO_PATH }}/ansible/inventory.ini.tmpl"
           "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
       - name: Materialize vars files
@@ -311,7 +312,7 @@ jobs:
           SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
           SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
           SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
-        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.sh"
+        run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/materialize-ansible-vars.sh"
 
       - name: Run ansible dry run with diff
         shell: bash
@@ -319,7 +320,7 @@ jobs:
         env:
           GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/run-service-ansible.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/run-service-ansible.sh"
           dry-run
           "${{ steps.ssh.outputs.inventory_file }}"
           "${{ needs.stage-1-build-image.outputs.playbook_path }}"
@@ -330,7 +331,7 @@ jobs:
       - name: Summarize Stage 3
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/summarize-service-release-stage.sh"
           stage3
           "${{ needs.stage-1-build-image.outputs.service_name }}"
           "${{ needs.stage-1-build-image.outputs.track }}"
@@ -371,14 +372,14 @@ jobs:
 
       - name: Install Ansible
         shell: bash
-        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" ansible
+        run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/install-python-tools.sh" ansible
 
       - name: Prepare runner SSH and inventory
         id: ssh
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/prepare-ansible-runtime.sh"
-          "${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini.tmpl"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/prepare-ansible-runtime.sh"
+          "${{ env.CONTROL_REPO_PATH }}/ansible/inventory.ini.tmpl"
           "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
 
       - name: Materialize vars files
@@ -394,7 +395,7 @@ jobs:
           SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
           SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
           SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
-        run: bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/materialize-ansible-vars.sh"
+        run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/materialize-ansible-vars.sh"
 
       - name: Run ansible apply with diff
         shell: bash
@@ -402,7 +403,7 @@ jobs:
         env:
           GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/run-service-ansible.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/run-service-ansible.sh"
           apply
           "${{ steps.ssh.outputs.inventory_file }}"
           "${{ needs.stage-1-build-image.outputs.playbook_path }}"
@@ -413,7 +414,7 @@ jobs:
       - name: Summarize Stage 4
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/summarize-service-release-stage.sh"
           stage4
           "${{ needs.stage-1-build-image.outputs.service_name }}"
           "${{ needs.stage-1-build-image.outputs.track }}"

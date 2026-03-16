@@ -5,7 +5,7 @@ services to the single-node Docker Compose host defined in `inventory.ini`.
 
 Workflow usage reference:
 
-- `docs/operations-governance/single-node-service-release-workflow.md`
+- `docs/operations-governance/service-release-control-plane-workflow.md`
 
 ## Shared Pieces
 

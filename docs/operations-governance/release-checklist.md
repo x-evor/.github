@@ -13,6 +13,9 @@
 - [ ] New env vars are documented in `.env.example` (keys only, no secret values)
 - [ ] Local run uses `.env`; runtime/prod uses Secret Manager or platform env vars
 - [ ] PR diff contains no real secret material (token/password/private key)
+- [ ] Control-plane release metadata is updated when repo/domain/port/catalog entries change
+- [ ] Required GitHub Actions secrets and variables exist for the single-node release workflow
+- [ ] Stable domains already point to the single deploy host before promoting a new revision
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos
 - [ ] API contracts are validated (path, payload, auth headers)

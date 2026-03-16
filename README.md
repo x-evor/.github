@@ -45,14 +45,32 @@ For cross-repo requests, use one objective per task and require this output form
 - Secrets stay in local `.env` (gitignored) and production secret managers.
 - This repo holds standards and coordination docs, not service runtime code.
 
-## Single-Node Release
+## Release Control Plane
 
-This repo coordinates single-node VPS releases for the `svc.plus` services.
+This repo coordinates the Cloud Run-like release control plane for the `svc.plus` services.
+
+Current runtime profile:
+
+- `single-node-docker-compose`
+
+Planned runtime profiles:
+
+- `single-node-k3s`
+- `cluster-k8s`
 
 Reference docs:
 
 - Ansible overview: [`ansible/README.md`](ansible/README.md)
-- Workflow details: [`docs/operations-governance/single-node-service-release-workflow.md`](docs/operations-governance/single-node-service-release-workflow.md)
+- Design v1: [`docs/plans/2026-03-16-single-node-cloud-run-like-release-design.md`](docs/plans/2026-03-16-single-node-cloud-run-like-release-design.md)
+- Workflow details: [`docs/operations-governance/service-release-control-plane-workflow.md`](docs/operations-governance/service-release-control-plane-workflow.md)
+- Local OrbStack workflow: [`docs/operations-governance/orbstack-local-build-and-tar-deploy.md`](docs/operations-governance/orbstack-local-build-and-tar-deploy.md)
+- Repo catalog: [`config/single-node-release/repositories.json`](config/single-node-release/repositories.json)
+- Service catalog: [`config/single-node-release/services.json`](config/single-node-release/services.json)
+
+Control-plane boundary:
+
+- This repo owns catalog, workflow orchestration, release policy, and DNS/update flow.
+- Each sub repo still owns its own Dockerfile, playbook, runtime env shape, and service-specific startup behavior.
 
 ### Local Deploy Commands
 
@@ -89,22 +107,61 @@ ansible-playbook -D ansible/playbooks/<service-playbook>.yml \
   -e @/secure/path/<service>.runtime.yml
 ```
 
+### Local OrbStack Build and Tar Deploy
+
+For macOS local development and release preparation, prefer OrbStack as the Docker runtime.
+
+Build locally, export a tar, then ship and load it on the VPS:
+
+```bash
+scripts/single-node/build_local_image_tar.sh \
+  --context /Users/shenlan/workspaces/cloud-neutral-toolkit/<service-repo> \
+  --image local/<service-name> \
+  --tag "$(git -C /Users/shenlan/workspaces/cloud-neutral-toolkit/<service-repo> rev-parse --short HEAD)" \
+  --tar /tmp/<service-name>.tar \
+  --platform linux/amd64
+
+scripts/single-node/ship_image_tar.sh \
+  --host root@us-xhttp.svc.plus \
+  --tar /tmp/<service-name>.tar \
+  --remote-dir /opt/cloud-neutral/<service-name>/<release-name>
+```
+
+The full workflow and examples are documented in:
+
+- [`docs/operations-governance/orbstack-local-build-and-tar-deploy.md`](docs/operations-governance/orbstack-local-build-and-tar-deploy.md)
+
 ### GitHub Actions Manual Release
 
 Workflow file:
 
-- `.github/workflows/single_node_service_release.yml`
+- `.github/workflows/service_release_control_plane.yml`
 
-Service mapping:
+Core release-enabled services:
 
-| Service | Repo | Playbook | Workflow `service` |
-| --- | --- | --- | --- |
-| accounts | `accounts.svc.plus` | `ansible/playbooks/deploy_accounts_compose.yml` | `accounts` |
-| accounts-preview | `accounts.svc.plus` | `ansible/playbooks/deploy_accounts_compose.yml` | `accounts-preview` |
-| rag-server | `rag-server.svc.plus` | `ansible/playbooks/deploy_rag_server_compose.yml` | `rag-server` |
-| x-cloud-flow | `x-cloud-flow.svc.plus` | `ansible/playbooks/deploy_x_cloud_flow_compose.yml` | `x-cloud-flow` |
-| x-ops-agent | `x-ops-agent.svc.plus` | `ansible/playbooks/deploy_x_ops_agent_compose.yml` | `x-ops-agent` |
-| x-scope-hub | `x-scope-hub.svc.plus` | `ansible/playbooks/deploy_x_scope_hub_compose.yml` | `x-scope-hub` |
+| Service | Repo | Repo Category | Playbook | Prod Stable Domain | Preview Stable Domain |
+| --- | --- | --- | --- | --- | --- |
+| accounts | `accounts.svc.plus` | `api` | `ansible/playbooks/deploy_accounts_compose.yml` | `accounts.svc.plus` | `accounts-preview.svc.plus` |
+| rag-server | `rag-server.svc.plus` | `api` | `ansible/playbooks/deploy_rag_server_compose.yml` | `rag-server.svc.plus` | `rag-server-preview.svc.plus` |
+| x-cloud-flow | `x-cloud-flow.svc.plus` | `api` | `ansible/playbooks/deploy_x_cloud_flow_compose.yml` | `x-cloud-flow.svc.plus` | `x-cloud-flow-preview.svc.plus` |
+| x-ops-agent | `x-ops-agent.svc.plus` | `api` | `ansible/playbooks/deploy_x_ops_agent_compose.yml` | `x-ops-agent.svc.plus` | `x-ops-agent-preview.svc.plus` |
+| x-scope-hub | `x-scope-hub.svc.plus` | `api` | `ansible/playbooks/deploy_x_scope_hub_compose.yml` | `x-scope-hub.svc.plus` | `x-scope-hub-preview.svc.plus` |
+
+Workflow input model:
+
+- `service`: logical service key from `config/single-node-release/services.json`
+- `track`: `prod` or `preview`
+- `service_ref`: branch, tag, or commit SHA in the service repo
+- `run_apply`: `false` for dry-run only, `true` for final apply
+
+Release behavior:
+
+- CI builds and pushes the image to `ghcr.io`
+- CI creates the immutable release DNS record
+- CD runs the sub-repo playbook against the single VPS
+- Stable domains stay fixed and should already point to the deploy host
+- Release domains are unique per deployment:
+  - `<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>`
 
 Before running the workflow, configure:
 
@@ -128,29 +185,31 @@ Before running the workflow, configure:
 Manual run in GitHub UI:
 
 1. Open `Actions`
-2. Select `Single-Node Service Release`
+2. Select `Service Release Control Plane`
 3. Click `Run workflow`
 4. Fill:
-   - `service`: one of `accounts`, `accounts-preview`, `rag-server`, `x-cloud-flow`, `x-ops-agent`, `x-scope-hub`
+   - `service`: one of `accounts`, `rag-server`, `x-cloud-flow`, `x-ops-agent`, `x-scope-hub`
+   - `track`: `prod` or `preview`
    - `service_ref`: branch, tag, or commit SHA from the service repository
    - `run_apply`: `false` for dry-run only, `true` to continue through the final apply stage
 
 Manual run with GitHub CLI:
 
 ```bash
-gh workflow run single_node_service_release.yml \
+gh workflow run service_release_control_plane.yml \
   -R cloud-neutral-toolkit/github-org-cloud-neutral-toolkit \
-  -f service=rag-server \
-  -f service_ref=main \
+  -f service=accounts \
+  -f track=prod \
+  -f service_ref=release/2026-03-16 \
   -f run_apply=false
 ```
 
 Workflow stages:
 
 1. Build and push the image to `ghcr.io`
-2. Update the release DNS record
-3. Run `ansible-playbook -D -C`
-4. Optionally run `ansible-playbook -D`
+2. Update the immutable release DNS record
+3. Run the sub-repo `ansible-playbook -D -C`
+4. Optionally run the sub-repo `ansible-playbook -D`
 
 ## StackFlow GitHub Actions Secrets
 

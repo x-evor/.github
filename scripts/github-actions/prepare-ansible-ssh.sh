@@ -24,8 +24,36 @@ umask 077
 mkdir -p "${ssh_dir}"
 chmod 700 "${ssh_dir}"
 
-printf '%s' "${SINGLE_NODE_VPS_SSH_PRIVATE_KEY}" | tr -d '\r' > "${private_key_file}"
-printf '\n' >> "${private_key_file}"
+normalized_private_key="$(
+  python3 - <<'PY'
+import base64
+import os
+import sys
+
+raw = os.environ["SINGLE_NODE_VPS_SSH_PRIVATE_KEY"].replace("\r", "").strip()
+candidates = [raw]
+
+if "\\n" in raw:
+    candidates.append(raw.replace("\\n", "\n").strip())
+
+try:
+    decoded = base64.b64decode(raw, validate=True).decode("utf-8").replace("\r", "").strip()
+except Exception:
+    decoded = ""
+
+if decoded:
+    candidates.append(decoded)
+
+for candidate in candidates:
+    if "BEGIN " in candidate and "PRIVATE KEY" in candidate:
+        sys.stdout.write(candidate.rstrip("\n") + "\n")
+        raise SystemExit(0)
+
+sys.stdout.write(raw.rstrip("\n") + "\n")
+PY
+)"
+
+printf '%s' "${normalized_private_key}" > "${private_key_file}"
 chmod 600 "${private_key_file}"
 
 if ! ssh-keygen -y -f "${private_key_file}" >/dev/null 2>&1; then

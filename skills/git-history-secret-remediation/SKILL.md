@@ -21,7 +21,10 @@ Bundled scripts:
 
 - `scripts/list_git_refs.sh`
 - `scripts/run_gitleaks_history_scan.sh`
+- `scripts/backup_git_remotes.py`
+- `scripts/restore_git_remotes.py`
 - `scripts/run_filter_repo_redaction.sh`
+- `scripts/run_history_remediation.sh`
 
 ## When To Use
 
@@ -44,6 +47,7 @@ Trigger this skill when the user asks to:
    - inventory refs first
    - expect force-push
    - warn that teammates must reclone or fully scrub old clones
+6. Back up `git remote -v` before rewrite and restore it after rewrite or force-push preparation.
 
 ## Workflow
 
@@ -126,9 +130,31 @@ bash skills/git-history-secret-remediation/scripts/run_filter_repo_redaction.sh 
 
 Behavior:
 
+- backs up `git remote -v` metadata before rewriting
+- restores remotes after rewriting if needed
+- runs `git filter-repo --force --sensitive-data-removal --no-fetch`
 - clears `.git/filter-repo/already_ran` when present
-- runs `git filter-repo --force --sensitive-data-removal`
 - optionally removes listed paths from history with `--invert-paths`
+
+### 6b. Single-command remediation
+
+If you already know the replacement mapping and the paths to purge, use the orchestrator:
+
+```bash
+bash skills/git-history-secret-remediation/scripts/run_history_remediation.sh \
+  /path/to/repo \
+  /tmp/replace-text.txt \
+  [path-to-remove...]
+```
+
+Behavior:
+
+- inventories refs
+- runs a pre-scan
+- rewrites history
+- restores remotes
+- re-runs `gitleaks`
+- exits non-zero until the repo scans clean
 
 ### 7. Re-run gitleaks
 
@@ -161,3 +187,4 @@ Always tell the user to:
 - purge or invalidate old access where relevant
 - have other clones recloned or scrubbed
 - notify repo admins if server-side cache or object cleanup is needed
+- use the remote backup JSON when reconstructing remotes after force-push in a fresh clone

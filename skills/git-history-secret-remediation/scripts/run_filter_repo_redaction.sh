@@ -10,6 +10,9 @@ repo_path=$1
 replace_text_file=$2
 shift 2
 remove_paths=("$@")
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+backup_dir="$repo_path/.git/filter-repo"
+remote_backup_json="$backup_dir/remotes.backup.json"
 
 if [[ ! -d "$repo_path/.git" ]]; then
   echo "Error: not a git repository: $repo_path" >&2
@@ -35,12 +38,15 @@ if marker.exists():
     marker.unlink()
 PY
 
+python3 "$script_dir/backup_git_remotes.py" "$repo_path" "$remote_backup_json" >/dev/null
+
 cmd=(
   git
   -C "$repo_path"
   filter-repo
   --force
   --sensitive-data-removal
+  --no-fetch
   --replace-text "$replace_text_file"
 )
 
@@ -52,3 +58,4 @@ if [[ ${#remove_paths[@]} -gt 0 ]]; then
 fi
 
 "${cmd[@]}"
+python3 "$script_dir/restore_git_remotes.py" "$repo_path" "$remote_backup_json" >/dev/null

@@ -2,7 +2,7 @@ version: 1
 domain: svc.plus
 default_registry: ghcr.io
 default_repo_owner: cloud-neutral-toolkit
-release_domain_format: "<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>"
+release_domain_format: "prod release/* => <release-prefix>-<deploy-hostname>-<release-name>-<git-short-commit>.<domain>; otherwise => <release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>"
 track_policy:
   prod:
     trigger: push to release/*

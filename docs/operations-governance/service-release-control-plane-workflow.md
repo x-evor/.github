@@ -66,6 +66,7 @@ Catalog split:
   - One of: `prod`, `preview`
 - `service_ref`
   - Branch, tag, or commit SHA of the service repository
+  - For `prod`, refs under `release/*` also become part of the immutable release-domain name
 - `run_apply`
   - `false`: stop after stage 3
   - `true`: continue to stage 4
@@ -116,6 +117,8 @@ The caller repo should pass:
 - build the service image
 - push to `ghcr.io`
 - compute the immutable release domain
+  - prod + `release/*`: `<release-prefix>-<deploy-hostname>-<release-name>-<git-short-commit>.<domain>`
+  - preview or non-`release/*`: `<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>`
 
 ### Stage 2. Update Release DNS
 

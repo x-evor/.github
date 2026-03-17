@@ -165,7 +165,8 @@ Release behavior:
 - CD writes the deploy key to the runner, renders a temporary inventory from `ansible/inventory.ini.tmpl`, and runs the sub-repo playbook against the single VPS
 - Stable domains stay fixed and should already point to the deploy host
 - Release domains are unique per deployment:
-  - `<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>`
+  - prod + `release/*`: `<release-prefix>-<deploy-hostname>-<release-name>-<git-short-commit>.<domain>`
+  - preview or non-`release/*`: `<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>`
 
 Before running the workflow, configure:
 

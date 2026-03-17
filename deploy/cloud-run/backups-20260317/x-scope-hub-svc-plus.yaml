@@ -1,0 +1,90 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    run.googleapis.com/build-enable-automatic-updates: 'false'
+    run.googleapis.com/build-id: 9995e653-4041-4159-99a2-fabde50030a5
+    run.googleapis.com/build-image-uri: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/x-scope-hub-svc-plus
+    run.googleapis.com/build-name: projects/266500572462/locations/asia-northeast1/builds/9995e653-4041-4159-99a2-fabde50030a5
+    run.googleapis.com/build-source-location: gs://run-sources-xzerolab-480008-asia-northeast1/services/x-scope-hub-svc-plus/1773537517.353392-572f9c22a6c14cb1a0f4b35795ce7a49.zip#1773537527264355
+    run.googleapis.com/client-name: gcloud
+    run.googleapis.com/client-version: 552.0.0
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+    run.googleapis.com/maxScale: '3'
+    run.googleapis.com/operation-id: fad5f2fb-a7af-4463-b080-c6ba59b31a8d
+    run.googleapis.com/urls: '["https://x-scope-hub-svc-plus-266500572462.asia-northeast1.run.app","https://x-scope-hub-svc-plus-pztvwzbmpq-an.a.run.app"]'
+    serving.knative.dev/creator: haitaopanhq@gmail.com
+    serving.knative.dev/lastModifier: haitaopanhq@gmail.com
+  creationTimestamp: '2026-02-09T23:27:41.302903Z'
+  generation: 3
+  labels:
+    cloud.googleapis.com/location: asia-northeast1
+  name: x-scope-hub-svc-plus
+  namespace: '266500572462'
+  resourceVersion: AAZNBedLfLE
+  selfLink: /apis/serving.knative.dev/v1/namespaces/266500572462/services/x-scope-hub-svc-plus
+  uid: dc72c5d0-556f-48f7-90ba-a63478491009
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '20'
+        run.googleapis.com/client-name: gcloud
+        run.googleapis.com/client-version: 552.0.0
+        run.googleapis.com/startup-cpu-boost: 'true'
+      labels:
+        client.knative.dev/nonce: cuzbmqoqzv
+        run.googleapis.com/startupProbeType: Default
+    spec:
+      containerConcurrency: 80
+      containers:
+      - env:
+        - name: OPENCLAW_GATEWAY_URL
+          value: wss://openclaw.svc.plus:443
+        - name: OPENCLAW_GATEWAY_TOKEN
+          value: 
+        - name: AI_GATEWAY_URL
+          value: https://api.svc.plus/v1
+        - name: AI_GATEWAY_API_KEY
+          value: =
+        image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/x-scope-hub-svc-plus@sha256:48e9f7a27797ab5a03295d36abcc18f0ab82b9e95e309d09e9c82929e92f5ec5
+        ports:
+        - containerPort: 8080
+          name: http1
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 1
+          periodSeconds: 240
+          tcpSocket:
+            port: 8080
+          timeoutSeconds: 240
+      serviceAccountName: 266500572462-compute@developer.gserviceaccount.com
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100
+status:
+  address:
+    url: https://x-scope-hub-svc-plus-pztvwzbmpq-an.a.run.app
+  conditions:
+  - lastTransitionTime: '2026-03-15T01:20:10.923185Z'
+    status: 'True'
+    type: Ready
+  - lastTransitionTime: '2026-03-15T01:20:08.126844Z'
+    status: 'True'
+    type: ConfigurationsReady
+  - lastTransitionTime: '2026-03-15T01:20:10.900349Z'
+    status: 'True'
+    type: RoutesReady
+  latestCreatedRevisionName: x-scope-hub-svc-plus-00003-nmk
+  latestReadyRevisionName: x-scope-hub-svc-plus-00003-nmk
+  observedGeneration: 3
+  traffic:
+  - latestRevision: true
+    percent: 100
+    revisionName: x-scope-hub-svc-plus-00003-nmk
+  url: https://x-scope-hub-svc-plus-pztvwzbmpq-an.a.run.app

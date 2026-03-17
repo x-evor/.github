@@ -206,6 +206,8 @@ jobs:
           "${{ steps.meta.outputs.deploy_subdomain_prefix }}"
           "${{ steps.meta.outputs.deploy_hostname }}"
           "${{ steps.meta.outputs.domain }}"
+          "${{ inputs.track }}"
+          "${{ inputs.service_ref }}"
 
       - name: Summarize Stage 1
         shell: bash

@@ -43,11 +43,11 @@ spec:
         - name: OPENCLAW_GATEWAY_URL
           value: wss://openclaw.svc.plus:443
         - name: OPENCLAW_GATEWAY_TOKEN
-          value: 
+          value: ""
         - name: AI_GATEWAY_URL
           value: https://api.svc.plus/v1
         - name: AI_GATEWAY_API_KEY
-          value: 
+          value: ""
         image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/x-cloud-flow-svc-plus@sha256:8bd0e20c171b77f2ad969ab1b1ac0da5d12da4e6ff5a77f6c81ec9fe60d112f9
         ports:
         - containerPort: 8080

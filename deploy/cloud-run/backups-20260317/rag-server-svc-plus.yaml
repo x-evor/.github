@@ -54,9 +54,9 @@ spec:
         - name: POSTGRES_USER
           value: postgres
         - name: POSTGRES_PASSWORD
-          value: 
+          value: ""
         - name: NVIDIA_API_KEY
-          value: 
+          value: ""
         - name: DATABASE_URL
           valueFrom:
             secretKeyRef:

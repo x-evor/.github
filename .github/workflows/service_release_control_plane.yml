@@ -132,6 +132,7 @@ jobs:
       image_name: ${{ steps.meta.outputs.image_name }}
       ansible_vars_secret_name: ${{ steps.meta.outputs.ansible_vars_secret_name }}
       secret_env_map_json: ${{ steps.meta.outputs.secret_env_map_json }}
+      track_env_json: ${{ steps.meta.outputs.track_env_json }}
       service_public_vars_path: ${{ steps.meta.outputs.service_public_vars_path }}
       deploy_subdomain_prefix: ${{ steps.meta.outputs.deploy_subdomain_prefix }}
       stable_domain: ${{ steps.meta.outputs.stable_domain }}
@@ -306,6 +307,7 @@ jobs:
         env:
           SERVICE_ANSIBLE_VARS_SECRET_NAME: ${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}
           SERVICE_SECRET_ENV_MAP_JSON: ${{ needs.stage-1-build-image.outputs.secret_env_map_json }}
+          SERVICE_TRACK_ENV_JSON: ${{ needs.stage-1-build-image.outputs.track_env_json }}
           SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
           SERVICE_DEPLOY_PREFIX: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
           SERVICE_STABLE_DOMAIN: ${{ needs.stage-1-build-image.outputs.stable_domain }}
@@ -389,6 +391,7 @@ jobs:
         env:
           SERVICE_ANSIBLE_VARS_SECRET_NAME: ${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}
           SERVICE_SECRET_ENV_MAP_JSON: ${{ needs.stage-1-build-image.outputs.secret_env_map_json }}
+          SERVICE_TRACK_ENV_JSON: ${{ needs.stage-1-build-image.outputs.track_env_json }}
           SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
           SERVICE_DEPLOY_PREFIX: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
           SERVICE_STABLE_DOMAIN: ${{ needs.stage-1-build-image.outputs.stable_domain }}

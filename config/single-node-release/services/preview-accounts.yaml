@@ -4,3 +4,9 @@ enabled: true
 stable_domain: accounts-preview.svc.plus
 release_prefix: accounts-preview
 host_port: 18081
+env:
+  POSTGRES_USER: svcplus_vps
+  DB_USER: svcplus_vps
+  SMTP_FROM: "XControl Account <noreply@svc.plus>"
+  SMTP_USERNAME: ""
+  SMTP_PASSWORD: ""

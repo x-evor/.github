@@ -52,6 +52,16 @@ def build_secret_payload() -> dict:
 
 
 def build_runtime_payload() -> dict:
+    track_env_json = os.environ.get("SERVICE_TRACK_ENV_JSON", "")
+    track_env = {}
+    if track_env_json:
+        try:
+            track_env = json.loads(track_env_json)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"invalid SERVICE_TRACK_ENV_JSON: {exc}") from exc
+        if not isinstance(track_env, dict):
+            raise SystemExit("SERVICE_TRACK_ENV_JSON must decode to an object")
+
     return {
         "service_compose_image": require_env("SERVICE_COMPOSE_IMAGE"),
         "service_compose_registry_server": os.environ.get("GHCR_REGISTRY", "ghcr.io"),
@@ -65,7 +75,7 @@ def build_runtime_payload() -> dict:
                 "stable_domains": [require_env("SERVICE_STABLE_DOMAIN")],
                 "host_port": int(require_env("SERVICE_HOST_PORT")),
                 "healthcheck_path": require_env("SERVICE_HEALTHCHECK_PATH"),
-                "env": {},
+                "env": track_env,
             }
         ],
     }

@@ -118,6 +118,7 @@ def main() -> None:
         "service_public_vars_path": resolved_public_vars_path,
         "ansible_vars_secret_name": service.get("ansible_vars_secret_name", ""),
         "secret_env_map_json": json.dumps(service.get("secret_env_map", {}), separators=(",", ":")),
+        "track_env_json": json.dumps(track_conf.get("env", {}), separators=(",", ":")),
         "deploy_subdomain_prefix": track_conf["release_prefix"],
         "stable_domain": track_conf["stable_domain"],
         "host_port": str(track_conf["host_port"]),

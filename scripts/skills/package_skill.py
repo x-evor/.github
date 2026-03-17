@@ -10,6 +10,14 @@ from pathlib import Path
 from validate_skill import validate_skill
 
 
+def should_include(file_path: Path) -> bool:
+    if "__pycache__" in file_path.parts:
+        return False
+    if file_path.suffix == ".pyc":
+        return False
+    return True
+
+
 def package_skill(skill_path: str | Path, output_dir: str | Path | None = None) -> Path:
     skill_dir = Path(skill_path).resolve()
     if not skill_dir.exists():
@@ -27,7 +35,7 @@ def package_skill(skill_path: str | Path, output_dir: str | Path | None = None) 
     output_path = destination / f"{skill_dir.name}.skill"
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as archive:
         for file_path in skill_dir.rglob("*"):
-            if file_path.is_file():
+            if file_path.is_file() and should_include(file_path):
                 archive.write(file_path, file_path.relative_to(skill_dir.parent))
 
     return output_path

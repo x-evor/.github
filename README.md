@@ -47,6 +47,7 @@ For cross-repo requests, use one objective per task and require this output form
 - This repo holds standards and coordination docs, not service runtime code.
 - Shared ClawHub-style skill sources live under `skills/`.
 - Build a distributable `.skill` package with `python3 scripts/skills/package_skill.py skills/<skill-name> dist/skills`.
+- Distribute a skill to child repos with `python3 scripts/skills/distribute_skill.py skills/<skill-name> /path/to/repo [...]`.
 
 ## Release Control Plane
 

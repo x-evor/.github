@@ -23,6 +23,10 @@
     state: directory
     mode: "0755"
 
+- name: Ensure shared stunnel component is ready
+  ansible.builtin.import_tasks: shared_stunnel.yml
+  when: service_compose_shared_stunnel_enabled | bool
+
 - name: Deploy compose targets
   ansible.builtin.include_tasks: deploy_target.yml
   loop: "{{ service_compose_deploy_targets }}"

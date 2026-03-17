@@ -62,7 +62,17 @@ def build_runtime_payload() -> dict:
         if not isinstance(track_env, dict):
             raise SystemExit("SERVICE_TRACK_ENV_JSON must decode to an object")
 
-    return {
+    shared_stunnel_json = os.environ.get("SERVICE_SHARED_STUNNEL_JSON", "")
+    shared_stunnel = {}
+    if shared_stunnel_json:
+        try:
+            shared_stunnel = json.loads(shared_stunnel_json)
+        except json.JSONDecodeError as exc:
+            raise SystemExit(f"invalid SERVICE_SHARED_STUNNEL_JSON: {exc}") from exc
+        if not isinstance(shared_stunnel, dict):
+            raise SystemExit("SERVICE_SHARED_STUNNEL_JSON must decode to an object")
+
+    runtime_payload = {
         "service_compose_image": require_env("SERVICE_COMPOSE_IMAGE"),
         "service_compose_registry_server": os.environ.get("GHCR_REGISTRY", "ghcr.io"),
         "service_compose_registry_username": require_env("GHCR_USERNAME"),
@@ -79,6 +89,20 @@ def build_runtime_payload() -> dict:
             }
         ],
     }
+    runtime_payload.update(
+        {
+            "service_compose_shared_stunnel_enabled": bool(shared_stunnel.get("enabled", False)),
+            "service_compose_shared_stunnel_container_name": str(
+                shared_stunnel.get("container_name", "cn-toolkit-stunnel-client")
+            ),
+            "service_compose_shared_stunnel_network_name": str(
+                shared_stunnel.get("network_name", "cn-toolkit-shared")
+            ),
+            "service_compose_shared_stunnel_image": str(shared_stunnel.get("image", "dweomer/stunnel")),
+            "service_compose_shared_stunnel_accept_port": int(shared_stunnel.get("accept_port", 15432)),
+        }
+    )
+    return runtime_payload
 
 
 def main() -> None:

@@ -28,3 +28,8 @@ service_compose_user: ""
 service_compose_pull_policy: always
 service_compose_remove_previous_releases: true
 service_compose_remove_previous_caddy: true
+service_compose_shared_stunnel_enabled: false
+service_compose_shared_stunnel_container_name: cn-toolkit-stunnel-client
+service_compose_shared_stunnel_network_name: cn-toolkit-shared
+service_compose_shared_stunnel_image: dweomer/stunnel
+service_compose_shared_stunnel_accept_port: 15432

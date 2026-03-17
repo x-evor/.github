@@ -1,0 +1,27 @@
+- name: Ensure shared stunnel runtime directory exists
+  ansible.builtin.file:
+    path: "{{ service_compose_project_root }}/shared-components/stunnel-client"
+    state: directory
+    mode: "0755"
+
+- name: Render shared stunnel compose manifest
+  ansible.builtin.template:
+    src: stunnel-client.compose.yml.j2
+    dest: "{{ service_compose_project_root }}/shared-components/stunnel-client/docker-compose.yml"
+    mode: "0644"
+
+- name: Start shared stunnel client component
+  ansible.builtin.shell: |
+    set -euo pipefail
+    docker compose -f "{{ service_compose_project_root }}/shared-components/stunnel-client/docker-compose.yml" up -d
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Wait for shared stunnel client port on loopback
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ service_compose_shared_stunnel_accept_port }}"
+    timeout: 30
+  when: not ansible_check_mode

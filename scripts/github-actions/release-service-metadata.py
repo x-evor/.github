@@ -118,6 +118,7 @@ def main() -> None:
         "service_public_vars_path": resolved_public_vars_path,
         "ansible_vars_secret_name": service.get("ansible_vars_secret_name", ""),
         "secret_env_map_json": json.dumps(service.get("secret_env_map", {}), separators=(",", ":")),
+        "shared_stunnel_json": json.dumps(service.get("shared_stunnel", {}), separators=(",", ":")),
         "track_env_json": json.dumps(track_conf.get("env", {}), separators=(",", ":")),
         "deploy_subdomain_prefix": track_conf["release_prefix"],
         "stable_domain": track_conf["stable_domain"],

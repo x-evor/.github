@@ -15,6 +15,12 @@ services:
     repo_url: https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git
     playbook_path: ansible/playbooks/deploy_accounts_compose.yml
     public_vars_path: ansible/vars/accounts.release.public.yml
+    shared_stunnel:
+      enabled: true
+      container_name: cn-toolkit-stunnel-client
+      network_name: cn-toolkit-shared
+      image: dweomer/stunnel
+      accept_port: 15432
     secret_env_map:
       INTERNAL_SERVICE_TOKEN: INTERNAL_SERVICE_TOKEN
       POSTGRES_PASSWORD: ACCOUNTS_DB_PASSWORD

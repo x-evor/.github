@@ -50,3 +50,15 @@ services:
       - {{ value | to_json }}
 {% endfor %}
 {% endif %}
+{% if service_compose_shared_stunnel_enabled | bool %}
+    networks:
+      - default
+      - shared_stunnel
+{% endif %}
+{% if service_compose_shared_stunnel_enabled | bool %}
+
+networks:
+  shared_stunnel:
+    external: true
+    name: {{ service_compose_shared_stunnel_network_name | to_json }}
+{% endif %}

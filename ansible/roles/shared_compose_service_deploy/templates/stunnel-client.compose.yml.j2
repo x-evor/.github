@@ -12,6 +12,12 @@ services:
       STUNNEL_VERIFY_CHAIN: "yes"
     ports:
       - "127.0.0.1:{{ service_compose_shared_stunnel_accept_port }}:{{ service_compose_shared_stunnel_accept_port }}"
+{% if service_compose_dns | length > 0 %}
+    dns:
+{% for value in service_compose_dns %}
+      - {{ value | to_json }}
+{% endfor %}
+{% endif %}
     networks:
       shared:
         aliases:

@@ -77,3 +77,11 @@ Use the default template in `.github/pull_request_template.md`.
 - Non-trivial step logic must move to checked-in scripts and templates.
 - See `docs/operations-governance/github-actions-yaml-governance.md`
 - Use `skills/github-actions-yaml-governance/SKILL.md` when designing or refactoring control-plane workflows.
+
+## 9) Shareable Skill Package Rule
+
+- Reusable cross-repo skills must live under `skills/<skill-name>/`.
+- A distributable ClawHub-style package must be buildable with:
+  - `python3 scripts/skills/package_skill.py skills/<skill-name> dist/skills`
+- `SKILL.md` frontmatter must stay compatible with the minimal validator in `scripts/skills/validate_skill.py`.
+- Package only the skill directory and its bundled resources; do not rely on external local paths for distribution.

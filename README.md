@@ -21,6 +21,7 @@ This repository is the management hub for a multi-repo project under the `cloud-
 - Workspace file: [`console.svc.plus.code-workspace`](console.svc.plus.code-workspace)
 - Env template: [`.env.example`](.env.example)
 - Env/secret skill: [`skills/env-secrets-governance/SKILL.md`](skills/env-secrets-governance/SKILL.md)
+- Git history remediation skill: [`skills/git-history-secret-remediation/SKILL.md`](skills/git-history-secret-remediation/SKILL.md)
 - Root README skill: [`skills/readme-root-standard/SKILL.md`](skills/readme-root-standard/SKILL.md)
 - Unified setup.sh skill: [`skills/unified-setup-sh/SKILL.md`](skills/unified-setup-sh/SKILL.md)
 - Release branch policy skill: [`skills/release-branch-policy/SKILL.md`](skills/release-branch-policy/SKILL.md)
@@ -44,6 +45,8 @@ For cross-repo requests, use one objective per task and require this output form
 
 - Secrets stay in local `.env` (gitignored) and production secret managers.
 - This repo holds standards and coordination docs, not service runtime code.
+- Shared ClawHub-style skill sources live under `skills/`.
+- Build a distributable `.skill` package with `python3 scripts/skills/package_skill.py skills/<skill-name> dist/skills`.
 
 ## Release Control Plane
 

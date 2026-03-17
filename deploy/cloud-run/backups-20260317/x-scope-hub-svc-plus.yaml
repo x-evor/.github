@@ -47,7 +47,7 @@ spec:
         - name: AI_GATEWAY_URL
           value: https://api.svc.plus/v1
         - name: AI_GATEWAY_API_KEY
-          value: =
+          value: 
         image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/x-scope-hub-svc-plus@sha256:48e9f7a27797ab5a03295d36abcc18f0ab82b9e95e309d09e9c82929e92f5ec5
         ports:
         - containerPort: 8080

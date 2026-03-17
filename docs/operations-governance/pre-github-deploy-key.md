@@ -12,7 +12,7 @@ Do not reuse a personal daily-use SSH key when a dedicated CI key can be used in
 
 | Location | Expected value | Use `.pub`? | Example |
 | --- | --- | --- | --- |
-| GitHub Organization Secret `SINGLE_NODE_VPS_SSH_PRIVATE_KEY` | private key contents | No | `<BEGIN_OPENSSH_PRIVATE_KEY> ...` |
+| GitHub Organization Secret `SINGLE_NODE_VPS_SSH_PRIVATE_KEY` | private key contents | No | `<OPENSSH_PRIVATE_KEY_CONTENT>` |
 | GitHub repository `Deploy keys` page | public key contents | Yes | `ssh-ed25519 AAAA... github-actions@cloud-neutral-toolkit` |
 | GitHub personal `SSH keys` page | public key contents | Yes | `ssh-ed25519 AAAA... github-actions@cloud-neutral-toolkit` |
 | Deploy host `~/.ssh/authorized_keys` | public key contents | Yes | `ssh-ed25519 AAAA... github-actions@cloud-neutral-toolkit` |

@@ -12,6 +12,13 @@ playbook_path="$3"
 public_vars_path="$4"
 secret_vars_file="$5"
 runtime_vars_file="$6"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+merged_vars_file="$(mktemp)"
+
+cleanup() {
+  rm -f "${merged_vars_file}"
+}
+trap cleanup EXIT
 
 args=(
   ansible-playbook
@@ -33,13 +40,16 @@ esac
 
 args+=("${playbook_path}")
 
+merge_inputs=()
 if [[ -n "${public_vars_path}" ]]; then
-  args+=(-e "@${public_vars_path}")
+  merge_inputs+=("${public_vars_path}")
 fi
+merge_inputs+=("${secret_vars_file}" "${runtime_vars_file}")
+
+python3 "${script_dir}/merge-ansible-vars.py" "${merged_vars_file}" "${merge_inputs[@]}"
 
 args+=(
-  -e "@${secret_vars_file}"
-  -e "@${runtime_vars_file}"
+  -e "@${merged_vars_file}"
 )
 
 ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' "${args[@]}"

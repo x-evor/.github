@@ -65,6 +65,6 @@ This makes the overall platform suitable for users who need a practical path fro
 🤝 Community & License
 We welcome contributions and collaboration.
 
-Copyright © 2024 Cloud-Neutral Toolkit. Licensed under the Apache 2.0 License.
+Copyright © 2024-2026 Cloud-Neutral Toolkit. Licensed under the Apache 2.0 License.
 
 </div>

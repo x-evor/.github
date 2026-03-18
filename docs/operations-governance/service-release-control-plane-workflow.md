@@ -2,7 +2,7 @@
 
 Workflow file:
 
-- `.github/workflows/service_release_control_plane.yml`
+- `.github/workflows/service_release_apiserver-deploy.yml`
 
 This workflow is the control-plane entrypoint for the Cloud Run-like `svc.plus` release system.
 
@@ -84,7 +84,7 @@ For repositories declared with `source_kind=git-submodule`, the actual source re
 CLI example:
 
 ```bash
-gh workflow run service_release_control_plane.yml \
+gh workflow run service_release_apiserver-deploy.yml \
   -f service=accounts \
   -f track=prod \
   -f service_ref=release/2026-03-16 \
@@ -224,7 +224,7 @@ on:
 
 jobs:
   prod:
-    uses: cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/.github/workflows/service_release_control_plane.yml@main
+    uses: cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/.github/workflows/service_release_apiserver-deploy.yml@main
     with:
       service: accounts
       track: prod
@@ -249,7 +249,7 @@ on:
 
 jobs:
   preview:
-    uses: cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/.github/workflows/service_release_control_plane.yml@main
+    uses: cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/.github/workflows/service_release_apiserver-deploy.yml@main
     with:
       service: accounts
       track: preview

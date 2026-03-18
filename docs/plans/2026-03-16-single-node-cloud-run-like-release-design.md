@@ -36,7 +36,7 @@ The first version intentionally uses four checked-in control-plane sources:
    - Repository classification and release eligibility
 3. `config/single-node-release/services/common.yaml` and `config/single-node-release/services/<track>-<service>.yaml`
    - Service release catalog, tracks, domains, ports, Dockerfile paths, and secret names
-4. `.github/workflows/service_release_control_plane.yml`
+4. `.github/workflows/service_release_apiserver-deploy.yml`
    - The control-plane workflow entrypoint for manual and reusable execution
 
 This avoids hardcoding service metadata in shell case statements.
@@ -230,7 +230,7 @@ Deliver in the control repo:
 - workspace-backed repo catalog
 - service catalog
 - track-aware metadata resolver
-- updated `service_release_control_plane.yml`
+- updated `service_release_apiserver-deploy.yml`
 - updated workflow and README documentation
 
 ### Phase 2

@@ -6,7 +6,7 @@
     },
     {
       "name": "console.svc.plus",
-      "path": "../console.svc.plus"
+      "path": "subrepos/console.svc.plus"
     },
     {
       "name": "accounts.svc.plus",

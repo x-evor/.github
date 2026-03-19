@@ -1,0 +1,227 @@
+name: Service Release Frontend Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: Optional image tag override. Defaults to the current commit SHA.
+        required: false
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/service_release_frontend-deploy.yml"
+      - ".gitmodules"
+      - "ansible/**"
+      - "subrepos/console.svc.plus/**"
+
+concurrency:
+  group: frontend-release-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  SERVICE_PATH: subrepos/console.svc.plus
+  DEPLOY_HOST: 47.120.61.35
+  DEPLOY_DIR: /opt/console-svc-plus
+  PRIMARY_DOMAIN: cn.svc.plus
+  SECONDARY_DOMAIN: cn.onwalk.net
+  GHCR_REGISTRY: ghcr.io
+  GHCR_USERNAME: svc-design
+
+jobs:
+  stage-1-build-image:
+    name: "1. Build And Push Image"
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      ghcr_namespace: ${{ steps.meta.outputs.ghcr_namespace }}
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_ref: ${{ steps.meta.outputs.image_ref }}
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: recursive
+
+      - name: Compute Image Metadata
+        id: meta
+        working-directory: ${{ env.SERVICE_PATH }}
+        run: bash scripts/github-actions/compute-frontend-release-metadata.sh "${{ github.event.inputs.image_tag }}"
+
+      - name: Prepare Frontend Build Context
+        working-directory: ${{ env.SERVICE_PATH }}
+        env:
+          KNOWLEDGE_REPO: ${{ vars.KNOWLEDGE_REPO || 'https://github.com/Cloud-Neutral-Workshop/knowledge.git' }}
+        run: bash scripts/github-actions/prepare-frontend-build-context.sh
+
+      - name: Render Frontend Build Args
+        id: build_args
+        working-directory: ${{ env.SERVICE_PATH }}
+        env:
+          PRIMARY_DOMAIN: ${{ env.PRIMARY_DOMAIN }}
+          NEXT_PUBLIC_APP_BASE_URL: ${{ vars.NEXT_PUBLIC_APP_BASE_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_LOGIN_URL: ${{ vars.NEXT_PUBLIC_LOGIN_URL }}
+          NEXT_PUBLIC_DOCS_BASE_URL: ${{ vars.NEXT_PUBLIC_DOCS_BASE_URL }}
+          NEXT_PUBLIC_RUNTIME_ENVIRONMENT: ${{ vars.NEXT_PUBLIC_RUNTIME_ENVIRONMENT }}
+          NEXT_PUBLIC_RUNTIME_REGION: ${{ vars.NEXT_PUBLIC_RUNTIME_REGION }}
+          NEXT_PUBLIC_GISCUS_REPO: ${{ vars.NEXT_PUBLIC_GISCUS_REPO }}
+          NEXT_PUBLIC_GISCUS_REPO_ID: ${{ vars.NEXT_PUBLIC_GISCUS_REPO_ID }}
+          NEXT_PUBLIC_GISCUS_CATEGORY: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY }}
+          NEXT_PUBLIC_GISCUS_CATEGORY_ID: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY_ID }}
+          NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${{ vars.NEXT_PUBLIC_PAYPAL_CLIENT_ID }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION }}
+        run: bash scripts/github-actions/render-frontend-build-args.sh
+
+      - name: Login To GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ env.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Set Up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Build And Push Frontend Image
+        id: build_image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          context: ${{ env.SERVICE_PATH }}
+          file: ${{ env.SERVICE_PATH }}/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.image_ref }}
+          build-args: ${{ steps.build_args.outputs.build_args }}
+
+  stage-2-update-dns:
+    name: "2. Update Frontend DNS (${{ matrix.domain }})"
+    runs-on: ubuntu-latest
+    needs: stage-1-build-image
+    environment: production
+    strategy:
+      fail-fast: false
+      matrix:
+        domain:
+          - cn.svc.plus
+          - cn.onwalk.net
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: recursive
+
+      - name: Ensure Cloudflare DNS Records
+        env:
+          CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+        run: >
+          bash "${{ env.SERVICE_PATH }}/scripts/github-actions/ensure-frontend-dns.sh"
+          "${{ env.DEPLOY_HOST }}"
+          "${{ matrix.domain }}"
+
+  stage-3-deploy:
+    name: "3. Deploy Frontend Stack (Ansible)"
+    runs-on: ubuntu-latest
+    needs:
+      - stage-1-build-image
+      - stage-2-update-dns
+    environment: production
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: bash scripts/github-actions/install-python-tools.sh ansible
+
+      - name: Prepare runner SSH key
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY || secrets.FRONTEND_DEPLOY_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
+      - name: Deploy Frontend Stack With Ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+          FRONTEND_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
+          GHCR_PASSWORD: ${{ secrets.GHCR_TOKEN }}
+          APP_BASE_URL: ${{ vars.APP_BASE_URL || format('https://{0}', env.PRIMARY_DOMAIN) }}
+          NEXT_PUBLIC_APP_BASE_URL: ${{ vars.NEXT_PUBLIC_APP_BASE_URL || format('https://{0}', env.PRIMARY_DOMAIN) }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL || format('https://{0}', env.PRIMARY_DOMAIN) }}
+          NEXT_PUBLIC_LOGIN_URL: ${{ vars.NEXT_PUBLIC_LOGIN_URL || format('https://{0}/login', env.PRIMARY_DOMAIN) }}
+          NEXT_PUBLIC_DOCS_BASE_URL: ${{ vars.NEXT_PUBLIC_DOCS_BASE_URL || format('https://{0}/docs', env.PRIMARY_DOMAIN) }}
+          NEXT_PUBLIC_RUNTIME_ENVIRONMENT: ${{ vars.NEXT_PUBLIC_RUNTIME_ENVIRONMENT || 'prod' }}
+          NEXT_PUBLIC_RUNTIME_REGION: ${{ vars.NEXT_PUBLIC_RUNTIME_REGION || 'cn' }}
+          RUNTIME_HOSTNAME: ${{ vars.RUNTIME_HOSTNAME || env.PRIMARY_DOMAIN }}
+          NEXT_RUNTIME_HOSTNAME: ${{ vars.NEXT_RUNTIME_HOSTNAME || env.PRIMARY_DOMAIN }}
+          DEPLOYMENT_HOSTNAME: ${{ vars.DEPLOYMENT_HOSTNAME || env.PRIMARY_DOMAIN }}
+          ACCOUNT_SERVICE_URL: ${{ vars.ACCOUNT_SERVICE_URL || 'https://accounts.svc.plus' }}
+          NEXT_PUBLIC_ACCOUNT_SERVICE_URL: ${{ vars.NEXT_PUBLIC_ACCOUNT_SERVICE_URL || vars.ACCOUNT_SERVICE_URL || 'https://accounts.svc.plus' }}
+          SERVER_SERVICE_URL: ${{ vars.SERVER_SERVICE_URL || 'https://api.svc.plus' }}
+          NEXT_PUBLIC_SERVER_SERVICE_URL: ${{ vars.NEXT_PUBLIC_SERVER_SERVICE_URL || vars.SERVER_SERVICE_URL || 'https://api.svc.plus' }}
+          SERVER_SERVICE_INTERNAL_URL: ${{ vars.SERVER_SERVICE_INTERNAL_URL }}
+          ROOT_EMAIL_WHITELIST: ${{ vars.ROOT_EMAIL_WHITELIST || 'admin@svc.plus' }}
+          OPENCLAW_GATEWAY_REMOTE_URL: ${{ vars.OPENCLAW_GATEWAY_REMOTE_URL }}
+          OPENCLAW_GATEWAY_TOKEN: ${{ secrets.OPENCLAW_GATEWAY_TOKEN }}
+          VAULT_SERVER_URL: ${{ vars.VAULT_SERVER_URL }}
+          VAULT_NAMESPACE: ${{ vars.VAULT_NAMESPACE }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+          APISIX_AI_GATEWAY_URL: ${{ vars.APISIX_AI_GATEWAY_URL }}
+          AI_GATEWAY_ACCESS_TOKEN: ${{ secrets.AI_GATEWAY_ACCESS_TOKEN }}
+          INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WEB_ANALYTICS_SITE_TAG: ${{ vars.CLOUDFLARE_WEB_ANALYTICS_SITE_TAG }}
+          CLOUDFLARE_ZONE_TAG: ${{ vars.CLOUDFLARE_ZONE_TAG }}
+          NEXT_PUBLIC_GISCUS_REPO: ${{ vars.NEXT_PUBLIC_GISCUS_REPO || 'cloud-neutral-toolkit/console.svc.plus' }}
+          NEXT_PUBLIC_GISCUS_REPO_ID: ${{ vars.NEXT_PUBLIC_GISCUS_REPO_ID }}
+          NEXT_PUBLIC_GISCUS_CATEGORY: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY || 'General' }}
+          NEXT_PUBLIC_GISCUS_CATEGORY_ID: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY_ID }}
+          NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${{ vars.NEXT_PUBLIC_PAYPAL_CLIENT_ID }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION }}
+        run: >
+          ansible-playbook
+          -i ansible/inventory.ini
+          -l web
+          ansible/playbooks/deploy_console_frontend.yml
+
+  stage-4-verify:
+    name: "4. Verify Frontend Release"
+    runs-on: ubuntu-latest
+    needs: stage-3-deploy
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: recursive
+
+      - name: Verify Frontend Domains And Static Assets
+        run: >
+          bash "${{ env.SERVICE_PATH }}/scripts/github-actions/verify-frontend-release.sh"
+          "${{ env.PRIMARY_DOMAIN }}"
+          "${{ env.SECONDARY_DOMAIN }}"

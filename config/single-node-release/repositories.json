@@ -45,8 +45,9 @@
     "console.svc.plus": {
       "category": "frontend",
       "repo_url": "https://github.com/cloud-neutral-toolkit/console.svc.plus.git",
-      "workspace_path": "../console.svc.plus",
-      "release_enabled": false
+      "workspace_path": "subrepos/console.svc.plus",
+      "source_kind": "git-submodule",
+      "release_enabled": true
     },
     "accounts.svc.plus": {
       "category": "api",

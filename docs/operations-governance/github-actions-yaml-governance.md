@@ -62,7 +62,7 @@ At minimum, validate:
 ```bash
 python3 - <<'PY'
 import yaml, pathlib
-yaml.safe_load(pathlib.Path('.github/workflows/service_release_control_plane.yml').read_text())
+yaml.safe_load(pathlib.Path('.github/workflows/service_release_apiserver-deploy.yml').read_text())
 print('workflow yaml ok')
 PY
 

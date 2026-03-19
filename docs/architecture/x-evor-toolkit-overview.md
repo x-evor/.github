@@ -1,6 +1,7 @@
 # ☁️ X-Evor Toolkit
 
 A cloud-neutral ecosystem for connectivity, AI interaction, and service orchestration.
+
 From local acceleration to intelligent workflows, and finally to cloud-side delivery, X-Evor connects every layer into one unified system.
 
 **Flow:** Xstream -> Xworkmate -> console.svc.plus
@@ -21,9 +22,9 @@ Xstream / Xworkmate / Other Apps / Web
       |               |               |                      |
       v               v               v                      v
 accounts.svc.plus  rag-server.svc.plus  more services  OpenClaw Gateway
-      \               |               /                   
-       \              |              /                    
-        \             |             /                     
+      \               |               /
+       \              |              /
+        \             |             /
             postgresql.svc.plus
                     |
                     v
@@ -32,7 +33,7 @@ accounts.svc.plus  rag-server.svc.plus  more services  OpenClaw Gateway
 gitops + iac_modules -> all services -> observability.svc.plus
 ```
 
-## Ecosystem Repositories
+## Core Ecosystem Repositories
 
 | Repository | Role | Quick Access |
 | :--- | :--- | :--- |
@@ -77,10 +78,6 @@ Together, they form a practical path from connectivity, to AI productivity, to m
 ---
 
 <div align="center">
-
-<strong>X-Evor</strong><br/>
-Connectivity, AI, and cloud services working as one system.
-
-Copyright © 2024-2026 Cloud-Neutral Toolkit. Licensed under the Apache 2.0 License.
-
+  <strong>X-Evor</strong><br/>
+  Connectivity, AI, and cloud services working as one system.
 </div>

@@ -56,6 +56,12 @@
     state: directory
     mode: "0755"
 
+- name: Ensure frontend Docker config directory exists
+  ansible.builtin.file:
+    path: "{{ console_frontend_docker_config_dir }}"
+    state: directory
+    mode: "0700"
+
 - name: Upload frontend docker compose manifest
   ansible.builtin.copy:
     src: "{{ console_frontend_repo_path }}/deploy/single-node/docker-compose.yml"
@@ -75,14 +81,29 @@
     dest: "{{ console_frontend_deploy_dir }}/.env.runtime"
     mode: "0600"
 
+- name: Validate GHCR credentials for frontend deploy
+  no_log: true
+  ansible.builtin.assert:
+    that:
+      - console_frontend_ghcr_registry | length > 0
+      - console_frontend_ghcr_username | length > 0
+      - console_frontend_ghcr_password | length > 0
+    fail_msg: "Missing GHCR registry credentials for console frontend deployment."
+
 - name: Log in to GHCR on target host
   no_log: true
   ansible.builtin.shell: |
     set -euo pipefail
     printf '%s' "$GHCR_PASSWORD" | docker login "$GHCR_REGISTRY" -u "$GHCR_USERNAME" --password-stdin
+  register: console_frontend_ghcr_login
+  retries: 3
+  delay: 5
+  until: console_frontend_ghcr_login.rc == 0
+  changed_when: true
   args:
     executable: /bin/bash
   environment:
+    DOCKER_CONFIG: "{{ console_frontend_docker_config_dir }}"
     GHCR_REGISTRY: "{{ console_frontend_ghcr_registry }}"
     GHCR_USERNAME: "{{ console_frontend_ghcr_username }}"
     GHCR_PASSWORD: "{{ console_frontend_ghcr_password }}"
@@ -101,6 +122,8 @@
       - caddy
   args:
     chdir: "{{ console_frontend_deploy_dir }}"
+  environment:
+    DOCKER_CONFIG: "{{ console_frontend_docker_config_dir }}"
 
 - name: Refresh frontend static assets
   ansible.builtin.command:
@@ -116,6 +139,8 @@
       - frontend-assets
   args:
     chdir: "{{ console_frontend_deploy_dir }}"
+  environment:
+    DOCKER_CONFIG: "{{ console_frontend_docker_config_dir }}"
 
 - name: Start frontend services
   ansible.builtin.command:
@@ -133,6 +158,8 @@
       - caddy
   args:
     chdir: "{{ console_frontend_deploy_dir }}"
+  environment:
+    DOCKER_CONFIG: "{{ console_frontend_docker_config_dir }}"
 
 - name: Show frontend compose status
   ansible.builtin.command:
@@ -146,6 +173,8 @@
       - ps
   args:
     chdir: "{{ console_frontend_deploy_dir }}"
+  environment:
+    DOCKER_CONFIG: "{{ console_frontend_docker_config_dir }}"
   changed_when: false
 
 - name: Remove temporary runtime env file from runner

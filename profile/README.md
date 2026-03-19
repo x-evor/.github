@@ -9,13 +9,30 @@ From local acceleration to intelligent workflows, and finally to cloud-side deli
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloud-neutral-toolkit/rag-server.svc.plus)](https://goreportcard.com/report/github.com/cloud-neutral-toolkit/rag-server.svc.plus)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-## Product Overview
+## Cloud-Neutral Toolkit Architecture Overview
 
-- **Xstream**: network acceleration and connectivity layer for stable access, routing, and performance.
-- **Xworkmate**: AI assistant application built on top of the accelerated connection layer for daily work, collaboration, and intelligent workflows.
-- **console.svc.plus**: cloud-hosted online services for account access, management, configuration, and future service orchestration.
+```
+Xstream / Xworkmate / Other Apps / Web
+                  |
+                  v
+           console.svc.plus
+                  |
+      ---------------------------------------------------------
+      |               |               |                      |
+      v               v               v                      v
+accounts.svc.plus  rag-server.svc.plus  more services  OpenClaw Gateway
+      \               |               /                   
+       \              |              /                    
+        \             |             /                     
+            postgresql.svc.plus
+                    |
+                    v
+               vector data
 
-Together, they form a complete path from local connectivity to intelligent interaction and then to cloud-side service delivery.
+gitops + iac_modules -> all services -> observability.svc.plus
+
+```
+
 
 ## Ecosystem Repositories
 

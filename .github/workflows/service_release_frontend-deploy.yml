@@ -55,8 +55,6 @@ jobs:
 
       - name: Prepare Frontend Build Context
         working-directory: ${{ env.SERVICE_PATH }}
-        env:
-          KNOWLEDGE_REPO: ${{ vars.KNOWLEDGE_REPO || 'https://github.com/Cloud-Neutral-Workshop/knowledge.git' }}
         run: bash scripts/github-actions/prepare-frontend-build-context.sh
 
       - name: Render Frontend Build Args
@@ -180,6 +178,8 @@ jobs:
           SERVER_SERVICE_URL: ${{ vars.SERVER_SERVICE_URL || 'https://api.svc.plus' }}
           NEXT_PUBLIC_SERVER_SERVICE_URL: ${{ vars.NEXT_PUBLIC_SERVER_SERVICE_URL || vars.SERVER_SERVICE_URL || 'https://api.svc.plus' }}
           SERVER_SERVICE_INTERNAL_URL: ${{ vars.SERVER_SERVICE_INTERNAL_URL }}
+          DOCS_SERVICE_URL: ${{ vars.DOCS_SERVICE_URL || 'https://docs.svc.plus' }}
+          DOCS_SERVICE_INTERNAL_URL: ${{ vars.DOCS_SERVICE_INTERNAL_URL }}
           ROOT_EMAIL_WHITELIST: ${{ vars.ROOT_EMAIL_WHITELIST || 'admin@svc.plus' }}
           OPENCLAW_GATEWAY_REMOTE_URL: ${{ vars.OPENCLAW_GATEWAY_REMOTE_URL }}
           OPENCLAW_GATEWAY_TOKEN: ${{ secrets.OPENCLAW_GATEWAY_TOKEN }}

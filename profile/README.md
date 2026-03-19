@@ -15,7 +15,7 @@ From local acceleration to intelligent workflows, and finally to cloud-side deli
 Xstream / Xworkmate / Other Apps / Web
                   |
                   v
-           console.svc.plus
+           services.svc.plus
                   |
       ---------------------------------------------------------
       |               |               |                      |

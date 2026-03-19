@@ -18,6 +18,9 @@
 - [ ] Service-specific secrets are split correctly: public defaults checked in, secret-only fields in GitHub Secrets
 - [ ] For `git-submodule` services, the submodule pointer in the control repo is updated and pushed before dispatching the release workflow
 - [ ] Stable domains already point to the single deploy host before promoting a new revision
+- [ ] `docs.svc.plus` has `KNOWLEDGE_REPO_PATH`, `DOCS_SERVICE_PORT`, `DOCS_RELOAD_INTERVAL`, and `INTERNAL_SERVICE_TOKEN` configured
+- [ ] `console.svc.plus` has `DOCS_SERVICE_URL` / `DOCS_SERVICE_INTERNAL_URL` configured for the target environment
+- [ ] Gateway-side `docs-agent` policy keeps `plan_update` and `apply_update` separate, with confirmation required for apply
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos
 - [ ] API contracts are validated (path, payload, auth headers)
@@ -30,11 +33,13 @@ Release from lower-level dependencies upward:
 2. [ ] `postgresql.svc.plus` (if schema/connection changed)
 3. [ ] `accounts.svc.plus`
 4. [ ] `rag-server.svc.plus`
-5. [ ] `page-reading-agent-backend`
-6. [ ] `moltbot.svc.plus` / `agent.svc.plus` (if impacted)
-7. [ ] `console.svc.plus`
-8. [ ] `page-reading-agent-dashboard`
-9. [ ] `observability.svc.plus` dashboards/alerts updates
+5. [ ] `docs.svc.plus`
+6. [ ] `openclaw.svc.plus` / AI gateway config (if impacted)
+7. [ ] `page-reading-agent-backend`
+8. [ ] `moltbot.svc.plus` / `agent.svc.plus` (if impacted)
+9. [ ] `console.svc.plus`
+10. [ ] `page-reading-agent-dashboard`
+11. [ ] `observability.svc.plus` dashboards/alerts updates
 
 ## D. Validation After Each Step
 
@@ -47,6 +52,9 @@ Release from lower-level dependencies upward:
 
 - [ ] End-to-end auth chain test passed
 - [ ] Main user journey smoke test passed
+- [ ] `/docs`, `/docs/<collection>/<slug>`, `/blogs`, and `/blogs/<slug>` load through `docs.svc.plus`
+- [ ] Gateway can invoke `docs-agent` read operations successfully
+- [ ] If write mode is enabled, one `plan_update` and one confirmed `apply_update` completed with audit logs
 - [ ] Rollback scripts/commands are ready
 - [ ] Release notes include impact and fallback
 - [ ] Cross-repo release manifest is updated/committed in the control repo (`releases/<version>.yaml`)

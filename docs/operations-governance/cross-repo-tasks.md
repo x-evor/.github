@@ -10,6 +10,7 @@ Use this board to track multi-repo initiatives.
 | CRT-002 | P1 | Shared CI cache optimization | `console`, `page-reading-agent-dashboard`, `page-reading-agent-backend` | `@tbd` | TODO |
 | CRT-003 | P1 | Release metadata standardization | all deployable repos | `@tbd` | TODO |
 | CRT-004 | P0 | Accounts + Console RBAC / 多租户 / Token model convergence | `console`, `accounts`, control repo | `@shenlan` | IN_PROGRESS |
+| CRT-005 | P0 | Externalize docs/blog delivery via `docs.svc.plus` + `docs-agent` | `docs.svc.plus`, `console.svc.plus`, `knowledge`, `openclaw.svc.plus`, control repo | `@shenlan` | IN_PROGRESS |
 
 ## 2) CRT-001 Execution Plan (Real Task)
 
@@ -115,3 +116,34 @@ Codex should answer with:
 ## Test Commands
 ## Rollback Plan
 ```
+
+## 4.1) CRT-005 Execution Plan (Real Task)
+
+**Objective**
+- Move `/docs` and `/blogs` content delivery out of `console.svc.plus` build-time sync and into `docs.svc.plus`, then expose document retrieval and controlled updates as `docs-agent` behind the OpenClaw gateway.
+
+**Impacted repos**
+- `docs.svc.plus`
+- `console.svc.plus`
+- `knowledge`
+- `openclaw.svc.plus`
+- `github-org-cloud-neutral-toolkit`
+
+**Phase plan**
+- **Phase 1:** ship read-only docs/blog service APIs and reload flow in `docs.svc.plus`
+- **Phase 2:** switch `console.svc.plus` `/docs`, `/blogs`, sitemap, and latest blogs feed to the new service
+- **Phase 3:** register `docs-agent` in gateway as read-only
+- **Phase 4:** enable `docs.plan_update`
+- **Phase 5:** enable confirm-required `docs.apply_update`
+
+**Key defaults**
+- `knowledge` is the single source of truth
+- browser traffic does not call `docs.svc.plus` directly
+- all `/api/v1/*` reads require `X-Service-Token`
+- `docs-agent` writes are restricted to `knowledge/docs/**` and `knowledge/content/**`
+
+**Risk points**
+- UI regression if remote HTML differs from current markdown rendering
+- reload or pull failures can desync source and index snapshots
+- unsafe path handling in `docs-agent` would be release-blocking
+- gateway policy drift could allow apply without confirmation

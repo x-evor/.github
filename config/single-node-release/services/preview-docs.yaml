@@ -1,0 +1,6 @@
+service: docs
+track: preview
+enabled: true
+stable_domain: docs-preview.svc.plus
+release_prefix: docs-preview
+host_port: 18184

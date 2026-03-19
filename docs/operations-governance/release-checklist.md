@@ -19,6 +19,7 @@
 - [ ] For `git-submodule` services, the submodule pointer in the control repo is updated and pushed before dispatching the release workflow
 - [ ] Stable domains already point to the single deploy host before promoting a new revision
 - [ ] `docs.svc.plus` has `KNOWLEDGE_REPO_PATH`, `DOCS_SERVICE_PORT`, `DOCS_RELOAD_INTERVAL`, and `INTERNAL_SERVICE_TOKEN` configured
+- [ ] The deploy host has a readable `knowledge` Git checkout mounted at the `docs.svc.plus` host path expected by the release vars
 - [ ] `console.svc.plus` has `DOCS_SERVICE_URL` / `DOCS_SERVICE_INTERNAL_URL` configured for the target environment
 - [ ] Gateway-side `docs-agent` policy keeps `plan_update` and `apply_update` separate, with confirmation required for apply
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it

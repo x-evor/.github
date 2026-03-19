@@ -1,0 +1,11 @@
+docs_service_knowledge_repo_path_host: "{{ lookup('ansible.builtin.env', 'DOCS_KNOWLEDGE_REPO_PATH_HOST') | default('/opt/cloud-neutral/knowledge', true) }}"
+
+service_compose_service_slug: docs
+service_compose_zone: svc.plus
+service_compose_container_port: 8084
+service_compose_env_common:
+  KNOWLEDGE_REPO_PATH: /knowledge
+  DOCS_SERVICE_PORT: "8084"
+  DOCS_RELOAD_INTERVAL: "{{ lookup('ansible.builtin.env', 'DOCS_RELOAD_INTERVAL') | default('5m', true) }}"
+service_compose_volumes:
+  - "{{ docs_service_knowledge_repo_path_host }}:/knowledge:rw"

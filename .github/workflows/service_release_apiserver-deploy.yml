@@ -324,6 +324,8 @@ jobs:
         working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
         env:
           GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
+          DOCS_KNOWLEDGE_REPO_PATH_HOST: ${{ vars.DOCS_KNOWLEDGE_REPO_PATH_HOST }}
+          DOCS_RELOAD_INTERVAL: ${{ vars.DOCS_RELOAD_INTERVAL }}
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/run-service-ansible.sh"
           dry-run
@@ -409,6 +411,8 @@ jobs:
         working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
         env:
           GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
+          DOCS_KNOWLEDGE_REPO_PATH_HOST: ${{ vars.DOCS_KNOWLEDGE_REPO_PATH_HOST }}
+          DOCS_RELOAD_INTERVAL: ${{ vars.DOCS_RELOAD_INTERVAL }}
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/run-service-ansible.sh"
           apply

@@ -55,6 +55,11 @@ Catalog split:
 - `common.yaml` stores shared service metadata such as repo, playbook, Docker, and secret mapping
 - `<track>-<service>.yaml` stores track-specific release settings such as stable domain, release prefix, and host port
 
+Optional service-level host targeting:
+
+- `common.yaml` may set `deploy_server_alias` for services that should not use the default release host alias
+- if omitted, the resolver still falls back to the first alias from `ansible/inventory.ini`
+
 ## Inputs
 
 ### `workflow_dispatch`

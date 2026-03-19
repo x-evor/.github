@@ -8,6 +8,7 @@
     "api": [
       "accounts.svc.plus",
       "rag-server.svc.plus",
+      "docs.svc.plus",
       "page-reading-agent-backend",
       "agent.svc.plus",
       "openclaw.svc.plus",
@@ -60,6 +61,12 @@
       "category": "api",
       "repo_url": "https://github.com/cloud-neutral-toolkit/rag-server.svc.plus.git",
       "workspace_path": "../rag-server.svc.plus",
+      "release_enabled": true
+    },
+    "docs.svc.plus": {
+      "category": "api",
+      "repo_url": "https://github.com/cloud-neutral-toolkit/docs.svc.plus.git",
+      "workspace_path": "../docs.svc.plus",
       "release_enabled": true
     },
     "page-reading-agent-backend": {

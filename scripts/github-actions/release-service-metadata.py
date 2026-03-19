@@ -32,6 +32,13 @@ def first_server_alias(inventory_path: str) -> str:
     raise SystemExit(f"failed to resolve first server alias from {inventory_path}")
 
 
+def resolve_deploy_server_alias(inventory_path: str, service: dict) -> str:
+    explicit_alias = str(service.get("deploy_server_alias", "")).strip()
+    if explicit_alias:
+        return explicit_alias
+    return first_server_alias(inventory_path)
+
+
 def main() -> None:
     if len(sys.argv) != 9:
         raise SystemExit(
@@ -96,7 +103,7 @@ def main() -> None:
     public_vars_path = service.get("public_vars_path", "")
     resolved_public_vars_path = public_vars_path if public_vars_path else ""
 
-    server_alias = first_server_alias(inventory_path)
+    server_alias = resolve_deploy_server_alias(inventory_path, service)
     deploy_hostname = server_alias.split(".", 1)[0]
     domain = services_catalog["domain"]
 

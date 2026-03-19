@@ -1,0 +1,9 @@
+- name: Deploy docs.svc.plus compose release
+  hosts: server
+  become: true
+  vars_files:
+    - ../vars/docs.release.public.yml
+  tasks:
+    - name: Deploy docs.svc.plus via shared compose role
+      ansible.builtin.include_role:
+        name: shared_compose_service_deploy

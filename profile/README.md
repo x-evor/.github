@@ -1,4 +1,4 @@
-# ☁️ Cloud-Neutral Toolkit
+# ☁️ X-Stack Toolkit
 
 Cloud-Neutral Toolkit is building a connected productivity stack across network acceleration, AI assistance, and cloud services.
 

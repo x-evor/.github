@@ -1,0 +1,156 @@
+- name: Render runtime env file on runner
+  delegate_to: localhost
+  no_log: true
+  ansible.builtin.command:
+    argv:
+      - bash
+      - "{{ console_frontend_repo_path }}/scripts/github-actions/render-frontend-runtime-env.sh"
+      - "{{ console_frontend_runtime_env_file_local }}"
+  environment:
+    FRONTEND_IMAGE: "{{ console_frontend_image }}"
+    PRIMARY_DOMAIN: "{{ console_frontend_primary_domain }}"
+    SECONDARY_DOMAIN: "{{ console_frontend_secondary_domain }}"
+    APP_BASE_URL: "{{ lookup('env', 'APP_BASE_URL') }}"
+    NEXT_PUBLIC_APP_BASE_URL: "{{ lookup('env', 'NEXT_PUBLIC_APP_BASE_URL') }}"
+    NEXT_PUBLIC_SITE_URL: "{{ lookup('env', 'NEXT_PUBLIC_SITE_URL') }}"
+    NEXT_PUBLIC_LOGIN_URL: "{{ lookup('env', 'NEXT_PUBLIC_LOGIN_URL') }}"
+    NEXT_PUBLIC_DOCS_BASE_URL: "{{ lookup('env', 'NEXT_PUBLIC_DOCS_BASE_URL') }}"
+    NEXT_PUBLIC_RUNTIME_ENVIRONMENT: "{{ lookup('env', 'NEXT_PUBLIC_RUNTIME_ENVIRONMENT') }}"
+    NEXT_PUBLIC_RUNTIME_REGION: "{{ lookup('env', 'NEXT_PUBLIC_RUNTIME_REGION') }}"
+    RUNTIME_HOSTNAME: "{{ lookup('env', 'RUNTIME_HOSTNAME') }}"
+    NEXT_RUNTIME_HOSTNAME: "{{ lookup('env', 'NEXT_RUNTIME_HOSTNAME') }}"
+    DEPLOYMENT_HOSTNAME: "{{ lookup('env', 'DEPLOYMENT_HOSTNAME') }}"
+    ACCOUNT_SERVICE_URL: "{{ lookup('env', 'ACCOUNT_SERVICE_URL') }}"
+    NEXT_PUBLIC_ACCOUNT_SERVICE_URL: "{{ lookup('env', 'NEXT_PUBLIC_ACCOUNT_SERVICE_URL') }}"
+    SERVER_SERVICE_URL: "{{ lookup('env', 'SERVER_SERVICE_URL') }}"
+    NEXT_PUBLIC_SERVER_SERVICE_URL: "{{ lookup('env', 'NEXT_PUBLIC_SERVER_SERVICE_URL') }}"
+    SERVER_SERVICE_INTERNAL_URL: "{{ lookup('env', 'SERVER_SERVICE_INTERNAL_URL') }}"
+    ROOT_EMAIL_WHITELIST: "{{ lookup('env', 'ROOT_EMAIL_WHITELIST') }}"
+    OPENCLAW_GATEWAY_REMOTE_URL: "{{ lookup('env', 'OPENCLAW_GATEWAY_REMOTE_URL') }}"
+    OPENCLAW_GATEWAY_TOKEN: "{{ lookup('env', 'OPENCLAW_GATEWAY_TOKEN') }}"
+    VAULT_SERVER_URL: "{{ lookup('env', 'VAULT_SERVER_URL') }}"
+    VAULT_NAMESPACE: "{{ lookup('env', 'VAULT_NAMESPACE') }}"
+    VAULT_TOKEN: "{{ lookup('env', 'VAULT_TOKEN') }}"
+    APISIX_AI_GATEWAY_URL: "{{ lookup('env', 'APISIX_AI_GATEWAY_URL') }}"
+    AI_GATEWAY_ACCESS_TOKEN: "{{ lookup('env', 'AI_GATEWAY_ACCESS_TOKEN') }}"
+    INTERNAL_SERVICE_TOKEN: "{{ lookup('env', 'INTERNAL_SERVICE_TOKEN') }}"
+    CLOUDFLARE_API_TOKEN: "{{ lookup('env', 'CLOUDFLARE_API_TOKEN') }}"
+    CLOUDFLARE_ACCOUNT_ID: "{{ lookup('env', 'CLOUDFLARE_ACCOUNT_ID') }}"
+    CLOUDFLARE_WEB_ANALYTICS_SITE_TAG: "{{ lookup('env', 'CLOUDFLARE_WEB_ANALYTICS_SITE_TAG') }}"
+    CLOUDFLARE_ZONE_TAG: "{{ lookup('env', 'CLOUDFLARE_ZONE_TAG') }}"
+    NEXT_PUBLIC_GISCUS_REPO: "{{ lookup('env', 'NEXT_PUBLIC_GISCUS_REPO') }}"
+    NEXT_PUBLIC_GISCUS_REPO_ID: "{{ lookup('env', 'NEXT_PUBLIC_GISCUS_REPO_ID') }}"
+    NEXT_PUBLIC_GISCUS_CATEGORY: "{{ lookup('env', 'NEXT_PUBLIC_GISCUS_CATEGORY') }}"
+    NEXT_PUBLIC_GISCUS_CATEGORY_ID: "{{ lookup('env', 'NEXT_PUBLIC_GISCUS_CATEGORY_ID') }}"
+    NEXT_PUBLIC_PAYPAL_CLIENT_ID: "{{ lookup('env', 'NEXT_PUBLIC_PAYPAL_CLIENT_ID') }}"
+    NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO: "{{ lookup('env', 'NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO') }}"
+    NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION: "{{ lookup('env', 'NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION') }}"
+    NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO: "{{ lookup('env', 'NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO') }}"
+    NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION: "{{ lookup('env', 'NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION') }}"
+    NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO: "{{ lookup('env', 'NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO') }}"
+    NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION: "{{ lookup('env', 'NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION') }}"
+
+- name: Ensure frontend deploy directory exists
+  ansible.builtin.file:
+    path: "{{ console_frontend_deploy_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Upload frontend docker compose manifest
+  ansible.builtin.copy:
+    src: "{{ console_frontend_repo_path }}/deploy/single-node/docker-compose.yml"
+    dest: "{{ console_frontend_deploy_dir }}/docker-compose.yml"
+    mode: "0644"
+
+- name: Upload frontend Caddyfile
+  ansible.builtin.copy:
+    src: "{{ console_frontend_repo_path }}/deploy/single-node/Caddyfile"
+    dest: "{{ console_frontend_deploy_dir }}/Caddyfile"
+    mode: "0644"
+
+- name: Upload frontend runtime env file
+  no_log: true
+  ansible.builtin.copy:
+    src: "{{ console_frontend_runtime_env_file_local }}"
+    dest: "{{ console_frontend_deploy_dir }}/.env.runtime"
+    mode: "0600"
+
+- name: Log in to GHCR on target host
+  no_log: true
+  ansible.builtin.shell: |
+    set -euo pipefail
+    printf '%s' "$GHCR_PASSWORD" | docker login "$GHCR_REGISTRY" -u "$GHCR_USERNAME" --password-stdin
+  args:
+    executable: /bin/bash
+  environment:
+    GHCR_REGISTRY: "{{ console_frontend_ghcr_registry }}"
+    GHCR_USERNAME: "{{ console_frontend_ghcr_username }}"
+    GHCR_PASSWORD: "{{ console_frontend_ghcr_password }}"
+
+- name: Pull frontend containers
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ console_frontend_project_name }}"
+      - --env-file
+      - .env.runtime
+      - pull
+      - dashboard
+      - caddy
+  args:
+    chdir: "{{ console_frontend_deploy_dir }}"
+
+- name: Refresh frontend static assets
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ console_frontend_project_name }}"
+      - --env-file
+      - .env.runtime
+      - run
+      - --rm
+      - frontend-assets
+  args:
+    chdir: "{{ console_frontend_deploy_dir }}"
+
+- name: Start frontend services
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ console_frontend_project_name }}"
+      - --env-file
+      - .env.runtime
+      - up
+      - -d
+      - --remove-orphans
+      - dashboard
+      - caddy
+  args:
+    chdir: "{{ console_frontend_deploy_dir }}"
+
+- name: Show frontend compose status
+  ansible.builtin.command:
+    argv:
+      - docker
+      - compose
+      - --project-name
+      - "{{ console_frontend_project_name }}"
+      - --env-file
+      - .env.runtime
+      - ps
+  args:
+    chdir: "{{ console_frontend_deploy_dir }}"
+  changed_when: false
+
+- name: Remove temporary runtime env file from runner
+  delegate_to: localhost
+  no_log: true
+  ansible.builtin.file:
+    path: "{{ console_frontend_runtime_env_file_local }}"
+    state: absent

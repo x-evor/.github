@@ -2,3 +2,7 @@
 	path = subrepos/accounts.svc.plus
 	url = https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git
 	branch = main
+[submodule "subrepos/console.svc.plus"]
+	path = subrepos/console.svc.plus
+	url = https://github.com/cloud-neutral-toolkit/console.svc.plus.git
+	branch = main

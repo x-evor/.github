@@ -80,9 +80,9 @@
       - --nsg-name
       - "{{ azure_network_security_group }}"
       - --name
-      - "allow-tcp-{{ port }}-{{ '%03d' | format(index + (port_index * 100) + 100) }}"
+      - "allow-tcp-{{ port }}-{{ '%03d' | format((index | int) + ((port_index | int) * 100) + 100) }}"
       - --priority
-      - "{{ '%d' | format(index + (port_index * 100) + 100) }}"
+      - "{{ '%d' | format((index | int) + ((port_index | int) * 100) + 100) }}"
       - --access
       - Allow
       - --protocol

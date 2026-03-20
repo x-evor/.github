@@ -62,6 +62,8 @@ Impacted repos:
 Constraints:
 Acceptance criteria:
 Target environment:
+Validation mode:
+Gate entry:
 ```
 
 ## 3.1) CRT-004 Execution Plan (Real Task)
@@ -104,6 +106,25 @@ Target environment:
 - `accounts.svc.plus`: schema, auth middleware, token exchange, admin permission gates
 - `console.svc.plus`: session normalization, access control utilities, admin BFF route guards, integration token resolvers
 - Control repo: audit/architecture docs and backlog stay decision-complete
+
+## 3.2) Stable Release Gate Template (required output)
+
+Use this template when asking Codex to verify a stable release candidate:
+
+```md
+Mode:
+Service:
+Track:
+Service ref:
+Smoke URL:
+Expected status:
+Required evidence:
+```
+
+**Mode defaults**
+- `local`: repo-local config/doc validation only
+- `stable`: repo-local validation plus live smoke against the stable domain
+- Gate entry: `.github/workflows/stable_release_gate.yml`
 
 ## 4) Delivery Template (required output)
 

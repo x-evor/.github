@@ -3,6 +3,7 @@
 Workflow file:
 
 - `.github/workflows/service_release_apiserver-deploy.yml`
+- `.github/workflows/stable_release_gate.yml`
 
 This workflow is the control-plane entrypoint for the Cloud Run-like `svc.plus` release system.
 
@@ -10,6 +11,11 @@ It now supports:
 
 - `workflow_dispatch` for manual runs from the control repo
 - `workflow_call` for thin wrapper workflows in each service repo
+
+The companion stable release gate workflow supports:
+
+- `workflow_dispatch` for `local` and `stable` validation modes
+- `workflow_call` from the release deploy workflow after apply
 
 Current runtime profile:
 
@@ -150,6 +156,13 @@ Stable domains should already point to the deploy host and should not be switche
 - run the service repo playbook with:
   - `ansible-playbook -D`
 
+### Stage 5. Stable Release Gate
+
+- call `.github/workflows/stable_release_gate.yml`
+- `mode=local` validates repo-local docs and metadata wiring without network access
+- `mode=stable` adds a live smoke against the resolved stable domain and healthcheck path
+- this gate runs after stage 4 when `run_apply=true`
+
 ## Current Release Flow Shape
 
 The first version keeps the already-working deployment runtime:
@@ -164,6 +177,7 @@ This means the Cloud Run-like behavior is implemented at the release-control lay
 - fixed stable domains
 - fixed prod/preview ports
 - active revision recorded by the release process
+- local and stable gate modes are enforced before stable sign-off
 
 It does not require moving service runtime ownership out of the service repos.
 

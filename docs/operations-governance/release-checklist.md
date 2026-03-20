@@ -24,6 +24,9 @@
 - [ ] The deploy host has a readable `knowledge` Git checkout mounted at the `docs.svc.plus` host path expected by the release vars
 - [ ] `console.svc.plus` has `DOCS_SERVICE_URL` / `DOCS_SERVICE_INTERNAL_URL` configured for the target environment
 - [ ] Gateway-side `docs-agent` policy keeps `plan_update` and `apply_update` separate, with confirmation required for apply
+- [ ] The control-plane release gate entry exists at `.github/workflows/stable_release_gate.yml`
+- [ ] `python3 scripts/github-actions/stable-release-gate.py --mode local --service <service> --track <track> --service-ref <ref>` passes before any stable promotion
+- [ ] `python3 scripts/github-actions/stable-release-gate.py --mode stable --service <service> --track <track> --service-ref <ref>` passes against the live stable domain before release sign-off
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos
 - [ ] API contracts are validated (path, payload, auth headers)
@@ -61,6 +64,8 @@ Release from lower-level dependencies upward:
 - [ ] Rollback scripts/commands are ready
 - [ ] Release notes include impact and fallback
 - [ ] Cross-repo release manifest is updated/committed in the control repo (`releases/<version>.yaml`)
+- [ ] The stable release gate was executed in `local` mode and `stable` mode for the candidate service
+- [ ] The stable smoke endpoint returned a 2xx response for the service under release
 
 ## F. Rollback Order (if needed)
 

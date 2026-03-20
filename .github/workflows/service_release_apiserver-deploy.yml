@@ -432,3 +432,16 @@ jobs:
           "${{ needs.stage-1-build-image.outputs.playbook_path }}"
           "${{ needs.stage-1-build-image.outputs.release_domain }}"
           "${{ needs.stage-1-build-image.outputs.stable_domain }}"
+
+  stage-5-stable-release-gate:
+    name: "5. Stable Release Gate"
+    needs:
+      - stage-4-ansible-apply
+    if: ${{ inputs.run_apply }}
+    uses: ./.github/workflows/stable_release_gate.yml
+    with:
+      mode: stable
+      service: ${{ inputs.service }}
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+    secrets: inherit

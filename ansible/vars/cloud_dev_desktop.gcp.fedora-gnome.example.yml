@@ -1,0 +1,24 @@
+provider: gcp
+profile_name: gcp-fedora-gnome-gtk
+os_family: fedora-gnome
+zone: asia-east2-a
+vm_size: n2-standard-8
+disk_gb: 200
+admin_username: devadmin
+allowed_cidrs:
+  - 203.0.113.10/32
+ttl_hours: 12
+owner: shenlan
+purpose: fedora-gnome-gtk-build
+toolchains:
+  codex: true
+  android_studio: false
+  vscode: true
+  flutter: true
+  dart: true
+desktop_access:
+  protocol: native
+  port: 22
+tags:
+  environment: dev
+  workstation_role: fedora-gnome-builder

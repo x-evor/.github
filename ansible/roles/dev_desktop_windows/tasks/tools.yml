@@ -14,11 +14,17 @@
     if ({{ toolchains.vscode | bool | ternary('$true', '$false') }}) { $packages += 'vscode' }
     if ({{ toolchains.android_studio | bool | ternary('$true', '$false') }}) { $packages += 'androidstudio' }
     if ({{ toolchains.codex | bool | ternary('$true', '$false') }}) { $packages += 'nodejs-lts' }
+    if ({{ toolchains.flutter | bool | ternary('$true', '$false') }}) { $packages += 'flutter' }
+    if (({{ toolchains.dart | bool | ternary('$true', '$false') }}) -and (-not {{ toolchains.flutter | bool | ternary('$true', '$false') }})) { $packages += 'dart-sdk' }
     foreach ($pkg in $packages) {
       choco install $pkg -y --no-progress
     }
     if ({{ toolchains.codex | bool | ternary('$true', '$false') }}) {
       npm install -g @openai/codex
+    }
+    if ({{ toolchains.flutter | bool | ternary('$true', '$false') }}) {
+      flutter config --enable-windows-desktop
+      flutter doctor
     }
   changed_when: true
 
@@ -34,4 +40,3 @@
     EXPIRES_AT={{ cloud_vm_expires_at }}
     "@ | Set-Content -Encoding ASCII 'C:\cloud-dev-desktop\profile.env'
   changed_when: true
-

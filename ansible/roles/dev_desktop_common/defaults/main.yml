@@ -2,4 +2,4 @@ cloud_dev_desktop_workspace_root: /opt/cloud-dev-desktop
 cloud_dev_desktop_timezone: Etc/UTC
 cloud_dev_desktop_locale: en_US.UTF-8
 cloud_dev_desktop_user_shell: /bin/bash
-
+cloud_dev_desktop_extra_authorized_keys: []

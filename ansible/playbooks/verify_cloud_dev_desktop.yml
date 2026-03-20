@@ -52,6 +52,15 @@
       changed_when: false
       when: os_family == "windows"
 
+    - name: Verify Flutter on Windows
+      ansible.builtin.raw: |
+        $ErrorActionPreference = "Stop"
+        flutter --version | Out-Null
+      changed_when: false
+      when:
+        - os_family == "windows"
+        - toolchains.flutter | bool
+
     - name: Verify VS Code on Windows
       ansible.builtin.raw: |
         $ErrorActionPreference = "Stop"
@@ -61,3 +70,21 @@
         - os_family == "windows"
         - toolchains.vscode | bool
 
+    - name: Verify Windows SSH config for peer Linux desktops
+      ansible.builtin.raw: |
+        $ErrorActionPreference = "Stop"
+        $configPath = Join-Path $env:USERPROFILE '.ssh\config'
+        if (-not (Test-Path $configPath)) {
+          throw "Missing SSH config: $configPath"
+        }
+        {% for alias in windows_ssh_host_aliases | default([]) %}
+        ssh -G {{ alias }} | Out-Null
+        if ($LASTEXITCODE -ne 0) {
+          throw "Failed to resolve SSH host alias {{ alias }}"
+        }
+        {% endfor %}
+      changed_when: false
+      when:
+        - os_family == "windows"
+        - windows_ssh_host_aliases is defined
+        - (windows_ssh_host_aliases | length) > 0

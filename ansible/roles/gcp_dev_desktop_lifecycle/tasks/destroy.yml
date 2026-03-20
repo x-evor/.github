@@ -4,6 +4,7 @@
       - "gcp_project_id={{ gcp_project_id | default('n/a') }}"
       - "gcp_vm_name={{ gcp_vm_name | default(profile_name | default('n/a')) }}"
       - "gcp_cleanup_mode={{ gcp_cleanup_mode | default(false) }}"
+      - "cloud_vm_destroy_mode={{ cloud_vm_destroy_mode | default('destroy') }}"
 
 - name: List GCP managed instances
   ansible.builtin.command:
@@ -23,6 +24,25 @@
     - gcp_cleanup_mode | default(false)
     - not ansible_check_mode
 
+- name: Park GCP VM in lowest-consumption mode
+  ansible.builtin.command:
+    argv:
+      - gcloud
+      - compute
+      - instances
+      - stop
+      - "{{ gcp_vm_name }}"
+      - --project
+      - "{{ gcp_project_id }}"
+      - --zone
+      - "{{ gcp_zone }}"
+      - --quiet
+  changed_when: true
+  when:
+    - not gcp_cleanup_mode | default(false)
+    - (cloud_vm_destroy_mode | default('destroy')) == 'park'
+    - not ansible_check_mode
+
 - name: Delete GCP VM directly
   ansible.builtin.command:
     argv:
@@ -39,6 +59,7 @@
   changed_when: true
   when:
     - not gcp_cleanup_mode | default(false)
+    - (cloud_vm_destroy_mode | default('destroy')) == 'destroy'
     - not ansible_check_mode
 
 - name: Delete GCP managed instances
@@ -67,4 +88,4 @@
   when:
     - cloud_vm_state_file is defined
     - not gcp_cleanup_mode | default(false)
-
+    - (cloud_vm_destroy_mode | default('destroy')) == 'destroy'

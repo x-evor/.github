@@ -1,7 +1,7 @@
 provider: gcp
 profile_name: gcp-ubuntu-kde-gtk
 os_family: debian-kde
-zone: asia-east2-a
+zone: asia-northeast1-a
 vm_size: n2-standard-8
 disk_gb: 200
 admin_username: devadmin

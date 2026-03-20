@@ -1,7 +1,7 @@
 provider: azure
 profile_name: azure-win11-flutter-android
 os_family: windows
-region: eastus
+region: japaneast
 vm_size: Standard_D8s_v5
 disk_gb: 256
 admin_username: devadmin

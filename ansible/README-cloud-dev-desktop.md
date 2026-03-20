@@ -45,7 +45,7 @@ Provider-specific fields:
 Default GCP values in this repo:
 
 - `gcp_project_id: xzerolab-480008`
-- `zone: asia-east2-a` which maps to region `asia-east2` (Hong Kong)
+- `zone: asia-northeast1-a` which maps to region `asia-northeast1` (Tokyo)
 
 ## Local usage
 

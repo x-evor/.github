@@ -1,5 +1,5 @@
 provider: azure
-region: eastus
+region: japaneast
 vm_size: Standard_D8s_v5
 disk_gb: 256
 image_offer: windows-11
@@ -7,4 +7,3 @@ image_sku: win11-24h2-pro
 azure_subscription_id: 00000000-0000-0000-0000-000000000000
 azure_vnet_cidr: 10.42.0.0/16
 azure_subnet_cidr: 10.42.1.0/24
-

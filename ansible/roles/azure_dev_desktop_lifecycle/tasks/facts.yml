@@ -2,7 +2,7 @@
   ansible.builtin.set_fact:
     azure_subscription_id: "{{ azure_subscription_id | default(lookup('env', 'AZURE_SUBSCRIPTION_ID')) }}"
     azure_resource_group: "{{ azure_resource_group | default('rg-devdesktop-' ~ cloud_vm_owner_slug) }}"
-    azure_location: "{{ region | default(azure_location | default('eastus')) }}"
+    azure_location: "{{ region | default(azure_location | default('japaneast')) }}"
     azure_network_security_group: "{{ azure_network_security_group | default('nsg-' ~ cloud_vm_profile_slug) }}"
     azure_virtual_network: "{{ azure_virtual_network | default('vnet-devdesktop-' ~ cloud_vm_owner_slug) }}"
     azure_subnet: "{{ azure_subnet | default('snet-devdesktop') }}"
@@ -55,4 +55,3 @@
     azure_image_version: "{{ image_version | default('latest') }}"
     azure_admin_password: "{{ azure_admin_password | default(lookup('env', 'AZURE_WINDOWS_ADMIN_PASSWORD')) }}"
     cloud_vm_platform: "azure"
-

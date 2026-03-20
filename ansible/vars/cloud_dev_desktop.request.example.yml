@@ -1,8 +1,8 @@
 provider: azure
 profile_name: win11-codex-dev
 os_family: windows
-region: eastus
-zone: us-central1-a
+region: japaneast
+zone: asia-northeast1-a
 vm_size: Standard_D8s_v5
 disk_gb: 256
 admin_username: devadmin

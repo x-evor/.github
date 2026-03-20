@@ -1,7 +1,7 @@
 - name: Normalize GCP desktop resource names
   ansible.builtin.set_fact:
     gcp_project_id: "{{ gcp_project_id | default(lookup('env', 'GCP_PROJECT_ID')) }}"
-    gcp_zone: "{{ zone | default(gcp_zone | default('asia-east2-a')) }}"
+    gcp_zone: "{{ zone | default(gcp_zone | default('asia-northeast1-a')) }}"
     gcp_network: "{{ gcp_network | default('devdesktop-' ~ cloud_vm_owner_slug) }}"
     gcp_subnet: "{{ gcp_subnet | default('devdesktop-' ~ cloud_vm_owner_slug ~ '-subnet') }}"
     gcp_firewall_rule: "{{ gcp_firewall_rule | default('allow-' ~ cloud_vm_profile_slug) }}"

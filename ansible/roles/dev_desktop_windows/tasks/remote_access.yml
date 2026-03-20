@@ -1,0 +1,10 @@
+- name: Enable Windows remote desktop
+  ansible.builtin.raw: |
+    $ErrorActionPreference = "Stop"
+    Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
+    Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+    winrm quickconfig -q
+    Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
+    Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $true
+  changed_when: true
+

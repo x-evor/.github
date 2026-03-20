@@ -1,0 +1,21 @@
+- name: Normalize cloud dev desktop request
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - role: cloud_vm_request_validate
+
+- name: Bootstrap remote cloud dev desktop
+  hosts: cloud_desktop
+  gather_facts: true
+  become: "{{ os_family != 'windows' }}"
+  roles:
+    - role: dev_desktop_common
+      when: os_family != "windows"
+    - role: dev_desktop_windows
+      when: os_family == "windows"
+    - role: dev_desktop_fedora_gnome
+      when: os_family == "fedora-gnome"
+    - role: dev_desktop_debian_kde
+      when: os_family == "debian-kde"
+

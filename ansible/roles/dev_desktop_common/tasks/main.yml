@@ -1,0 +1,9 @@
+- name: Prepare common Linux users
+  ansible.builtin.import_tasks: users.yml
+
+- name: Prepare common Linux network policy
+  ansible.builtin.import_tasks: network.yml
+
+- name: Persist TTL and profile metadata
+  ansible.builtin.import_tasks: ttl.yml
+

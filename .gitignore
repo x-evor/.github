@@ -1,6 +1,8 @@
 .env
 .env.*
 !.env.example
+.ansible/cloud-dev-desktop/
+.ansible/*.json
 .DS_Store
 **/.DS_Store
 __pycache__/

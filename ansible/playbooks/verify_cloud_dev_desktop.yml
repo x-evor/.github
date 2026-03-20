@@ -1,0 +1,63 @@
+- name: Normalize cloud dev desktop request
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - role: cloud_vm_request_validate
+
+- name: Verify remote cloud dev desktop
+  hosts: cloud_desktop
+  gather_facts: true
+  become: "{{ os_family != 'windows' }}"
+  tasks:
+    - name: Verify common Linux workspace marker
+      ansible.builtin.stat:
+        path: /opt/cloud-dev-desktop/profile.env
+      register: common_profile_marker
+      when: os_family != "windows"
+
+    - name: Assert Linux profile marker exists
+      ansible.builtin.assert:
+        that:
+          - common_profile_marker.stat.exists
+        fail_msg: "Missing /opt/cloud-dev-desktop/profile.env marker on Linux host."
+      when: os_family != "windows"
+
+    - name: Verify Fedora GNOME desktop packages
+      ansible.builtin.command: rpm -q gnome-shell gtk3-devel clang cmake ninja-build
+      changed_when: false
+      when: os_family == "fedora-gnome"
+
+    - name: Verify Debian KDE desktop packages
+      ansible.builtin.command: dpkg-query -W plasma-desktop qtbase5-dev clang cmake ninja-build
+      changed_when: false
+      when: os_family == "debian-kde"
+
+    - name: Verify Flutter is installed on Linux
+      ansible.builtin.shell: |
+        set -euo pipefail
+        test -x /opt/flutter/bin/flutter
+        /opt/flutter/bin/flutter --version
+      args:
+        executable: /bin/bash
+      changed_when: false
+      when:
+        - os_family != "windows"
+        - toolchains.flutter | bool
+
+    - name: Verify Codex CLI on Windows
+      ansible.builtin.raw: |
+        $ErrorActionPreference = "Stop"
+        Get-Command codex | Out-Null
+      changed_when: false
+      when: os_family == "windows"
+
+    - name: Verify VS Code on Windows
+      ansible.builtin.raw: |
+        $ErrorActionPreference = "Stop"
+        Get-Command code | Out-Null
+      changed_when: false
+      when:
+        - os_family == "windows"
+        - toolchains.vscode | bool
+

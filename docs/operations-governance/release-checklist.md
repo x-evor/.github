@@ -13,6 +13,8 @@
 - [ ] New env vars are documented in `.env.example` (keys only, no secret values)
 - [ ] Local run uses `.env`; runtime/prod uses Secret Manager or platform env vars
 - [ ] PR diff contains no real secret material (token/password/private key)
+- [ ] Cloud desktop changes document Azure/GCP auth requirements and keep VM state files out of Git
+- [ ] Cloud desktop changes require non-empty `allowed_cidrs` and cleanup targeting only toolkit-tagged resources
 - [ ] Control-plane release metadata is updated when repo/domain/port/catalog entries change
 - [ ] Required GitHub Actions secrets exist and any workflow SSH overrides are set correctly for the single-node release workflow
 - [ ] Service-specific secrets are split correctly: public defaults checked in, secret-only fields in GitHub Secrets

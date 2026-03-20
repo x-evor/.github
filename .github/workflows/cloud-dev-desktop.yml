@@ -1,0 +1,103 @@
+name: Cloud Dev Desktop
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Lifecycle action"
+        required: true
+        default: create
+        type: choice
+        options:
+          - create
+          - bootstrap
+          - verify
+          - destroy
+          - cleanup-expired
+      provider:
+        description: "Cloud provider"
+        required: true
+        default: azure
+        type: choice
+        options:
+          - azure
+          - gcp
+      request_file:
+        description: "Repo-relative request YAML path"
+        required: false
+        default: ansible/vars/cloud_dev_desktop.request.example.yml
+        type: string
+      dry_run:
+        description: "Run in Ansible check mode"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  cloud-dev-desktop:
+    name: "${{ inputs.action }} (${{ inputs.provider }})"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible runtime
+        shell: bash
+        run: bash scripts/github-actions/install-python-tools.sh ansible
+
+      - name: Azure CLI login
+        if: ${{ inputs.provider == 'azure' && secrets.AZURE_CREDENTIALS_JSON != '' }}
+        shell: bash
+        env:
+          AZURE_CREDENTIALS_JSON: ${{ secrets.AZURE_CREDENTIALS_JSON }}
+        run: |
+          printf '%s' "${AZURE_CREDENTIALS_JSON}" > /tmp/azure-creds.json
+          az login --service-principal --username "$(python3 -c 'import json;print(json.load(open("/tmp/azure-creds.json"))["clientId"])')" \
+            --password "$(python3 -c 'import json;print(json.load(open("/tmp/azure-creds.json"))["clientSecret"])')" \
+            --tenant "$(python3 -c 'import json;print(json.load(open("/tmp/azure-creds.json"))["tenantId"])')"
+          az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: GCP CLI login
+        if: ${{ inputs.provider == 'gcp' && secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
+        shell: bash
+        env:
+          GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+        run: |
+          printf '%s' "${GCP_SERVICE_ACCOUNT_JSON}" > /tmp/gcp-sa.json
+          gcloud auth activate-service-account --key-file=/tmp/gcp-sa.json
+          gcloud config set project "${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}"
+
+      - name: Run lifecycle wrapper
+        shell: bash
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}
+          AZURE_WINDOWS_ADMIN_PASSWORD: ${{ secrets.AZURE_WINDOWS_ADMIN_PASSWORD }}
+          GCP_WINDOWS_ADMIN_PASSWORD: ${{ secrets.GCP_WINDOWS_ADMIN_PASSWORD }}
+          CLOUD_DEV_DESKTOP_WINDOWS_PASSWORD: ${{ secrets.CLOUD_DEV_DESKTOP_WINDOWS_PASSWORD }}
+        run: |
+          set -euo pipefail
+          suffix=""
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            suffix="--dry-run"
+          fi
+          case "${{ inputs.action }}" in
+            create) bash scripts/cloud-dev-desktop/create.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
+            bootstrap) bash scripts/cloud-dev-desktop/bootstrap.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
+            verify) bash scripts/cloud-dev-desktop/verify.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
+            destroy) bash scripts/cloud-dev-desktop/destroy.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
+            cleanup-expired) bash scripts/cloud-dev-desktop/cleanup-expired.sh --provider "${{ inputs.provider }}" ${suffix} ;;
+            *) echo "Unsupported action"; exit 1 ;;
+          esac
+

@@ -1,0 +1,26 @@
+provider: azure
+profile_name: win11-codex-dev
+os_family: windows
+region: eastus
+zone: us-central1-a
+vm_size: Standard_D8s_v5
+disk_gb: 256
+admin_username: devadmin
+allowed_cidrs:
+  - 203.0.113.10/32
+ttl_hours: 12
+owner: shenlan
+purpose: flutter-desktop-dev
+retain_data_disk: false
+toolchains:
+  codex: true
+  android_studio: true
+  vscode: true
+  flutter: false
+  dart: false
+desktop_access:
+  protocol: rdp
+  port: 3389
+tags:
+  environment: dev
+  cost_center: desktop-lab

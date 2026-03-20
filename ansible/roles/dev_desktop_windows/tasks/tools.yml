@@ -1,0 +1,37 @@
+- name: Install Chocolatey
+  ansible.builtin.raw: |
+    Set-ExecutionPolicy Bypass -Scope Process -Force
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072
+    if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
+      Invoke-Expression ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
+    }
+  changed_when: true
+
+- name: Install Windows toolchain packages
+  ansible.builtin.raw: |
+    $ErrorActionPreference = "Stop"
+    $packages = @()
+    if ({{ toolchains.vscode | bool | ternary('$true', '$false') }}) { $packages += 'vscode' }
+    if ({{ toolchains.android_studio | bool | ternary('$true', '$false') }}) { $packages += 'androidstudio' }
+    if ({{ toolchains.codex | bool | ternary('$true', '$false') }}) { $packages += 'nodejs-lts' }
+    foreach ($pkg in $packages) {
+      choco install $pkg -y --no-progress
+    }
+    if ({{ toolchains.codex | bool | ternary('$true', '$false') }}) {
+      npm install -g @openai/codex
+    }
+  changed_when: true
+
+- name: Create Windows desktop metadata directory
+  ansible.builtin.raw: |
+    $ErrorActionPreference = "Stop"
+    New-Item -ItemType Directory -Force -Path 'C:\cloud-dev-desktop' | Out-Null
+    @"
+    PROFILE_NAME={{ profile_name }}
+    PROVIDER={{ provider }}
+    OWNER={{ owner }}
+    PURPOSE={{ purpose }}
+    EXPIRES_AT={{ cloud_vm_expires_at }}
+    "@ | Set-Content -Encoding ASCII 'C:\cloud-dev-desktop\profile.env'
+  changed_when: true
+

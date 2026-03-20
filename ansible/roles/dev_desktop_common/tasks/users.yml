@@ -1,0 +1,25 @@
+- name: Ensure common Linux packages are installed
+  ansible.builtin.package:
+    name:
+      - git
+      - curl
+      - wget
+      - unzip
+      - tar
+      - jq
+      - ca-certificates
+    state: present
+
+- name: Ensure admin user exists on Linux
+  ansible.builtin.user:
+    name: "{{ admin_username }}"
+    shell: "{{ cloud_dev_desktop_user_shell }}"
+    create_home: true
+    state: present
+
+- name: Ensure workspace root exists
+  ansible.builtin.file:
+    path: "{{ cloud_dev_desktop_workspace_root }}"
+    state: directory
+    mode: "0755"
+

@@ -78,3 +78,17 @@ export CLOUDFLARE_DNS_API_TOKEN="..."
 ansible-playbook ansible/playbooks/update_cloudflare_dns.yml \
   -e '{"cloudflare_dns_records":[{"type":"CNAME","name":"accounts-us-xhttp-abc1234.svc.plus","content":"us-xhttp.svc.plus","proxied":false}]}'
 ```
+
+## Cloud Dev Desktop Control Plane
+
+The repo also ships a separate control-plane slice for temporary Azure/GCP
+desktop VMs used for app development and testing.
+
+See:
+
+- `ansible/README-cloud-dev-desktop.md`
+- `ansible/playbooks/create_cloud_dev_desktop.yml`
+- `ansible/playbooks/bootstrap_cloud_dev_desktop.yml`
+- `ansible/playbooks/verify_cloud_dev_desktop.yml`
+- `ansible/playbooks/destroy_cloud_dev_desktop.yml`
+- `ansible/playbooks/cleanup_expired_cloud_dev_desktops.yml`

@@ -1,0 +1,11 @@
+- name: Cleanup expired cloud dev desktop infrastructure
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - role: cloud_vm_request_validate
+      vars:
+        cloud_vm_request_validation_mode: cleanup
+    - role: "{{ (provider == 'azure') | ternary('azure_dev_desktop_lifecycle', 'gcp_dev_desktop_lifecycle') }}"
+      vars:
+        cloud_lifecycle_action: cleanup

@@ -1,0 +1,28 @@
+- name: Install Debian/Ubuntu Flutter Qt dependencies
+  ansible.builtin.apt:
+    name:
+      - clang
+      - cmake
+      - ninja-build
+      - pkg-config
+      - libgtk-3-dev
+      - qtbase5-dev
+      - qtchooser
+      - qt5-qmake
+      - libgl1-mesa-dev
+      - unzip
+    state: present
+    update_cache: true
+
+- name: Install Flutter SDK on Debian family
+  ansible.builtin.unarchive:
+    src: "{{ flutter_sdk_url | default('https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.29.0-stable.tar.xz') }}"
+    dest: /opt
+    remote_src: true
+    creates: /opt/flutter/bin/flutter
+
+- name: Verify Flutter doctor on Debian family
+  ansible.builtin.command: /opt/flutter/bin/flutter doctor -v
+  changed_when: false
+  when: not ansible_check_mode
+

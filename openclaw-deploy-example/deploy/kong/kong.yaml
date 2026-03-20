@@ -1,0 +1,148 @@
+_format_version: "3.0"
+_transform: true
+
+upstreams:
+  - name: openclaw-unified-pool
+    algorithm: round-robin
+    slots: 10000
+    healthchecks:
+      passive:
+        healthy:
+          successes: 2
+        unhealthy:
+          http_statuses:
+            - 429
+            - 500
+            - 502
+            - 503
+            - 504
+          tcp_failures: 2
+          timeouts: 2
+          http_failures: 2
+    targets:
+      - target: openclaw-remote.svc.plus:443
+        weight: 100
+      # Enable this target when VPS failover or burst mode is needed.
+      # In steady state, keep Cloud Run out of the unified pool so VPS remains
+      # the default remote node.
+      #
+      # - target: openclaw-cloud-run.svc.plus:443
+      #   weight: 20
+
+  - name: openclaw-remote-direct-pool
+    algorithm: round-robin
+    targets:
+      - target: openclaw-remote.svc.plus:443
+        weight: 100
+
+  - name: openclaw-cloud-run-direct-pool
+    algorithm: round-robin
+    targets:
+      - target: openclaw-cloud-run.svc.plus:443
+        weight: 100
+
+services:
+  - name: openclaw-unified
+    host: openclaw-unified-pool
+    protocol: https
+    port: 443
+    path: /
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: openclaw-unified-route
+        protocols:
+          - https
+        hosts:
+          - openclaw.svc.plus
+        paths:
+          - /
+        strip_path: false
+        preserve_host: true
+
+  - name: openclaw-remote-direct
+    host: openclaw-remote-direct-pool
+    protocol: https
+    port: 443
+    path: /
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: openclaw-remote-direct-route
+        protocols:
+          - https
+        hosts:
+          - openclaw-remote.svc.plus
+        paths:
+          - /
+        strip_path: false
+        preserve_host: true
+
+  - name: openclaw-cloud-run-direct
+    host: openclaw-cloud-run-direct-pool
+    protocol: https
+    port: 443
+    path: /
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: openclaw-cloud-run-direct-route
+        protocols:
+          - https
+        hosts:
+          - openclaw-cloud-run.svc.plus
+        paths:
+          - /
+        strip_path: false
+        preserve_host: true
+
+plugins:
+  - name: correlation-id
+    service: openclaw-unified
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: rate-limiting
+    service: openclaw-unified
+    config:
+      minute: 120
+      hour: 3000
+      policy: local
+
+  - name: request-transformer
+    service: openclaw-unified
+    config:
+      add:
+        headers:
+          - "X-OpenClaw-Route: unified-remote"
+
+  - name: request-transformer
+    service: openclaw-remote-direct
+    config:
+      add:
+        headers:
+          - "X-OpenClaw-Route: remote-direct"
+
+  - name: request-transformer
+    service: openclaw-cloud-run-direct
+    config:
+      add:
+        headers:
+          - "X-OpenClaw-Route: cloud-run-direct"
+
+# AI Gateway and Vault plugin blocks are intentionally left out of this base
+# sample because their schemas differ by Kong version and edition.
+#
+# Recommended pattern:
+# - attach provider-facing AI Gateway plugins on dedicated model/API services
+# - keep Vault-managed credentials at Kong so OpenClaw nodes do not duplicate
+#   upstream token wiring
+# - attach auth and quota plugins at the edge before traffic reaches OpenClaw

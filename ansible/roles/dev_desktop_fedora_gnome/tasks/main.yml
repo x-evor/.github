@@ -1,3 +1,7 @@
+- name: Install Azure CLI and Google Cloud CLI on Fedora
+  ansible.builtin.import_role:
+    name: cloud_cli_prereqs
+
 - name: Install Fedora GNOME desktop
   ansible.builtin.import_tasks: desktop.yml
 
@@ -6,4 +10,3 @@
 
 - name: Configure Fedora native remote desktop
   ansible.builtin.import_tasks: remote_access.yml
-

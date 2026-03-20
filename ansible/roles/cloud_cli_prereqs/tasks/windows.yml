@@ -1,0 +1,20 @@
+- name: Ensure winget is available on Windows
+  ansible.builtin.raw: |
+    $ErrorActionPreference = "Stop"
+    Get-Command winget | Out-Null
+  changed_when: false
+
+- name: Install Azure CLI on Windows
+  ansible.builtin.raw: |
+    $ErrorActionPreference = "Stop"
+    winget install --id Microsoft.AzureCLI --exact --accept-package-agreements --accept-source-agreements --silent
+  changed_when: true
+  when: cloud_cli_prereqs_install_azure_cli | bool
+
+- name: Install Google Cloud CLI on Windows
+  ansible.builtin.raw: |
+    $ErrorActionPreference = "Stop"
+    winget install --id Google.CloudSDK --exact --accept-package-agreements --accept-source-agreements --silent
+  changed_when: true
+  when: cloud_cli_prereqs_install_gcloud_cli | bool
+

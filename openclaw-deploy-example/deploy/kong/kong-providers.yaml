@@ -1,0 +1,229 @@
+_format_version: "3.0"
+_transform: true
+
+# Contract for OpenClaw gateway nodes:
+# - point provider traffic at Kong's provider proxy host, for example
+#   https://llm.openclaw.svc.plus
+# - keep provider API keys in Kong or Vault rather than in every gateway node
+# - let Kong own provider token injection, model routing, and vendor headers
+
+services:
+  - name: provider-openai
+    host: api.openai.com
+    protocol: https
+    port: 443
+    path: /v1
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: provider-openai-route
+        protocols:
+          - https
+        hosts:
+          - llm.openclaw.svc.plus
+        paths:
+          - /providers/openai
+        strip_path: true
+        preserve_host: false
+
+  - name: provider-zai
+    host: open.bigmodel.cn
+    protocol: https
+    port: 443
+    path: /api/coding/paas/v4
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: provider-zai-route
+        protocols:
+          - https
+        hosts:
+          - llm.openclaw.svc.plus
+        paths:
+          - /providers/zai
+        strip_path: true
+        preserve_host: false
+
+  - name: provider-anthropic-native
+    host: api.anthropic.com
+    protocol: https
+    port: 443
+    path: /v1
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: provider-anthropic-native-route
+        protocols:
+          - https
+        hosts:
+          - llm.openclaw.svc.plus
+        paths:
+          - /providers/anthropic
+        strip_path: true
+        preserve_host: false
+
+  - name: provider-anthropic-openai-compatible
+    host: api.anthropic.com
+    protocol: https
+    port: 443
+    path: /v1
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: provider-anthropic-openai-route
+        protocols:
+          - https
+        hosts:
+          - llm.openclaw.svc.plus
+        paths:
+          - /providers/anthropic-openai
+        strip_path: true
+        preserve_host: false
+
+  - name: provider-nvidia-build
+    host: integrate.api.nvidia.com
+    protocol: https
+    port: 443
+    path: /v1
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: provider-nvidia-route
+        protocols:
+          - https
+        hosts:
+          - llm.openclaw.svc.plus
+        paths:
+          - /providers/nvidia
+        strip_path: true
+        preserve_host: false
+
+  # Chutes is modeled as one Kong service per chute host because public Chutes
+  # materials indicate model-specific hosts under *.chutes.ai rather than one
+  # universal canonical LLM base URL. Replace the host below with the chute you
+  # actually want to expose through Kong.
+  - name: provider-chutes-example
+    host: replace-with-your-chute-host.chutes.ai
+    protocol: https
+    port: 443
+    path: /
+    connect_timeout: 60000
+    write_timeout: 60000
+    read_timeout: 60000
+    retries: 2
+    routes:
+      - name: provider-chutes-example-route
+        protocols:
+          - https
+        hosts:
+          - llm.openclaw.svc.plus
+        paths:
+          - /providers/chutes/example
+        strip_path: true
+        preserve_host: false
+
+plugins:
+  - name: correlation-id
+    service: provider-openai
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: correlation-id
+    service: provider-zai
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: correlation-id
+    service: provider-anthropic-native
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: correlation-id
+    service: provider-anthropic-openai-compatible
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: correlation-id
+    service: provider-nvidia-build
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: correlation-id
+    service: provider-chutes-example
+    config:
+      header_name: X-Request-Id
+      generator: uuid
+      echo_downstream: true
+
+  - name: rate-limiting
+    config:
+      minute: 600
+      hour: 12000
+      policy: local
+
+  - name: request-transformer
+    service: provider-openai
+    config:
+      add:
+        headers:
+          - "X-Provider-Route: openai"
+
+  - name: request-transformer
+    service: provider-zai
+    config:
+      add:
+        headers:
+          - "X-Provider-Route: zai"
+
+  - name: request-transformer
+    service: provider-anthropic-native
+    config:
+      add:
+        headers:
+          - "X-Provider-Route: anthropic-native"
+
+  - name: request-transformer
+    service: provider-anthropic-openai-compatible
+    config:
+      add:
+        headers:
+          - "X-Provider-Route: anthropic-openai-compatible"
+
+  - name: request-transformer
+    service: provider-nvidia-build
+    config:
+      add:
+        headers:
+          - "X-Provider-Route: nvidia-build"
+
+  - name: request-transformer
+    service: provider-chutes-example
+    config:
+      add:
+        headers:
+          - "X-Provider-Route: chutes-example"
+
+# Recommended next step:
+# - attach Vault-backed secret injection per provider service
+# - inject Authorization / x-api-key / anthropic-version headers at Kong
+# - optionally separate provider routes into dedicated consumer groups or ACLs

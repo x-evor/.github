@@ -1,0 +1,1818 @@
+commit 0c5de37dba521d0b42135d2e5a852337b9383e33
+Author: Haitao Pan <manbuzhe2009@qq.com>
+Date:   Wed Mar 4 15:10:41 2026 +0800
+
+    feat: consolidate Cloud Run, GCS storage, FUSE tweaks, and macOS UI layout
+
+diff --git a/.dockerignore b/.dockerignore
+index 3a8e436d5..93489d2a8 100644
+--- a/.dockerignore
++++ b/.dockerignore
+@@ -37,27 +37,20 @@ dist
+ apps/macos/.build
+ apps/ios/build
+ **/*.trace
+-
+-# large app trees not needed for CLI build
+-apps/
++# large app trees not needed for CLI build (exclude explicitly instead of blocking the whole parent)
++apps/android/
++apps/ios/
++apps/macos/
++apps/shared/Xray-core/
+ assets/
+ Peekaboo/
+ Swabble/
+ Core/
+ Users/
+-vendor/
+ 
+ # Needed for building the Canvas A2UI bundle during Docker image builds.
+ # Keep the rest of apps/ and vendor/ excluded to avoid a large build context.
+-!apps/shared/
+-!apps/shared/OpenClawKit/
+-!apps/shared/OpenClawKit/Sources/
+-!apps/shared/OpenClawKit/Sources/OpenClawKit/
+-!apps/shared/OpenClawKit/Sources/OpenClawKit/Resources/
+-!apps/shared/OpenClawKit/Sources/OpenClawKit/Resources/tool-display.json
+-!apps/shared/OpenClawKit/Tools/
+-!apps/shared/OpenClawKit/Tools/CanvasA2UI/
+-!apps/shared/OpenClawKit/Tools/CanvasA2UI/**
++vendor/
+ !vendor/a2ui/
+ !vendor/a2ui/renderers/
+ !vendor/a2ui/renderers/lit/
+diff --git a/.gcloudignore b/.gcloudignore
+new file mode 100644
+index 000000000..6d79925d2
+--- /dev/null
++++ b/.gcloudignore
+@@ -0,0 +1,83 @@
++# This file specifies files that are *not* uploaded to Google Cloud
++# using gcloud. It follows the same syntax as .gitignore, with the addition of
++# "#!include" directives (which insert the entries of the given .gitignore-style
++# file at that point).
++#
++# For more information, run:
++#   $ gcloud topic gcloudignore
++#
++.gcloudignore
++# If you would like to upload your .git directory, .gitignore file or files
++# from your .gitignore file, remove the corresponding line
++# below:
++.git
++.gitignore
++#!include .gitignore
++
++# Node.js dependencies:
++node_modules/
++**/node_modules/
++
++# Build artifacts
++dist/
++coverage/
++.tsbuildinfo
++.pnpm-store
++
++# Development files
++.env
++.env.*
++!.env.example
++
++# IDE and editor files
++.vscode/
++.idea/
++*.swp
++*.swo
++*~
++
++# OS files
++.DS_Store
++**/.DS_Store
++Thumbs.db
++
++# Test files
++test-results/
++playwright-report/
++ui/__screenshots__/
++
++# Local development
++.local/
++/local/
++.worktrees/
++
++# Logs
++*.log
++npm-debug.log*
++yarn-debug.log*
++yarn-error.log*
++
++# Agent data (never deploy)
++/memory/
++.agent/*.json
++!.agent/workflows/
++
++# Mobile app builds (exclude heavy native dirs directly instead of negation)
++apps/android/
++apps/ios/
++apps/macos/
++apps/shared/Xray-core/
++apps/shared/OpenClawKit/.build/
++apps/shared/OpenClawKit/.swiftpm/
++apps/shared/MoltbotKit/.build/
++apps/shared/MoltbotKit/.swiftpm/
++
++# Exclude heavy vendor directories directly
++assets/
++Swabble/
++Peekaboo/
++
++# CI/CD
++.github/
++.gitlab-ci.yml
++.travis.yml
+diff --git a/Dockerfile b/Dockerfile
+index b314ca328..2c352c523 100644
+--- a/Dockerfile
++++ b/Dockerfile
+@@ -1,17 +1,7 @@
+-FROM node:22-bookworm@sha256:cd7bcd2e7a1e6f72052feb023c7f6b722205d3fcab7bbcbd2d1bfdab10b1e935
+-
+-# OCI base-image metadata for downstream image consumers.
+-# If you change these annotations, also update:
+-# - docs/install/docker.md ("Base image metadata" section)
+-# - https://docs.openclaw.ai/install/docker
+-LABEL org.opencontainers.image.base.name="docker.io/library/node:22-bookworm" \
+-  org.opencontainers.image.base.digest="sha256:cd7bcd2e7a1e6f72052feb023c7f6b722205d3fcab7bbcbd2d1bfdab10b1e935" \
+-  org.opencontainers.image.source="https://github.com/openclaw/openclaw" \
+-  org.opencontainers.image.url="https://openclaw.ai" \
+-  org.opencontainers.image.documentation="https://docs.openclaw.ai/install/docker" \
+-  org.opencontainers.image.licenses="MIT" \
+-  org.opencontainers.image.title="OpenClaw" \
+-  org.opencontainers.image.description="OpenClaw gateway and CLI runtime container image"
++# ============================================================================
++# Stage 1: Builder - Install dependencies and build the application
++# ============================================================================
++FROM node:22-bookworm AS builder
+ 
+ # Install Bun (required for build scripts)
+ RUN curl -fsSL https://bun.sh/install | bash
+@@ -22,112 +12,91 @@ RUN corepack enable
+ WORKDIR /app
+ RUN chown node:node /app
+ 
++# Install optional system packages if specified
+ ARG OPENCLAW_DOCKER_APT_PACKAGES=""
+ RUN if [ -n "$OPENCLAW_DOCKER_APT_PACKAGES" ]; then \
+-      apt-get update && \
+-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
+-      apt-get clean && \
+-      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+-    fi
++  apt-get update && \
++  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends $OPENCLAW_DOCKER_APT_PACKAGES && \
++  apt-get clean && \
++  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
++  fi
+ 
+-COPY --chown=node:node package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+-COPY --chown=node:node ui/package.json ./ui/package.json
+-COPY --chown=node:node patches ./patches
+-COPY --chown=node:node scripts ./scripts
++# Copy package files for dependency installation
++COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
++COPY ui/package.json ./ui/package.json
++COPY patches ./patches
++COPY scripts ./scripts
+ 
+-USER node
+-# Reduce OOM risk on low-memory hosts during dependency installation.
+-# Docker builds on small VMs may otherwise fail with "Killed" (exit 137).
+-RUN NODE_OPTIONS=--max-old-space-size=2048 pnpm install --frozen-lockfile
+-
+-# Optionally install Chromium and Xvfb for browser automation.
+-# Build with: docker build --build-arg OPENCLAW_INSTALL_BROWSER=1 ...
+-# Adds ~300MB but eliminates the 60-90s Playwright install on every container start.
+-# Must run after pnpm install so playwright-core is available in node_modules.
+-USER root
+-ARG OPENCLAW_INSTALL_BROWSER=""
+-RUN if [ -n "$OPENCLAW_INSTALL_BROWSER" ]; then \
+-      apt-get update && \
+-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb && \
+-      mkdir -p /home/node/.cache/ms-playwright && \
+-      PLAYWRIGHT_BROWSERS_PATH=/home/node/.cache/ms-playwright \
+-      node /app/node_modules/playwright-core/cli.js install --with-deps chromium && \
+-      chown -R node:node /home/node/.cache/ms-playwright && \
+-      apt-get clean && \
+-      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+-    fi
+-
+-# Optionally install Docker CLI for sandbox container management.
+-# Build with: docker build --build-arg OPENCLAW_INSTALL_DOCKER_CLI=1 ...
+-# Adds ~50MB. Only the CLI is installed — no Docker daemon.
+-# Required for agents.defaults.sandbox to function in Docker deployments.
+-ARG OPENCLAW_INSTALL_DOCKER_CLI=""
+-ARG OPENCLAW_DOCKER_GPG_FINGERPRINT="9DC858229FC7DD38854AE2D88D81803C0EBFCD88"
+-RUN if [ -n "$OPENCLAW_INSTALL_DOCKER_CLI" ]; then \
+-      apt-get update && \
+-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+-        ca-certificates curl gnupg && \
+-      install -m 0755 -d /etc/apt/keyrings && \
+-      # Verify Docker apt signing key fingerprint before trusting it as a root key.
+-      # Update OPENCLAW_DOCKER_GPG_FINGERPRINT when Docker rotates release keys.
+-      curl -fsSL https://download.docker.com/linux/debian/gpg -o /tmp/docker.gpg.asc && \
+-      expected_fingerprint="$(printf '%s' "$OPENCLAW_DOCKER_GPG_FINGERPRINT" | tr '[:lower:]' '[:upper:]' | tr -d '[:space:]')" && \
+-      actual_fingerprint="$(gpg --batch --show-keys --with-colons /tmp/docker.gpg.asc | awk -F: '$1 == "fpr" { print toupper($10); exit }')" && \
+-      if [ -z "$actual_fingerprint" ] || [ "$actual_fingerprint" != "$expected_fingerprint" ]; then \
+-        echo "ERROR: Docker apt key fingerprint mismatch (expected $expected_fingerprint, got ${actual_fingerprint:-<empty>})" >&2; \
+-        exit 1; \
+-      fi && \
+-      gpg --dearmor -o /etc/apt/keyrings/docker.gpg /tmp/docker.gpg.asc && \
+-      rm -f /tmp/docker.gpg.asc && \
+-      chmod a+r /etc/apt/keyrings/docker.gpg && \
+-      printf 'deb [arch=%s signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian bookworm stable\n' \
+-        "$(dpkg --print-architecture)" > /etc/apt/sources.list.d/docker.list && \
+-      apt-get update && \
+-      DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+-        docker-ce-cli docker-compose-plugin && \
+-      apt-get clean && \
+-      rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*; \
+-    fi
++# Install dependencies with frozen lockfile
++RUN pnpm install --frozen-lockfile
++
++# Copy docs first to ensure templates are preserved
++COPY docs ./docs
++
++# Copy source code and build (skip plugin-sdk DTS generation — not needed at runtime)
++COPY . .
++RUN pnpm canvas:a2ui:bundle && pnpm exec tsdown && node --import tsx scripts/write-plugin-sdk-entry-dts.ts && node --import tsx scripts/canvas-a2ui-copy.ts && node --import tsx scripts/copy-hook-metadata.ts && node --import tsx scripts/copy-export-html-templates.ts && node --import tsx scripts/write-build-info.ts && node --import tsx scripts/write-cli-compat.ts
+ 
+-USER node
+-COPY --chown=node:node . .
+-# Normalize copied plugin/agent paths so plugin safety checks do not reject
+-# world-writable directories inherited from source file modes.
+-RUN for dir in /app/extensions /app/.agent /app/.agents; do \
+-      if [ -d "$dir" ]; then \
+-        find "$dir" -type d -exec chmod 755 {} +; \
+-        find "$dir" -type f -exec chmod 644 {} +; \
+-      fi; \
+-    done
+-RUN pnpm build
+ # Force pnpm for UI build (Bun may fail on ARM/Synology architectures)
+ ENV OPENCLAW_PREFER_PNPM=1
+ RUN pnpm ui:build
+ 
+-# Expose the CLI binary without requiring npm global writes as non-root.
+-USER root
+-RUN ln -sf /app/openclaw.mjs /usr/local/bin/openclaw \
+- && chmod 755 /app/openclaw.mjs
++# ============================================================================
++# Stage 2: Runtime - Minimal production image
++# ============================================================================
++FROM node:22-bookworm-slim AS runtime
++
++# Install only runtime dependencies
++RUN corepack enable && \
++  apt-get update && \
++  apt-get install -y --no-install-recommends \
++  ca-certificates \
++  curl \
++  git && \
++  apt-get clean && \
++  rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
++
++WORKDIR /app
+ 
++# Copy package files for production dependencies
++COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
++COPY ui/package.json ./ui/package.json
++
++# Install production dependencies only
++RUN git init && pnpm install --frozen-lockfile --prod
++
++# Copy built artifacts from builder stage
++COPY --from=builder /app/dist ./dist
++COPY --from=builder /app/openclaw.mjs ./openclaw.mjs
++COPY --from=builder /app/src ./src
++COPY --from=builder /app/extensions ./extensions
++COPY --from=builder /app/skills ./skills
++# Required by workspace bootstrap/template loader at runtime.
++COPY --from=builder /app/docs/reference/templates ./docs/reference/templates
++
++# Copy UI dist if it exists (may not exist if ui:build was skipped)
++COPY --from=builder /app/ui ./ui
++
++# Create directory for GCS volume mount
++# Cloud Run will mount GCS bucket to /data
++# We'll use /data as the state directory for persistent storage
++RUN mkdir -p /data && \
++  chown -R node:node /data /app
++
++# Set environment variables for production
+ ENV NODE_ENV=production
++ENV OPENCLAW_STATE_DIR=/data
+ 
+-# Security hardening: Run as non-root user
+-# The node:22-bookworm image includes a 'node' user (uid 1000)
+-# This reduces the attack surface by preventing container escape via root privileges
++# Security hardening: Run as non-root user (uid 1000)
+ USER node
+ 
+-# Start gateway server with default config.
+-# Binds to loopback (127.0.0.1) by default for security.
+-#
+-# IMPORTANT: With Docker bridge networking (-p 18789:18789), loopback bind
+-# makes the gateway unreachable from the host. Either:
+-#   - Use --network host, OR
+-#   - Override --bind to "lan" (0.0.0.0) and set auth credentials
+-#
+-# Built-in probe endpoints for container health checks:
+-#   - GET /healthz (liveness) and GET /readyz (readiness)
+-#   - aliases: /health and /ready
+-# For external access from host/ingress, override bind to "lan" and set auth.
+-HEALTHCHECK --interval=3m --timeout=10s --start-period=15s --retries=3 \
+-  CMD node -e "fetch('http://127.0.0.1:18789/healthz').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+-CMD ["node", "openclaw.mjs", "gateway", "--allow-unconfigured"]
++# Expose port (Cloud Run will override with PORT env var)
++EXPOSE 8080
++
++# Start gateway server for Cloud Run
++# - Binds to 0.0.0.0 (lan) to allow external health checks
++# - Uses token auth mode explicitly to avoid config drift (e.g. stale password mode in persisted config)
++# - Reads PORT from Cloud Run env and defaults to 8080
++# - State directory remains /data (GCS mounted volume)
++# - Idempotently writes ZAI_API_KEY to auth-profiles.json if present in env
++CMD ["sh", "-c", "node openclaw.mjs gateway --bind lan --allow-unconfigured --auth token --port ${PORT:-8080}"]
+diff --git a/cloudbuild.yaml b/cloudbuild.yaml
+new file mode 100644
+index 000000000..c9b732081
+--- /dev/null
++++ b/cloudbuild.yaml
+@@ -0,0 +1,47 @@
++steps:
++  # Step 0: Build the container image
++  - name: 'gcr.io/cloud-builders/docker'
++    args:
++      - 'build'
++      - '-t'
++      - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/openclawbot.svc.plus/openclawbot-svc-plus:$COMMIT_SHA'
++      - '.'
++
++  # Step 1: Push the container image
++  - name: 'gcr.io/cloud-builders/docker'
++    args:
++      - 'push'
++      - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/openclawbot.svc.plus/openclawbot-svc-plus:$COMMIT_SHA'
++
++  # Step 2: Deploy to Cloud Run with proper configuration
++  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk:slim'
++    entrypoint: 'gcloud'
++    args:
++      - 'run'
++      - 'deploy'
++      - 'openclawbot-svc-plus'
++      - '--platform=managed'
++      - '--region=asia-northeast1'
++      - '--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/openclawbot.svc.plus/openclawbot-svc-plus:$COMMIT_SHA'
++      - '--service-account=openclawbot-sa@$PROJECT_ID.iam.gserviceaccount.com'
++      - '--memory=2Gi'
++      - '--cpu=2'
++      - '--timeout=300'
++      - '--concurrency=80'
++      - '--min-instances=1'
++      - '--max-instances=10'
++      - '--no-cpu-throttling'
++      - '--allow-unauthenticated'
++      - '--port=8080'
++      - '--set-env-vars=NODE_ENV=production,OPENCLAW_STATE_DIR=/data,OPENCLAW_CONFIG_PATH=/data/openclaw.json,OPENCLAW_GATEWAY_MODE=local,OPENCLAW_GATEWAY_CONTROL_UI_ALLOWED_ORIGINS=*,OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK=true'
++      - '--update-secrets=OPENCLAW_GATEWAY_TOKEN=internal-service-token:latest,INTERNAL_SERVICE_TOKEN=internal-service-token:latest,ZAI_API_KEY=zai-api-key:latest,Z_AI_API_KEY=zai-api-key:latest'
++      - '--add-volume=name=gcs-data,type=cloud-storage,bucket=openclawbot-data'
++      - '--add-volume-mount=volume=gcs-data,mount-path=/data'
++      - '--execution-environment=gen2'
++
++images:
++  - 'asia-northeast1-docker.pkg.dev/$PROJECT_ID/cloud-run-source-deploy/openclawbot.svc.plus/openclawbot-svc-plus:$COMMIT_SHA'
++
++options:
++  machineType: 'E2_HIGHCPU_8'
++  logging: CLOUD_LOGGING_ONLY
+diff --git a/deploy/gcp/cloud-run/.env.example b/deploy/gcp/cloud-run/.env.example
+new file mode 100644
+index 000000000..b03b8e40c
+--- /dev/null
++++ b/deploy/gcp/cloud-run/.env.example
+@@ -0,0 +1,20 @@
++# Cloud Run Deployment Environment Variables
++# Copy this file to .env and fill in your values
++
++# Google Cloud Project Configuration
++GCP_PROJECT_ID=xzerolab-480008
++GCP_REGION=asia-northeast1
++
++# GCS Bucket for persistent storage
++GCS_BUCKET_NAME=openclawbot-data
++
++# Service Account (optional, will be auto-generated if not set)
++SERVICE_ACCOUNT_EMAIL=openclawbot-sa@xzerolab-480008.iam.gserviceaccount.com
++
++# Gateway Authentication Token
++# Generate with: openssl rand -base64 32
++# Default: mNrXA9Lm+5cs6wMziYMafJgkjTJg45OMiB1YTXEt5E8=
++OPENCLAW_GATEWAY_TOKEN=mNrXA9Lm+5cs6wMziYMafJgkjTJg45OMiB1YTXEt5E8=
++
++# Alternative: Use INTERNAL_SERVICE_TOKEN format (compatible)
++# OPENCLAW_GATEWAY_TOKEN=uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=
+diff --git a/deploy/gcp/cloud-run/DEPLOYMENT_FIX_SUMMARY.md b/deploy/gcp/cloud-run/DEPLOYMENT_FIX_SUMMARY.md
+new file mode 100644
+index 000000000..9da91e15b
+--- /dev/null
++++ b/deploy/gcp/cloud-run/DEPLOYMENT_FIX_SUMMARY.md
+@@ -0,0 +1,182 @@
++# Cloud Run 部署修复总结
++
++## 问题诊断
++
++### 原始错误
++
++```
++Gateway auth is set to token, but no token is configured.
++Set gateway.auth.token (or OPENCLAW_GATEWAY_TOKEN), or pass --token.
++```
++
++### 根本原因
++
++虽然在 `service.yaml` 中配置了 `OPENCLAW_GATEWAY_TOKEN` 环境变量，但应用代码在读取 token 时没有检查这个环境变量名称。应用期望的是 `INTERNAL_SERVICE_TOKEN`（与 console.svc.plus 和 accounts.svc.plus 共享的 token 名称）。
++
++## 解决方案
++
++### 1. 代码修改
++
++#### `src/gateway/auth.ts` (第 192-197 行)
++
++```typescript
++const token =
++  authConfig.token ??
++  env.OPENCLAW_GATEWAY_TOKEN ??
++  env.INTERNAL_SERVICE_TOKEN ?? // 新增：支持 INTERNAL_SERVICE_TOKEN
++  env.CLAWDBOT_GATEWAY_TOKEN ??
++  undefined;
++```
++
++**作用**: 添加 `INTERNAL_SERVICE_TOKEN` 作为 token 来源的备选项，确保与其他服务的命名一致性。
++
++#### `src/cli/gateway-cli/run.ts` (第 224 行)
++
++```typescript
++"Set gateway.auth.token (or OPENCLAW_GATEWAY_TOKEN/INTERNAL_SERVICE_TOKEN), or pass --token.",
++```
++
++**作用**: 更新错误提示信息，告知用户可以使用 `INTERNAL_SERVICE_TOKEN`。
++
++### 2. 部署配置修改
++
++#### `deploy/gcp/cloud-run/service.yaml`
++
++```yaml
++env:
++  - name: NODE_ENV
++    value: production
++  - name: OPENCLAW_STATE_DIR
++    value: /data
++  - name: OPENCLAW_CONFIG_PATH # 新增：方便配置同步
++    value: /data/openclaw.json
++  - name: OPENCLAW_GATEWAY_MODE
++    value: local
++  - name: OPENCLAW_GATEWAY_TOKEN
++    valueFrom:
++      secretKeyRef:
++        name: internal-service-token
++        key: latest
++```
++
++**作用**: 注入 `OPENCLAW_GATEWAY_TOKEN` (映射 `internal-service-token` Secret)，不需要额外注入 `INTERNAL_SERVICE_TOKEN` (代码优先使用 `OPENCLAW_GATEWAY_TOKEN`)。同时显式指定配置文件路径在 GCS 挂载点，确保配置持久化。
++
++### 3. 构建与持续交互 (Cloud Build)
++
++#### `cloudbuild.yaml`
++
++```yaml
++steps:
++  # ... 构建和推送 ...
++  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
++    args:
++      - "run"
++      - "deploy"
++      - "openclawbot-svc-plus"
++      - "--service-account=openclawbot-sa@$PROJECT_ID.iam.gserviceaccount.com"
++      - "--set-env-vars=NODE_ENV=production,OPENCLAW_STATE_DIR=/data,OPENCLAW_CONFIG_PATH=/data/openclaw.json,OPENCLAW_GATEWAY_MODE=local"
++      - "--update-secrets=OPENCLAW_GATEWAY_TOKEN=internal-service-token:latest"
++      - "--add-volume=name=gcs-data,type=cloud-storage,bucket=openclawbot-data"
++      - "--add-volume-mount=volume=gcs-data,mount-path=/data"
++      - "--execution-environment=gen2"
++```
++
++**作用**: 实现自动化部署，集成 Secret Manager 和 GCS 存储卷。
++
++### 4. 存储与权限
++
++- **GCS Bucket**: `openclawbot-data` (挂载至 `/data`)
++- **Secret Manager**: `internal-service-token`
++- **服务账号**: `openclawbot-sa@xzerolab-480008.iam.gserviceaccount.com`
++
++## 提交历史
++
++```
++73e53c62b - feat: support INTERNAL_SERVICE_TOKEN for gateway auth consistency
++4af0f8665 - fix: explicit gateway mode and allow-unconfigured flag to ensure startup
++2b0c7aefa - fix: add wait time for service account propagation
++ba7b0be2a - docs: add Secret Manager quick reference guide
++ae3f10732 - feat: use Secret Manager for shared INTERNAL_SERVICE_TOKEN
++14750de9d - fix: copy entire ui directory instead of just dist
++```
++
++## 部署验证
++
++### 检查构建状态
++
++```bash
++gcloud builds list --project=xzerolab-480008 --limit=3
++```
++
++### 检查服务状态
++
++```bash
++gcloud run services describe openclawbot-svc-plus \
++  --region=asia-northeast1 \
++  --project=xzerolab-480008
++```
++
++### 检查日志
++
++```bash
++gcloud run services logs read openclawbot-svc-plus \
++  --region=asia-northeast1 \
++  --project=xzerolab-480008 \
++  --limit=50
++```
++
++### 使用验证脚本
++
++```bash
++cd deploy/gcp/cloud-run
++./verify-deployment.sh
++```
++
++## 预期结果
++
++部署成功后，应该看到：
++
++1. ✅ Cloud Run 服务状态为 `Ready: True`
++2. ✅ 容器成功启动并监听端口 8080
++3. ✅ 日志中没有 "Gateway auth is set to token, but no token is configured" 错误
++4. ✅ 环境变量 `OPENCLAW_GATEWAY_TOKEN` 已正确注入 (且应用能通过它完成认证)
++5. ✅ 服务可以通过 Cloud Run URL 访问
++
++## 故障排查
++
++如果部署仍然失败，检查：
++
++1. **Secret Manager 权限**
++
++   ```bash
++   gcloud secrets get-iam-policy internal-service-token --project=xzerolab-480008
++   ```
++
++   确保服务账号 `openclawbot-sa@xzerolab-480008.iam.gserviceaccount.com` 有 `roles/secretmanager.secretAccessor` 权限。
++
++2. **Secret 值**
++
++   ```bash
++   gcloud secrets versions access latest --secret=internal-service-token --project=xzerolab-480008
++   ```
++
++   确认值为: `uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=`
++
++3. **环境变量注入**
++
++   ```bash
++   gcloud run services describe openclawbot-svc-plus \
++     --region=asia-northeast1 \
++     --project=xzerolab-480008 \
++     --format="yaml(spec.template.spec.containers[0].env)"
++   ```
++
++4. **容器日志**
++   查看详细的启动日志，确认 token 是否被正确读取。
++
++## 后续优化建议
++
++1. **统一环境变量命名**: 考虑在所有服务中统一使用 `INTERNAL_SERVICE_TOKEN`
++2. **Token 轮换**: 建议每 90 天更换一次 token
++3. **监控和告警**: 配置 Cloud Monitoring 监控服务健康状态
++4. **自动化测试**: 添加部署后的自动化健康检查
+diff --git a/deploy/gcp/cloud-run/ENV.md b/deploy/gcp/cloud-run/ENV.md
+new file mode 100644
+index 000000000..dcfb73901
+--- /dev/null
++++ b/deploy/gcp/cloud-run/ENV.md
+@@ -0,0 +1,108 @@
++# Cloud Run 环境变量配置
++
++## Gateway 认证 Token（推荐：使用 Secret Manager）
++
++### 生产环境配置（Secret Manager）
++
++Cloud Run 服务使用 Google Cloud Secret Manager 安全存储认证 token：
++
++```yaml
++# service.yaml 配置
++env:
++  - name: OPENCLAW_GATEWAY_TOKEN
++    valueFrom:
++      secretKeyRef:
++        name: internal-service-token
++        key: latest
++```
++
++**Secret 信息：**
++
++- **Secret 名称**: `internal-service-token`
++- **Secret 值**: `uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=`
++- **共享服务**:
++  - `openclawbot.svc.plus` (本服务)
++  - `console.svc.plus`
++  - `accounts.svc.plus`
++
++### 开发/测试环境配置（环境变量）
++
++如果不使用 Secret Manager，可以直接设置环境变量：
++
++```bash
++export OPENCLAW_GATEWAY_TOKEN=uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=
++```
++
++## Token 格式
++
++- **编码**: Base64
++- **长度**: 44 字符
++- **生成方式**: `openssl rand -base64 32`
++
++## 与其他服务的 Token 对比
++
++### accounts.svc.plus
++
++```bash
++INTERNAL_SERVICE_TOKEN=uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=
++```
++
++### openclawbot (本地配置)
++
++```bash
++gateway.auth.token=<openclaw-gateway-token>
++```
++
++### openclawbot (Cloud Run)
++
++```bash
++OPENCLAW_GATEWAY_TOKEN=mNrXA9Lm+5cs6wMziYMafJgkjTJg45OMiB1YTXEt5E8=
++```
++
++## 安全注意事项
++
++⚠️ **重要**:
++
++- 此 token 仅用于 Cloud Run 部署
++- 不要将 token 提交到公开仓库
++- 生产环境应使用 Secret Manager 存储敏感信息
++
++## 使用 Secret Manager（推荐）
++
++在生产环境中，建议使用 Google Cloud Secret Manager：
++
++```bash
++# 创建 secret
++echo -n "mNrXA9Lm+5cs6wMziYMafJgkjTJg45OMiB1YTXEt5E8=" | \
++  gcloud secrets create openclaw-gateway-token \
++  --data-file=- \
++  --project=xzerolab-480008
++
++# 授予服务账号访问权限
++gcloud secrets add-iam-policy-binding openclaw-gateway-token \
++  --member="serviceAccount:openclawbot-sa@xzerolab-480008.iam.gserviceaccount.com" \
++  --role="roles/secretmanager.secretAccessor" \
++  --project=xzerolab-480008
++
++# 在 Cloud Run 中使用 secret
++gcloud run services update openclawbot-svc-plus \
++  --update-secrets=OPENCLAW_GATEWAY_TOKEN=openclaw-gateway-token:latest \
++  --region=asia-northeast1 \
++  --project=xzerolab-480008
++```
++
++## 更新 Token
++
++如需更换 token：
++
++1. 生成新 token:
++
++   ```bash
++   openssl rand -base64 32
++   ```
++
++2. 更新配置文件:
++   - `deploy/gcp/cloud-run/service.yaml`
++   - `deploy/gcp/cloud-run/deploy.sh`
++
++3. 重新部署服务
+diff --git a/deploy/gcp/cloud-run/README.md b/deploy/gcp/cloud-run/README.md
+new file mode 100644
+index 000000000..08e725736
+--- /dev/null
++++ b/deploy/gcp/cloud-run/README.md
+@@ -0,0 +1,220 @@
++# Cloud Run 部署指南
++
++本文档说明如何将 OpenClawBot 部署到 Google Cloud Run，并配置 GCS 持久化存储。
++
++## 架构概述
++
++- **多阶段构建**: Dockerfile 使用 builder 和 runtime 两个阶段，优化镜像大小
++- **GCS 卷挂载**: 使用 GCS Fuse 将 Cloud Storage bucket 挂载到 `/data` 目录
++- **端口配置**: 自动读取 Cloud Run 的 `PORT` 环境变量（默认 8080）
++- **健康检查**: 使用 TCP 探针检查 WebSocket 服务可用性
++
++## 前置条件
++
++1. 安装并配置 Google Cloud SDK
++2. 配置环境变量（推荐使用 .env 文件）：
++
++```bash
++# 复制示例配置文件
++cp .env.example .env
++
++# 编辑 .env 文件，设置必要的环境变量
++# 或者直接在命令行设置：
++export GCP_PROJECT_ID=xzerolab-480008
++export GCP_REGION=asia-northeast1
++export GCS_BUCKET_NAME=openclawbot-data
++export OPENCLAW_GATEWAY_TOKEN=$(openssl rand -base64 32)
++```
++
++**重要环境变量说明：**
++
++| 变量名                   | 说明                 | 默认值                  |
++| ------------------------ | -------------------- | ----------------------- |
++| `GCP_PROJECT_ID`         | Google Cloud 项目 ID | `xzerolab-480008`       |
++| `GCP_REGION`             | 部署区域             | `asia-northeast1`       |
++| `GCS_BUCKET_NAME`        | GCS 存储桶名称       | `openclawbot-data`      |
++| `OPENCLAW_GATEWAY_TOKEN` | Gateway 认证 token   | 自动生成的 base64 token |
++| `SERVICE_ACCOUNT_EMAIL`  | 服务账号邮箱（可选） | 自动生成                |
++
++## 快速部署
++
++### 方式 1: 安全部署（推荐 - 使用 Secret Manager）
++
++使用 Secret Manager 安全存储共享的 `INTERNAL_SERVICE_TOKEN`：
++
++```bash
++cd deploy/gcp/cloud-run
++chmod +x deploy-secure.sh
++./deploy-secure.sh
++```
++
++该脚本会自动：
++
++1. 创建/验证 Secret Manager 中的 `internal-service-token`
++2. 创建 GCS bucket（如果不存在）
++3. 创建服务账号并授予权限（包括 Secret Manager 访问权限）
++4. 构建并部署到 Cloud Run，使用 Secret 注入环境变量
++
++### 方式 2: 标准部署（使用环境变量）
++
++```bash
++cd deploy/gcp/cloud-run
++chmod +x deploy.sh
++./deploy.sh
++```
++
++该脚本会自动：
++
++1. 创建 GCS bucket（如果不存在）
++2. 创建服务账号并授予权限
++3. 构建并部署到 Cloud Run
++
++## 手动部署步骤
++
++### 1. 创建 GCS Bucket
++
++```bash
++gsutil mb -p ${GCP_PROJECT_ID} -l ${GCP_REGION} gs://${GCS_BUCKET_NAME}
++```
++
++### 2. 创建服务账号
++
++```bash
++gcloud iam service-accounts create openclawbot-sa \
++  --display-name="OpenClawBot Service Account" \
++  --project=${GCP_PROJECT_ID}
++```
++
++### 3. 授予权限
++
++```bash
++gcloud projects add-iam-policy-binding ${GCP_PROJECT_ID} \
++  --member="serviceAccount:openclawbot-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
++  --role="roles/storage.objectAdmin"
++```
++
++### 4. 部署到 Cloud Run
++
++```bash
++gcloud run deploy openclawbot-svc-plus \
++  --source . \
++  --platform managed \
++  --region ${GCP_REGION} \
++  --project ${GCP_PROJECT_ID} \
++  --service-account openclawbot-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
++  --execution-environment gen2 \
++  --cpu 2 \
++  --memory 4Gi \
++  --min-instances 1 \
++  --max-instances 10 \
++  --no-cpu-throttling \
++  --allow-unauthenticated \
++  --port 8080 \
++  --add-volume name=gcs-data,type=cloud-storage,bucket=${GCS_BUCKET_NAME} \
++  --add-volume-mount volume=gcs-data,mount-path=/data
++```
++
++## 配置说明
++
++### 环境变量
++
++- `PORT`: Cloud Run 自动设置，应用会自动读取
++- `NODE_ENV`: 设置为 `production`
++- `OPENCLAW_STATE_DIR`: 设置为 `/data`（GCS 挂载点）
++
++### 资源配置
++
++- **CPU**: 2 核
++- **内存**: 4 GiB
++- **最小实例数**: 1（保持服务始终运行）
++- **最大实例数**: 10
++- **CPU 节流**: 禁用（WebSocket 需要持续 CPU）
++
++### 健康检查
++
++- **Startup Probe**: TCP 检查，端口 8080
++  - 初始延迟: 10 秒
++  - 检查周期: 5 秒
++  - 失败阈值: 24 次（允许 2 分钟启动时间）
++
++- **Liveness Probe**: TCP 检查，端口 8080
++  - 初始延迟: 60 秒
++  - 检查周期: 30 秒
++  - 失败阈值: 3 次
++
++## 持久化存储
++
++应用数据存储在 GCS bucket 中，挂载路径为 `/data`。包括：
++
++- 配置文件
++- 会话数据
++- 日志文件
++- 其他运行时数据
++
++## 查看日志
++
++```bash
++gcloud run services logs read openclawbot-svc-plus \
++  --region ${GCP_REGION} \
++  --project ${GCP_PROJECT_ID} \
++  --limit 50
++```
++
++## 更新服务
++
++修改代码后，重新运行部署脚本或手动部署命令即可。Cloud Run 会自动构建新镜像并滚动更新。
++
++## 故障排查
++
++### 容器启动失败
++
++检查日志：
++
++```bash
++gcloud run services logs read openclawbot-svc-plus --region ${GCP_REGION} --limit 100
++```
++
++常见问题：
++
++1. **端口配置错误**: 确保应用监听 `PORT` 环境变量指定的端口
++2. **权限问题**: 检查服务账号是否有 GCS bucket 访问权限
++3. **启动超时**: 增加 startup probe 的 `failureThreshold`
++
++### GCS 挂载问题
++
++验证 bucket 权限：
++
++```bash
++gsutil ls -L gs://${GCS_BUCKET_NAME}
++```
++
++检查服务账号权限：
++
++```bash
++gcloud projects get-iam-policy ${GCP_PROJECT_ID} \
++  --flatten="bindings[].members" \
++  --filter="bindings.members:serviceAccount:openclawbot-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com"
++```
++
++## 清理资源
++
++删除 Cloud Run 服务：
++
++```bash
++gcloud run services delete openclawbot-svc-plus \
++  --region ${GCP_REGION} \
++  --project ${GCP_PROJECT_ID}
++```
++
++删除 GCS bucket：
++
++```bash
++gsutil rm -r gs://${GCS_BUCKET_NAME}
++```
++
++删除服务账号：
++
++```bash
++gcloud iam service-accounts delete openclawbot-sa@${GCP_PROJECT_ID}.iam.gserviceaccount.com \
++  --project ${GCP_PROJECT_ID}
++```
+diff --git a/deploy/gcp/cloud-run/SECRET_MANAGER.md b/deploy/gcp/cloud-run/SECRET_MANAGER.md
+new file mode 100644
+index 000000000..165cab516
+--- /dev/null
++++ b/deploy/gcp/cloud-run/SECRET_MANAGER.md
+@@ -0,0 +1,151 @@
++# Secret Manager 快速参考
++
++## 共享 Token 配置
++
++### Token 信息
++
++- **Secret 名称**: `internal-service-token`
++- **Secret 值**: `uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=`
++- **格式**: Base64 编码（44 字符）
++- **用途**: 服务间认证
++
++### 共享服务
++
++1. **openclawbot.svc.plus** (本服务)
++   - 环境变量: `OPENCLAW_GATEWAY_TOKEN`
++   - 用途: Gateway 认证
++
++2. **console.svc.plus**
++   - 环境变量: `INTERNAL_SERVICE_TOKEN`
++   - 用途: 内部服务调用认证
++
++3. **accounts.svc.plus**
++   - 环境变量: `INTERNAL_SERVICE_TOKEN`
++   - 用途: 内部服务调用认证
++
++## 快速命令
++
++### 创建 Secret
++
++```bash
++echo -n "uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=" | \
++  gcloud secrets create internal-service-token \
++    --data-file=- \
++    --project=xzerolab-480008 \
++    --replication-policy="automatic"
++```
++
++### 查看 Secret
++
++```bash
++gcloud secrets describe internal-service-token \
++  --project=xzerolab-480008
++```
++
++### 读取 Secret 值
++
++```bash
++gcloud secrets versions access latest \
++  --secret=internal-service-token \
++  --project=xzerolab-480008
++```
++
++### 授予服务账号访问权限
++
++```bash
++gcloud secrets add-iam-policy-binding internal-service-token \
++  --member="serviceAccount:openclawbot-sa@xzerolab-480008.iam.gserviceaccount.com" \
++  --role="roles/secretmanager.secretAccessor" \
++  --project=xzerolab-480008
++```
++
++### 更新 Secret 值
++
++```bash
++echo -n "NEW_TOKEN_VALUE" | \
++  gcloud secrets versions add internal-service-token \
++    --data-file=- \
++    --project=xzerolab-480008
++```
++
++## Cloud Run 配置
++
++### 在 service.yaml 中使用
++
++```yaml
++env:
++  - name: OPENCLAW_GATEWAY_TOKEN
++    valueFrom:
++      secretKeyRef:
++        name: internal-service-token
++        key: latest
++```
++
++### 在 gcloud 命令中使用
++
++```bash
++gcloud run deploy openclawbot-svc-plus \
++  --update-secrets OPENCLAW_GATEWAY_TOKEN=internal-service-token:latest \
++  --region asia-northeast1 \
++  --project xzerolab-480008
++```
++
++## 安全最佳实践
++
++1. ✅ **使用 Secret Manager** 而不是环境变量
++2. ✅ **最小权限原则** - 只授予必要的访问权限
++3. ✅ **定期轮换** - 建议每 90 天更换一次 token
++4. ✅ **审计日志** - 启用 Secret Manager 审计日志
++5. ✅ **版本管理** - 使用 `latest` 或特定版本号
++
++## Token 轮换流程
++
++1. 生成新 token:
++
++   ```bash
++   openssl rand -base64 32
++   ```
++
++2. 添加新版本到 Secret Manager:
++
++   ```bash
++   echo -n "NEW_TOKEN" | \
++     gcloud secrets versions add internal-service-token --data-file=-
++   ```
++
++3. 更新所有使用该 secret 的服务（自动使用 `latest`）
++
++4. 验证所有服务正常工作
++
++5. 禁用旧版本:
++   ```bash
++   gcloud secrets versions disable VERSION_NUMBER \
++     --secret=internal-service-token
++   ```
++
++## 故障排查
++
++### 检查服务账号权限
++
++```bash
++gcloud secrets get-iam-policy internal-service-token \
++  --project=xzerolab-480008
++```
++
++### 测试 Secret 访问
++
++```bash
++gcloud secrets versions access latest \
++  --secret=internal-service-token \
++  --impersonate-service-account=openclawbot-sa@xzerolab-480008.iam.gserviceaccount.com
++```
++
++### 查看审计日志
++
++```bash
++gcloud logging read \
++  'resource.type="secretmanager.googleapis.com/Secret"
++   AND resource.labels.secret_id="internal-service-token"' \
++  --limit 50 \
++  --project=xzerolab-480008
++```
+diff --git a/deploy/gcp/cloud-run/deploy-secure.sh b/deploy/gcp/cloud-run/deploy-secure.sh
+new file mode 100755
+index 000000000..4c8de68ae
+--- /dev/null
++++ b/deploy/gcp/cloud-run/deploy-secure.sh
+@@ -0,0 +1,8 @@
++#!/bin/bash
++set -euo pipefail
++
++# Backward-compatible wrapper:
++# secure deploy logic has been merged into deploy.sh.
++
++SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
++exec "${SCRIPT_DIR}/deploy.sh" "$@"
+diff --git a/deploy/gcp/cloud-run/deploy.sh b/deploy/gcp/cloud-run/deploy.sh
+new file mode 100755
+index 000000000..d3fadff3c
+--- /dev/null
++++ b/deploy/gcp/cloud-run/deploy.sh
+@@ -0,0 +1,117 @@
++#!/bin/bash
++set -euo pipefail
++
++# Cloud Run Deployment Script for OpenClawBot
++# Unified script: includes Secret Manager setup + Cloud Run deployment.
++
++PROJECT_ID="${GCP_PROJECT_ID:-xzerolab-480008}"
++REGION="${GCP_REGION:-asia-northeast1}"
++SERVICE_NAME="openclawbot-svc-plus"
++GCS_BUCKET="${GCS_BUCKET_NAME:-openclawbot-data}"
++SERVICE_ACCOUNT="${SERVICE_ACCOUNT_EMAIL:-openclawbot-sa@${PROJECT_ID}.iam.gserviceaccount.com}"
++SECRET_NAME="${OPENCLAW_GATEWAY_SECRET_NAME:-internal-service-token}"
++GATEWAY_TOKEN="${OPENCLAW_GATEWAY_TOKEN:-}"
++
++echo "🚀 Deploying OpenClawBot to Cloud Run..."
++echo "   Project: ${PROJECT_ID}"
++echo "   Region: ${REGION}"
++echo "   Service: ${SERVICE_NAME}"
++echo "   GCS Bucket: ${GCS_BUCKET}"
++echo "   Secret: ${SECRET_NAME}"
++echo ""
++
++# Step 1: Create secret if missing (requires OPENCLAW_GATEWAY_TOKEN for first-time setup)
++echo "🔐 Checking Secret Manager..."
++if gcloud secrets describe "${SECRET_NAME}" --project="${PROJECT_ID}" &>/dev/null; then
++  echo "   ✅ Secret '${SECRET_NAME}' already exists"
++else
++  if [[ -z "${GATEWAY_TOKEN}" ]]; then
++    echo "   ❌ Secret '${SECRET_NAME}' does not exist."
++    echo "   Set OPENCLAW_GATEWAY_TOKEN to create it, then rerun."
++    exit 1
++  fi
++  echo "   Creating secret '${SECRET_NAME}'..."
++  printf '%s' "${GATEWAY_TOKEN}" | \
++    gcloud secrets create "${SECRET_NAME}" \
++      --data-file=- \
++      --project="${PROJECT_ID}" \
++      --replication-policy="automatic"
++  echo "   ✅ Secret created"
++fi
++
++# Step 2: Create GCS bucket if it doesn't exist
++echo "📦 Checking GCS bucket..."
++if ! gsutil ls -b "gs://${GCS_BUCKET}" &>/dev/null; then
++  echo "   Creating GCS bucket: ${GCS_BUCKET}"
++  gsutil mb -p "${PROJECT_ID}" -l "${REGION}" "gs://${GCS_BUCKET}"
++  echo "   ✅ Bucket created"
++else
++  echo "   ✅ Bucket already exists"
++fi
++
++# Step 3: Create service account if it doesn't exist
++echo "🔐 Checking service account..."
++if ! gcloud iam service-accounts describe "${SERVICE_ACCOUNT}" --project="${PROJECT_ID}" &>/dev/null; then
++  echo "   Creating service account..."
++  gcloud iam service-accounts create "openclawbot-sa" \
++    --display-name="OpenClawBot Service Account" \
++    --project="${PROJECT_ID}"
++  echo "   ✅ Service account created"
++  echo "   ⏳ Waiting for service account to propagate..."
++  sleep 10
++else
++  echo "   ✅ Service account already exists"
++fi
++
++# Step 4: Grant required IAM permissions
++echo "🔑 Granting permissions..."
++gcloud projects add-iam-policy-binding "${PROJECT_ID}" \
++  --member="serviceAccount:${SERVICE_ACCOUNT}" \
++  --role="roles/storage.objectAdmin" \
++  --condition=None \
++  --quiet
++
++gcloud secrets add-iam-policy-binding "${SECRET_NAME}" \
++  --member="serviceAccount:${SERVICE_ACCOUNT}" \
++  --role="roles/secretmanager.secretAccessor" \
++  --project="${PROJECT_ID}" \
++  --quiet
++
++echo "   ✅ Permissions granted"
++
++# Step 5: Build and deploy
++echo "🏗️  Building and deploying to Cloud Run..."
++gcloud run deploy "${SERVICE_NAME}" \
++  --source . \
++  --platform managed \
++  --region "${REGION}" \
++  --project "${PROJECT_ID}" \
++  --service-account "${SERVICE_ACCOUNT}" \
++  --execution-environment gen2 \
++  --cpu 2 \
++  --memory 4Gi \
++  --min-instances 1 \
++  --max-instances 10 \
++  --no-cpu-throttling \
++  --allow-unauthenticated \
++  --port 8080 \
++  --update-secrets OPENCLAW_GATEWAY_TOKEN="${SECRET_NAME}:latest",INTERNAL_SERVICE_TOKEN="${SECRET_NAME}:latest",ZAI_API_KEY=zai-api-key:latest,Z_AI_API_KEY=zai-api-key:latest \
++  --set-env-vars NODE_ENV=production,OPENCLAW_STATE_DIR=/data,OPENCLAW_CONFIG_PATH=/data/openclaw.json,OPENCLAW_GATEWAY_MODE=local,OPENCLAW_GATEWAY_CONTROL_UI_ALLOWED_ORIGINS=*,OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK=true \
++  --add-volume name=gcs-data,type=cloud-storage,bucket="${GCS_BUCKET}" \
++  --add-volume-mount volume=gcs-data,mount-path=/data \
++  --quiet
++
++echo ""
++echo "✅ Deployment complete!"
++echo ""
++echo "📋 Service URL:"
++gcloud run services describe "${SERVICE_NAME}" \
++  --platform managed \
++  --region "${REGION}" \
++  --project "${PROJECT_ID}" \
++  --format 'value(status.url)'
++
++echo ""
++echo "🔐 Secret Manager:"
++echo "   Secret: ${SECRET_NAME}"
++echo "   Version: latest"
+diff --git a/deploy/gcp/cloud-run/service.yaml b/deploy/gcp/cloud-run/service.yaml
+new file mode 100644
+index 000000000..91f75557b
+--- /dev/null
++++ b/deploy/gcp/cloud-run/service.yaml
+@@ -0,0 +1,97 @@
++apiVersion: serving.knative.dev/v1
++kind: Service
++metadata:
++  name: openclawbot-svc-plus
++  labels:
++    cloud.googleapis.com/location: asia-northeast1
++  annotations:
++    run.googleapis.com/ingress: all
++    run.googleapis.com/ingress-status: all
++spec:
++  template:
++    metadata:
++      annotations:
++        # Enable GCS volume mounting
++        run.googleapis.com/execution-environment: gen2
++        # Auto-scaling configuration
++        autoscaling.knative.dev/minScale: '1'
++        autoscaling.knative.dev/maxScale: '10'
++        # CPU allocation (always allocated for WebSocket connections)
++        run.googleapis.com/cpu-throttling: 'false'
++    spec:
++      # Service account for GCS access and Secret Manager
++      serviceAccountName: openclawbot-sa@xzerolab-480008.iam.gserviceaccount.com
++
++      containers:
++      - name: openclawbot
++        # Image will be set by Cloud Build
++        image: asia-northeast1-docker.pkg.dev/xzerolab-480008/cloud-run-source-deploy/openclawbot.svc.plus/openclawbot-svc-plus:latest
++
++        ports:
++        - name: http1
++          containerPort: 8080
++
++
++        env:
++        # Cloud Run will set PORT automatically
++        - name: NODE_ENV
++          value: production
++        - name: OPENCLAW_STATE_DIR
++          value: /data
++        - name: OPENCLAW_GATEWAY_MODE
++          value: local
++        - name: OPENCLAW_CONFIG_PATH
++          value: /data/openclaw.json
++        # Gateway authentication token from Secret Manager
++        # Shared with console.svc.plus and accounts.svc.plus
++        - name: OPENCLAW_GATEWAY_TOKEN
++          valueFrom:
++            secretKeyRef:
++              name: internal-service-token
++              key: latest
++        - name: Z_AI_API_KEY
++          valueFrom:
++            secretKeyRef:
++              name: zai-api-key
++              key: latest
++        - name: OPENCLAW_GATEWAY_CONTROL_UI_ALLOWED_ORIGINS
++          value: '*'
++
++        resources:
++          limits:
++            cpu: '2'
++            memory: 4Gi
++
++        # Mount GCS bucket for persistent storage
++        volumeMounts:
++        - name: gcs-data
++          mountPath: /data
++
++
++        # Startup probe - TCP check for WebSocket service
++        startupProbe:
++          tcpSocket:
++            port: 8080
++          initialDelaySeconds: 10
++          periodSeconds: 5
++          timeoutSeconds: 3
++          failureThreshold: 24
++
++        # Liveness probe - TCP check to verify container is alive
++        livenessProbe:
++          tcpSocket:
++            port: 8080
++          initialDelaySeconds: 60
++          periodSeconds: 30
++          timeoutSeconds: 5
++          failureThreshold: 3
++
++      # GCS volume configuration
++      volumes:
++      - name: gcs-data
++        csi:
++          driver: gcsfuse.run.googleapis.com
++          # Replace with your GCS bucket name
++          volumeAttributes:
++            bucketName: openclawbot-data
++            mountOptions: "implicit-dirs,uid=1000,gid=1000"
+diff --git a/deploy/gcp/cloud-run/verify-deployment.sh b/deploy/gcp/cloud-run/verify-deployment.sh
+new file mode 100755
+index 000000000..ef64aac25
+--- /dev/null
++++ b/deploy/gcp/cloud-run/verify-deployment.sh
+@@ -0,0 +1,45 @@
++#!/bin/bash
++set -e
++
++PROJECT_ID="${GCP_PROJECT_ID:-xzerolab-480008}"
++REGION="${GCP_REGION:-asia-northeast1}"
++SERVICE_NAME="openclawbot-svc-plus"
++
++echo "🔍 Verifying Cloud Run deployment..."
++echo "   Project: $PROJECT_ID"
++echo "   Region: $REGION"
++echo "   Service: $SERVICE_NAME"
++echo ""
++
++# Check service status
++echo "📊 Service Status:"
++gcloud run services describe "${SERVICE_NAME}" \
++  --region="${REGION}" \
++  --project="${PROJECT_ID}" \
++  --format="table(status.conditions[0].type,status.conditions[0].status,status.conditions[0].message,status.url)"
++
++echo ""
++echo "📋 Latest Revisions:"
++gcloud run revisions list \
++  --service="${SERVICE_NAME}" \
++  --region="${REGION}" \
++  --project="${PROJECT_ID}" \
++  --limit=3 \
++  --format="table(metadata.name,status.conditions[0].status,status.conditions[0].reason,metadata.creationTimestamp)"
++
++echo ""
++echo "🔐 Environment Variables:"
++gcloud run services describe "${SERVICE_NAME}" \
++  --region="${REGION}" \
++  --project="${PROJECT_ID}" \
++  --format="yaml(spec.template.spec.containers[0].env)" | grep -E "(name:|value:|valueFrom:)" | head -20
++
++echo ""
++echo "📝 Recent Logs (last 20 lines):"
++gcloud run services logs read "${SERVICE_NAME}" \
++  --region="${REGION}" \
++  --project="${PROJECT_ID}" \
++  --limit=20 2>/dev/null || echo "No logs available yet"
++
++echo ""
++echo "✅ Verification complete"
+diff --git a/docs/install/gcp-cloud-run.md b/docs/install/gcp-cloud-run.md
+new file mode 100644
+index 000000000..dcf9002d2
+--- /dev/null
++++ b/docs/install/gcp-cloud-run.md
+@@ -0,0 +1,79 @@
++# Deploying OpenClaw Gateway on Google Cloud Run (Gateway Only Mode)
++
++This guide covers how to deploy OpenClaw in a "Gateway Only" configuration on Cloud Run, optimized for low overhead and using Zhipu AI (ZAI/GLM) as the primary provider.
++
++## Architecture
++
++- **Cloud Run**: Runs the OpenClaw Gateway container.
++- **Cloud Storage (GCS)**: Mounted as a volume at `/data` for persistent `openclaw.json` and state.
++- **Secret Manager**: Securely stores `OPENCLAW_GATEWAY_TOKEN` and `ZAI_API_KEY`.
++- **Cloud Build**: Automates building and deploying the container.
++
++## Prerequisites
++
++1.  A Google Cloud Project with billing enabled.
++2.  GCS Bucket named `openclawbot-data`.
++3.  Secret Manager secrets:
++    - `internal-service-token`: Used for `OPENCLAW_GATEWAY_TOKEN`.
++    - `zai-api-key`: Your Zhipu AI API key.
++4.  Service Account `openclawbot-sa` with permissions:
++    - Cloud Run Developer
++    - Secret Manager Secret Accessor
++    - Storage Object Admin (for the bucket)
++
++## Minimal Configuration
++
++### Environment Variables (Server-side)
++
++The following variables are configured in `cloudbuild.yaml`:
++
++- `NODE_ENV=production`
++- `OPENCLAW_STATE_DIR=/data`
++- `OPENCLAW_CONFIG_PATH=/data/openclaw.json`
++- `OPENCLAW_GATEWAY_MODE=local`: Forces the gateway to run as the master node.
++- `OPENCLAW_GATEWAY_TOKEN`: Sourced from Secret Manager (`internal-service-token`).
++- `ZAI_API_KEY`: Sourced from Secret Manager (`zai-api-key`).
++
++### Deployment Step (`cloudbuild.yaml`)
++
++```yaml
++- name: "gcr.io/google.com/cloudsdktool/cloud-sdk:slim"
++  entrypoint: "gcloud"
++  args:
++    - "run"
++    - "deploy"
++    - "openclawbot-svc-plus"
++    - "--region=asia-northeast1"
++    - "--image=asia-northeast1-docker.pkg.dev/$PROJECT_ID/..."
++    - "--set-env-vars=NODE_ENV=production,OPENCLAW_STATE_DIR=/data,OPENCLAW_CONFIG_PATH=/data/openclaw.json,OPENCLAW_GATEWAY_MODE=local"
++    - "--update-secrets=OPENCLAW_GATEWAY_TOKEN=internal-service-token:latest,INTERNAL_SERVICE_TOKEN=internal-service-token:latest,ZAI_API_KEY=zai-api-key:latest"
++    - "--add-volume=name=gcs-data,type=cloud-storage,bucket=openclawbot-data"
++    - "--add-volume-mount=volume=gcs-data,mount-path=/data"
++```
++
++## How to Deploy
++
++1.  Ensure your secrets are created in Secret Manager.
++2.  Run the build using gcloud:
++    ```bash
++    gcloud builds submit --config cloudbuild.yaml --substitutions=COMMIT_SHA=$(git rev-parse HEAD)
++    ```
++
++## Post-Deployment Configuration (openclaw.json)
++
++Once deployed, the `openclaw.json` in your GCS bucket should be updated using our optimized template as a base. You can find this template at:
++`example/config/openclaw.json`
++
++The key configurations for this environment are:
++
++- **`agents.defaults.workspace`**: Set to `/data/workspace`.
++- **`auth.profiles`**: Configured for `zai` using environment-injected API keys.
++- **`gateway.controlUi`**: `dangerouslyDisableDeviceAuth` set to `true` for easier access in Cloud Run.
++
++The `ZAI_API_KEY` and `OPENCLAW_GATEWAY_TOKEN` environment variables injected by Cloud Run (via Secret Manager) will be automatically picked up by the system.
++
++## Troubleshooting
++
++- **Container failed to start**: Check Cloud Logging. Common causes include missing secrets or incorrect GCS bucket permissions.
++- **Gateway token mismatch**: Ensure the token you use in the Control UI matches the value in the `internal-service-token` secret.
++- **Plugin not found**: Ensure your `Dockerfile` copies the `extensions` and `skills` directories to the runtime stage.
+diff --git a/docs/runbook-cloud-run.md b/docs/runbook-cloud-run.md
+new file mode 100644
+index 000000000..f4c93a032
+--- /dev/null
++++ b/docs/runbook-cloud-run.md
+@@ -0,0 +1,67 @@
++# OpenClaw Cloud Run Deployment Runbook
++
++This document describes the deployment process for OpenClaw on Google Cloud Run with GCS storage, and documents known issues and their resolutions.
++
++## 1. Prerequisites
++
++- Google Cloud Project with Cloud Run and Secret Manager enabled.
++- GCS Bucket (e.g., `openclawbot-data`).
++- Service Account with `Storage Object Admin` and `Secret Manager Secret Accessor` roles.
++
++## 2. Environment Variables & Secrets
++
++The following variables must be configured in the Cloud Run service:
++
++| Variable                 | Source  | Description                                               |
++| :----------------------- | :------ | :-------------------------------------------------------- |
++| `NODE_ENV`               | Literal | Set to `production`.                                      |
++| `OPENCLAW_STATE_DIR`     | Literal | Path to the GCS volume mount point (e.g., `/data`).       |
++| `OPENCLAW_CONFIG_PATH`   | Literal | Path to the config file (e.g., `/data/openclaw.json`).    |
++| `OPENCLAW_GATEWAY_MODE`  | Literal | Set to `local`.                                           |
++| `INTERNAL_SERVICE_TOKEN` | Secret  | Gateway authentication token.                             |
++| `Z_AI_API_KEY`           | Secret  | Zhipu AI API Key (automatically mapped to `ZAI_API_KEY`). |
++
++## 3. Storage Configuration (GCS)
++
++- Mount a GCS bucket to `/data`.
++- Ensure `/data/openclaw.json` exists. For the best experience with the Control UI, use the following policy settings in `openclaw.json`:
++  ```json
++  "gateway": {
++    "controlUi": {
++      "enabled": true,
++      "allowedOrigins": ["*"],
++      "dangerouslyDisableDeviceAuth": true
++    }
++  }
++  ```
++
++## 4. Known Issues & Resolutions
++
++### Gateway Token Mismatch (Browser Dashboard)
++
++- **Problem**: Tokens containing the `+` character (common in Base64) are incorrectly decoded as spaces by `URLSearchParams` in the browser.
++- **Error**: `disconnected (1008): unauthorized: gateway token mismatch`.
++- **Resolution**: A fix was implemented in `ui/src/ui/app-settings.ts` to manually parse tokens from the URL hash to preserve special characters.
++
++### Disconnected (1005): No Reason
++
++- **Cause**: Connection interrupted without a close frame. Often caused by:
++  - Container OOM (check Cloud Run memory limits, recommend >= 2GB).
++  - Proxy timeout or reset.
++  - Process crash during handshake.
++- **Resolution**: Check Cloud Run logs for OOM or startup errors. Ensure `gateway.port` in `openclaw.json` matches the Cloud Run port (default 8080).
++
++## 5. Deployment Commands
++
++```bash
++# Build and Push
++gcloud builds submit --config cloudbuild.yaml .
++
++# Manual Deploy Example
++gcloud run deploy openclawbot-svc-plus \
++  --image asia-northeast1-docker.pkg.dev/$PROJECT_ID/... \
++  --update-secrets OPENCLAW_GATEWAY_TOKEN=internal-service-token:latest \
++  --set-env-vars NODE_ENV=production,OPENCLAW_STATE_DIR=/data,OPENCLAW_CONFIG_PATH=/data/openclaw.json,OPENCLAW_GATEWAY_MODE=local \
++  --add-volume name=gcs-data,type=cloud-storage,bucket=openclawbot-data \
++  --add-volume-mount volume=gcs-data,mount-path=/data
++```
+diff --git a/src/gateway/server-runtime-config.ts b/src/gateway/server-runtime-config.ts
+index d6352edf6..ca38e1b76 100644
+--- a/src/gateway/server-runtime-config.ts
++++ b/src/gateway/server-runtime-config.ts
+@@ -4,6 +4,7 @@ import type {
+   GatewayTailscaleConfig,
+   loadConfig,
+ } from "../config/config.js";
++import { isTruthyEnvValue, logAcceptedEnvOption } from "../infra/env.js";
+ import {
+   assertGatewayAuthConfigured,
+   type ResolvedGatewayAuth,
+@@ -34,6 +35,8 @@ export type GatewayRuntimeConfig = {
+   tailscaleMode: "off" | "serve" | "funnel";
+   hooksConfig: ReturnType<typeof resolveHooksConfig>;
+   canvasHostEnabled: boolean;
++  controlUiAllowedOrigins: string[];
++  dangerouslyAllowHostHeaderOriginFallback: boolean;
+ };
+ 
+ export async function resolveGatewayRuntimeConfig(params: {
+@@ -115,11 +118,39 @@ export async function resolveGatewayRuntimeConfig(params: {
+     process.env.OPENCLAW_SKIP_CANVAS_HOST !== "1" && params.cfg.canvasHost?.enabled !== false;
+ 
+   const trustedProxies = params.cfg.gateway?.trustedProxies ?? [];
+-  const controlUiAllowedOrigins = (params.cfg.gateway?.controlUi?.allowedOrigins ?? [])
++  const envAllowedOrigins = (process.env.OPENCLAW_GATEWAY_CONTROL_UI_ALLOWED_ORIGINS ?? "")
++    .split(",")
++    .map((v) => v.trim())
++    .filter(Boolean);
++  const controlUiAllowedOrigins = [
++    ...(params.cfg.gateway?.controlUi?.allowedOrigins ?? []),
++    ...envAllowedOrigins,
++  ]
+     .map((value) => value.trim())
+     .filter(Boolean);
++
+   const dangerouslyAllowHostHeaderOriginFallback =
+-    params.cfg.gateway?.controlUi?.dangerouslyAllowHostHeaderOriginFallback === true;
++    params.cfg.gateway?.controlUi?.dangerouslyAllowHostHeaderOriginFallback === true ||
++    isTruthyEnvValue(
++      process.env.OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK,
++    );
++
++  if (envAllowedOrigins.length > 0) {
++    logAcceptedEnvOption({
++      key: "OPENCLAW_GATEWAY_CONTROL_UI_ALLOWED_ORIGINS",
++      description: "Gateway Control UI allowed origins",
++    });
++  }
++  if (
++    isTruthyEnvValue(
++      process.env.OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK,
++    )
++  ) {
++    logAcceptedEnvOption({
++      key: "OPENCLAW_GATEWAY_CONTROL_UI_DANGEROUSLY_ALLOW_HOST_HEADER_ORIGIN_FALLBACK",
++      description: "Gateway Control UI dangerous Host-header origin fallback",
++    });
++  }
+ 
+   assertGatewayAuthConfigured(resolvedAuth);
+   if (tailscaleMode === "funnel" && authMode !== "password") {
+@@ -181,5 +212,7 @@ export async function resolveGatewayRuntimeConfig(params: {
+     tailscaleMode,
+     hooksConfig,
+     canvasHostEnabled,
++    controlUiAllowedOrigins,
++    dangerouslyAllowHostHeaderOriginFallback,
+   };
+ }
+diff --git a/ui/src/ui/app-settings.test.ts b/ui/src/ui/app-settings.test.ts
+index 48411bbe5..f65403581 100644
+--- a/ui/src/ui/app-settings.test.ts
++++ b/ui/src/ui/app-settings.test.ts
+@@ -1,10 +1,24 @@
+ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+-import { setTabFromRoute } from "./app-settings.ts";
++import { applySettingsFromUrl, setTabFromRoute } from "./app-settings.ts";
+ import type { Tab } from "./navigation.ts";
+ 
+ type SettingsHost = Parameters<typeof setTabFromRoute>[0] & {
+   logsPollInterval: number | null;
+   debugPollInterval: number | null;
++  password?: string;
++  theme: string;
++  themeResolved: string;
++  applySessionKey: string;
++  sessionKey: string;
++  tab: Tab;
++  connected: boolean;
++  chatHasAutoScrolled: boolean;
++  logsAtBottom: boolean;
++  eventLog: unknown[];
++  eventLogBuffer: unknown[];
++  basePath: string;
++  themeMedia: MediaQueryList | null;
++  themeMediaHandler: ((event: MediaQueryListEvent) => void) | null;
+ };
+ 
+ const createHost = (tab: Tab): SettingsHost => ({
+@@ -68,3 +82,24 @@ describe("setTabFromRoute", () => {
+     expect(host.debugPollInterval).toBeNull();
+   });
+ });
++
++describe("applySettingsFromUrl", () => {
++  it("correctly parses token containing '+' from hash", () => {
++    const host = createHost("chat");
++    const testToken = "uTvryFvAbz6M5sRtmTaSTQY6otLZ95hneBsWqXu+35I=";
++
++    // Mock window.location
++    const originalLocation = window.location;
++    delete (window as { location?: unknown }).location;
++    (window as unknown as { location: URL }).location = new URL(
++      "https://example.com/chat#token=" + testToken,
++    );
++
++    applySettingsFromUrl(host);
++
++    expect(host.settings.token).toBe(testToken);
++
++    // Cleanup
++    (window as unknown as { location: Location }).location = originalLocation;
++  });
++});
+diff --git a/ui/src/ui/app-settings.ts b/ui/src/ui/app-settings.ts
+index 2c07fc0f8..0f8feeeee 100644
+--- a/ui/src/ui/app-settings.ts
++++ b/ui/src/ui/app-settings.ts
+@@ -94,7 +94,13 @@ export function applySettingsFromUrl(host: SettingsHost) {
+   const params = new URLSearchParams(url.search);
+   const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
+ 
+-  const tokenRaw = params.get("token") ?? hashParams.get("token");
++  const tokenRaw =
++    params.get("token") ??
++    url.hash
++      .slice(1)
++      .split("&")
++      .find((p) => p.startsWith("token="))
++      ?.split("=")[1];
+   const passwordRaw = params.get("password") ?? hashParams.get("password");
+   const sessionRaw = params.get("session") ?? hashParams.get("session");
+   const gatewayUrlRaw = params.get("gatewayUrl") ?? hashParams.get("gatewayUrl");
+@@ -149,7 +155,24 @@ export function applySettingsFromUrl(host: SettingsHost) {
+ }
+ 
+ export function setTab(host: SettingsHost, next: Tab) {
+-  applyTabSelection(host, next, { refreshPolicy: "always", syncUrl: true });
++  if (host.tab !== next) {
++    host.tab = next;
++  }
++  if (next === "chat") {
++    host.chatHasAutoScrolled = false;
++  }
++  if (next === "logs") {
++    startLogsPolling(host as unknown as Parameters<typeof startLogsPolling>[0]);
++  } else {
++    stopLogsPolling(host as unknown as Parameters<typeof stopLogsPolling>[0]);
++  }
++  if (next === "debug") {
++    startDebugPolling(host as unknown as Parameters<typeof startDebugPolling>[0]);
++  } else {
++    stopDebugPolling(host as unknown as Parameters<typeof stopDebugPolling>[0]);
++  }
++  void refreshActiveTab(host);
++  syncUrlWithTab(host, next, false);
+ }
+ 
+ export function setTheme(host: SettingsHost, next: ThemeMode, context?: ThemeTransitionContext) {
+@@ -332,14 +355,6 @@ export function onPopState(host: SettingsHost) {
+ }
+ 
+ export function setTabFromRoute(host: SettingsHost, next: Tab) {
+-  applyTabSelection(host, next, { refreshPolicy: "connected" });
+-}
+-
+-function applyTabSelection(
+-  host: SettingsHost,
+-  next: Tab,
+-  options: { refreshPolicy: "always" | "connected"; syncUrl?: boolean },
+-) {
+   if (host.tab !== next) {
+     host.tab = next;
+   }
+@@ -356,14 +371,9 @@ function applyTabSelection(
+   } else {
+     stopDebugPolling(host as unknown as Parameters<typeof stopDebugPolling>[0]);
+   }
+-
+-  if (options.refreshPolicy === "always" || host.connected) {
++  if (host.connected) {
+     void refreshActiveTab(host);
+   }
+-
+-  if (options.syncUrl) {
+-    syncUrlWithTab(host, next, false);
+-  }
+ }
+ 
+ export function syncUrlWithTab(host: SettingsHost, tab: Tab, replace: boolean) {
+diff --git a/ui/src/ui/gateway.ts b/ui/src/ui/gateway.ts
+index 5d0c4e73f..8a6d851ff 100644
+--- a/ui/src/ui/gateway.ts
++++ b/ui/src/ui/gateway.ts
+@@ -99,6 +99,7 @@ export class GatewayBrowserClient {
+   private connectNonce: string | null = null;
+   private connectSent = false;
+   private connectTimer: number | null = null;
++  private pingTimer: number | null = null;
+   private backoffMs = 800;
+   private pendingConnectError: GatewayErrorInfo | undefined;
+ 
+@@ -111,6 +112,7 @@ export class GatewayBrowserClient {
+ 
+   stop() {
+     this.closed = true;
++    this.stopPingLoop();
+     this.ws?.close();
+     this.ws = null;
+     this.pendingConnectError = undefined;
+@@ -129,6 +131,7 @@ export class GatewayBrowserClient {
+     this.ws.addEventListener("open", () => this.queueConnect());
+     this.ws.addEventListener("message", (ev) => this.handleMessage(String(ev.data ?? "")));
+     this.ws.addEventListener("close", (ev) => {
++      this.stopPingLoop();
+       const reason = String(ev.reason ?? "");
+       const connectError = this.pendingConnectError;
+       this.pendingConnectError = undefined;
+@@ -258,6 +261,7 @@ export class GatewayBrowserClient {
+           });
+         }
+         this.backoffMs = 800;
++        this.startPingLoop();
+         this.opts.onHello?.(hello);
+       })
+       .catch((err: unknown) => {
+@@ -357,4 +361,20 @@ export class GatewayBrowserClient {
+       void this.sendConnect();
+     }, 750);
+   }
++
++  private startPingLoop() {
++    this.stopPingLoop();
++    this.pingTimer = window.setInterval(() => {
++      if (this.connected) {
++        this.ws?.send(JSON.stringify({ type: "event", event: "ping" }));
++      }
++    }, 30_000); // 30 seconds keep-alive for Cloud Run Load Balancer
++  }
++
++  private stopPingLoop() {
++    if (this.pingTimer !== null) {
++      window.clearInterval(this.pingTimer);
++      this.pingTimer = null;
++    }
++  }
+ }

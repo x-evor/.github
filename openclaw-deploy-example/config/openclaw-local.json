@@ -1,0 +1,96 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.3.3",
+    "lastTouchedAt": "2026-03-06T03:47:33.454Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-03-06T03:39:13.702Z",
+    "lastRunVersion": "2026.3.2",
+    "lastRunCommand": "configure",
+    "lastRunMode": "local"
+  },
+  "browser": {
+    "attachOnly": false
+  },
+  "auth": {
+    "profiles": {
+      "openai-codex:default": {
+        "provider": "openai-codex",
+        "mode": "oauth"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openai-codex/gpt-5.3-codex",
+        "fallbacks": [
+          "openai-codex/gpt-5.3-codex-spark",
+          "openai-codex/gpt-5.2-codex",
+          "openai-codex/gpt-5.2",
+          "openai/gpt-4"
+        ]
+      },
+      "models": {
+        "openai-codex/gpt-5.2": {},
+        "openai-codex/gpt-5.2-codex": {},
+        "openai-codex/gpt-5.3-codex": {},
+        "openai-codex/gpt-5.3-codex-spark": {},
+        "openai/gpt-4": {}
+      },
+      "workspace": "/Users/local-user/.openclaw/local-state/workspace",
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      }
+    }
+  },
+  "tools": {
+    "web": {
+      "search": {
+        "enabled": true
+      },
+      "fetch": {
+        "enabled": false
+      }
+    }
+  },
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "channels": {
+    "whatsapp": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groupPolicy": "allowlist",
+      "debounceMs": 0,
+      "mediaMaxMb": 50
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "controlUi": {
+      "allowedOrigins": [
+        "https://openclaw-local.svc.plus"
+      ]
+    },
+    "auth": {
+      "mode": "token"
+    },
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    }
+  }
+}

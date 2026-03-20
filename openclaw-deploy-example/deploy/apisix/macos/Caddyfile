@@ -1,0 +1,14 @@
+{$LOCAL_API_HOST:ai-local.avc.plus} {
+  tls internal
+
+  encode zstd gzip
+
+  reverse_proxy 127.0.0.1:{$APISIX_HTTP_PORT:9080}
+
+  header {
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
+    X-AI-Gateway-Sync-Origin "macos-local"
+  }
+}

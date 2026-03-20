@@ -1,0 +1,512 @@
+commit 0c5de37dba521d0b42135d2e5a852337b9383e33
+Author: Haitao Pan <manbuzhe2009@qq.com>
+Date:   Wed Mar 4 15:10:41 2026 +0800
+
+    feat: consolidate Cloud Run, GCS storage, FUSE tweaks, and macOS UI layout
+
+diff --git a/apps/macos/Sources/OpenClaw/WebChatSwiftUI.swift b/apps/macos/Sources/OpenClaw/WebChatSwiftUI.swift
+index 61e19d913..86180f631 100644
+--- a/apps/macos/Sources/OpenClaw/WebChatSwiftUI.swift
++++ b/apps/macos/Sources/OpenClaw/WebChatSwiftUI.swift
+@@ -10,9 +10,9 @@ import SwiftUI
+ private let webChatSwiftLogger = Logger(subsystem: "ai.openclaw", category: "WebChatSwiftUI")
+ 
+ private enum WebChatSwiftUILayout {
+-    static let windowSize = NSSize(width: 500, height: 840)
++    static let windowSize = NSSize(width: 1080, height: 840)
+     static let panelSize = NSSize(width: 480, height: 640)
+-    static let windowMinSize = NSSize(width: 480, height: 360)
++    static let windowMinSize = NSSize(width: 760, height: 480)
+     static let anchorPadding: CGFloat = 8
+ }
+ 
+@@ -157,9 +157,16 @@ final class WebChatSwiftUIWindowController {
+         self.presentation = presentation
+         let vm = OpenClawChatViewModel(sessionKey: sessionKey, transport: transport)
+         let accent = Self.color(fromHex: AppStateStore.shared.seamColorHex)
++        let prefersPersistentSessionSidebar: Bool = switch presentation {
++        case .window:
++            true
++        case .panel:
++            false
++        }
+         self.hosting = NSHostingController(rootView: OpenClawChatView(
+             viewModel: vm,
+             showsSessionSwitcher: true,
++            prefersPersistentSessionSidebar: prefersPersistentSessionSidebar,
+             userAccent: accent))
+         self.contentController = Self.makeContentController(for: presentation, hosting: self.hosting)
+         self.window = Self.makeWindow(for: presentation, contentViewController: self.contentController)
+@@ -251,7 +258,10 @@ final class WebChatSwiftUIWindowController {
+     }
+ 
+     private func removeDismissMonitor() {
+-        OverlayPanelFactory.clearGlobalEventMonitor(&self.dismissMonitor)
++        if let monitor = self.dismissMonitor {
++            NSEvent.removeMonitor(monitor)
++            self.dismissMonitor = nil
++        }
+     }
+ 
+     private static func makeWindow(
+@@ -272,6 +282,7 @@ final class WebChatSwiftUIWindowController {
+             window.titlebarAppearsTransparent = false
+             window.backgroundColor = .clear
+             window.isOpaque = false
++            window.collectionBehavior = [.fullScreenPrimary]
+             window.center()
+             WindowPlacement.ensureOnScreen(window: window, defaultSize: WebChatSwiftUILayout.windowSize)
+             window.minSize = WebChatSwiftUILayout.windowMinSize
+@@ -368,6 +379,13 @@ final class WebChatSwiftUIWindowController {
+     }
+ 
+     private static func color(fromHex raw: String?) -> Color? {
+-        ColorHexSupport.color(fromHex: raw)
++        let trimmed = (raw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
++        guard !trimmed.isEmpty else { return nil }
++        let hex = trimmed.hasPrefix("#") ? String(trimmed.dropFirst()) : trimmed
++        guard hex.count == 6, let value = Int(hex, radix: 16) else { return nil }
++        let r = Double((value >> 16) & 0xFF) / 255.0
++        let g = Double((value >> 8) & 0xFF) / 255.0
++        let b = Double(value & 0xFF) / 255.0
++        return Color(red: r, green: g, blue: b)
+     }
+ }
+diff --git a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatComposer.swift b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatComposer.swift
+index 627148381..39c019613 100644
+--- a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatComposer.swift
++++ b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatComposer.swift
+@@ -12,6 +12,9 @@ struct OpenClawChatComposer: View {
+     @Bindable var viewModel: OpenClawChatViewModel
+     let style: OpenClawChatView.Style
+     let showsSessionSwitcher: Bool
++    let usesPersistentSessionSidebar: Bool
++    let sessionSidebarVisible: Bool
++    let toggleSessionSidebar: (() -> Void)?
+ 
+     #if !os(macOS)
+     @State private var pickerItems: [PhotosPickerItem] = []
+@@ -24,11 +27,14 @@ struct OpenClawChatComposer: View {
+         VStack(alignment: .leading, spacing: 4) {
+             if self.showsToolbar {
+                 HStack(spacing: 6) {
+-                    if self.showsSessionSwitcher {
++                    if self.showsSessionSwitcher, !self.usesPersistentSessionSidebar {
+                         self.sessionPicker
+                     }
+                     self.thinkingPicker
+                     Spacer()
++                    if self.usesPersistentSessionSidebar, let toggleSessionSidebar {
++                        self.sessionSidebarToggleButton(toggleSessionSidebar)
++                    }
+                     self.refreshButton
+                     self.attachmentPicker
+                 }
+@@ -309,6 +315,19 @@ struct OpenClawChatComposer: View {
+         .help("Refresh")
+     }
+ 
++    @ViewBuilder
++    private func sessionSidebarToggleButton(_ action: @escaping () -> Void) -> some View {
++        #if os(macOS)
++        Button(action: action) {
++            Image(systemName: self.sessionSidebarVisible ? "sidebar.right" : "sidebar.right")
++                .symbolVariant(self.sessionSidebarVisible ? .fill : .none)
++        }
++        .buttonStyle(.bordered)
++        .controlSize(.small)
++        .help(self.sessionSidebarVisible ? "Hide Sessions Sidebar" : "Show Sessions Sidebar")
++        #endif
++    }
++
+     private var showsToolbar: Bool {
+         self.style == .standard && !self.isComposerCompacted
+     }
+diff --git a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatMessageViews.swift b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatMessageViews.swift
+index 08ae3ff29..cd278716d 100644
+--- a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatMessageViews.swift
++++ b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatMessageViews.swift
+@@ -70,7 +70,13 @@ private struct ChatBubbleShape: InsettableShape {
+             to: baseBottom,
+             control1: CGPoint(x: bubbleMaxX + self.tailWidth * 0.95, y: midY + baseH * 0.15),
+             control2: CGPoint(x: bubbleMaxX + self.tailWidth * 0.2, y: baseBottomY - baseH * 0.05))
+-        self.addBottomEdge(path: &path, bubbleMinX: bubbleMinX, bubbleMaxX: bubbleMaxX, bubbleMaxY: bubbleMaxY, radius: r)
++        path.addQuadCurve(
++            to: CGPoint(x: bubbleMaxX - r, y: bubbleMaxY),
++            control: CGPoint(x: bubbleMaxX, y: bubbleMaxY))
++        path.addLine(to: CGPoint(x: bubbleMinX + r, y: bubbleMaxY))
++        path.addQuadCurve(
++            to: CGPoint(x: bubbleMinX, y: bubbleMaxY - r),
++            control: CGPoint(x: bubbleMinX, y: bubbleMaxY))
+         path.addLine(to: CGPoint(x: bubbleMinX, y: bubbleMinY + r))
+         path.addQuadCurve(
+             to: CGPoint(x: bubbleMinX + r, y: bubbleMinY),
+@@ -102,7 +108,13 @@ private struct ChatBubbleShape: InsettableShape {
+             to: CGPoint(x: bubbleMaxX, y: bubbleMinY + r),
+             control: CGPoint(x: bubbleMaxX, y: bubbleMinY))
+         path.addLine(to: CGPoint(x: bubbleMaxX, y: bubbleMaxY - r))
+-        self.addBottomEdge(path: &path, bubbleMinX: bubbleMinX, bubbleMaxX: bubbleMaxX, bubbleMaxY: bubbleMaxY, radius: r)
++        path.addQuadCurve(
++            to: CGPoint(x: bubbleMaxX - r, y: bubbleMaxY),
++            control: CGPoint(x: bubbleMaxX, y: bubbleMaxY))
++        path.addLine(to: CGPoint(x: bubbleMinX + r, y: bubbleMaxY))
++        path.addQuadCurve(
++            to: CGPoint(x: bubbleMinX, y: bubbleMaxY - r),
++            control: CGPoint(x: bubbleMinX, y: bubbleMaxY))
+         path.addLine(to: baseBottom)
+         path.addCurve(
+             to: tip,
+@@ -119,22 +131,6 @@ private struct ChatBubbleShape: InsettableShape {
+ 
+         return path
+     }
+-
+-    private func addBottomEdge(
+-        path: inout Path,
+-        bubbleMinX: CGFloat,
+-        bubbleMaxX: CGFloat,
+-        bubbleMaxY: CGFloat,
+-        radius: CGFloat)
+-    {
+-        path.addQuadCurve(
+-            to: CGPoint(x: bubbleMaxX - radius, y: bubbleMaxY),
+-            control: CGPoint(x: bubbleMaxX, y: bubbleMaxY))
+-        path.addLine(to: CGPoint(x: bubbleMinX + radius, y: bubbleMaxY))
+-        path.addQuadCurve(
+-            to: CGPoint(x: bubbleMinX, y: bubbleMaxY - radius),
+-            control: CGPoint(x: bubbleMinX, y: bubbleMaxY))
+-    }
+ }
+ 
+ @MainActor
+@@ -492,20 +488,6 @@ extension ChatTypingIndicatorBubble: @MainActor Equatable {
+     }
+ }
+ 
+-private extension View {
+-    func assistantBubbleContainerStyle() -> some View {
+-        self
+-            .background(
+-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+-                    .fill(OpenClawChatTheme.assistantBubble))
+-            .overlay(
+-                RoundedRectangle(cornerRadius: 16, style: .continuous)
+-                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
+-            .frame(maxWidth: ChatUIConstants.bubbleMaxWidth, alignment: .leading)
+-            .focusable(false)
+-    }
+-}
+-
+ @MainActor
+ struct ChatStreamingAssistantBubble: View {
+     let text: String
+@@ -516,7 +498,14 @@ struct ChatStreamingAssistantBubble: View {
+             ChatAssistantTextBody(text: self.text, markdownVariant: self.markdownVariant)
+         }
+         .padding(12)
+-        .assistantBubbleContainerStyle()
++        .background(
++            RoundedRectangle(cornerRadius: 16, style: .continuous)
++                .fill(OpenClawChatTheme.assistantBubble))
++        .overlay(
++            RoundedRectangle(cornerRadius: 16, style: .continuous)
++                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
++        .frame(maxWidth: ChatUIConstants.bubbleMaxWidth, alignment: .leading)
++        .focusable(false)
+     }
+ }
+ 
+@@ -534,7 +523,7 @@ struct ChatPendingToolsBubble: View {
+                 let display = ToolDisplayRegistry.resolve(name: call.name, args: call.args)
+                 VStack(alignment: .leading, spacing: 4) {
+                     HStack(alignment: .firstTextBaseline, spacing: 8) {
+-                        Text("\(display.emoji) \(display.label)")
++                        Text(verbatim: "\(display.emoji) \(display.label)")
+                             .font(.footnote.monospaced())
+                             .lineLimit(1)
+                         Spacer(minLength: 0)
+@@ -553,7 +542,14 @@ struct ChatPendingToolsBubble: View {
+             }
+         }
+         .padding(12)
+-        .assistantBubbleContainerStyle()
++        .background(
++            RoundedRectangle(cornerRadius: 16, style: .continuous)
++                .fill(OpenClawChatTheme.assistantBubble))
++        .overlay(
++            RoundedRectangle(cornerRadius: 16, style: .continuous)
++                .strokeBorder(Color.white.opacity(0.08), lineWidth: 1))
++        .frame(maxWidth: ChatUIConstants.bubbleMaxWidth, alignment: .leading)
++        .focusable(false)
+     }
+ }
+ 
+diff --git a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatSheets.swift b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatSheets.swift
+index 678000d2c..c38005cdf 100644
+--- a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatSheets.swift
++++ b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatSheets.swift
+@@ -8,25 +8,10 @@ struct ChatSessionsSheet: View {
+ 
+     var body: some View {
+         NavigationStack {
+-            List(self.viewModel.sessions) { session in
+-                Button {
+-                    self.viewModel.switchSession(to: session.key)
+-                    self.dismiss()
+-                } label: {
+-                    VStack(alignment: .leading, spacing: 4) {
+-                        Text(session.displayName ?? session.key)
+-                            .font(.system(.body, design: .monospaced))
+-                            .lineLimit(1)
+-                        if let updatedAt = session.updatedAt, updatedAt > 0 {
+-                            Text(Date(timeIntervalSince1970: updatedAt / 1000).formatted(
+-                                date: .abbreviated,
+-                                time: .shortened))
+-                                .font(.caption)
+-                                .foregroundStyle(.secondary)
+-                        }
+-                    }
+-                }
+-            }
++            ChatSessionsList(
++                viewModel: self.viewModel,
++                dismissAfterSelection: true,
++                dismiss: { self.dismiss() })
+             .navigationTitle("Sessions")
+             .toolbar {
+                 #if os(macOS)
+@@ -67,3 +52,84 @@ struct ChatSessionsSheet: View {
+         }
+     }
+ }
++
++@MainActor
++struct ChatSessionsList: View {
++    @Bindable var viewModel: OpenClawChatViewModel
++    let dismissAfterSelection: Bool
++    let dismiss: (() -> Void)?
++
++    var body: some View {
++        List(self.viewModel.sessions) { session in
++            Button {
++                self.viewModel.switchSession(to: session.key)
++                if self.dismissAfterSelection {
++                    self.dismiss?()
++                }
++            } label: {
++                HStack(alignment: .top, spacing: 10) {
++                    Circle()
++                        .fill(session.key == self.viewModel.sessionKey ? Color.accentColor : Color.secondary.opacity(0.35))
++                        .frame(width: 8, height: 8)
++                        .padding(.top, 5)
++
++                    VStack(alignment: .leading, spacing: 4) {
++                        Text(session.displayName ?? session.key)
++                            .font(.system(.body, design: .monospaced))
++                            .lineLimit(1)
++                        if let updatedAt = session.updatedAt, updatedAt > 0 {
++                            Text(Date(timeIntervalSince1970: updatedAt / 1000).formatted(
++                                date: .abbreviated,
++                                time: .shortened))
++                                .font(.caption)
++                                .foregroundStyle(.secondary)
++                        }
++                    }
++                    Spacer(minLength: 0)
++                }
++                .padding(.vertical, 2)
++            }
++            .buttonStyle(.plain)
++        }
++    }
++}
++
++#if os(macOS)
++@MainActor
++struct ChatSessionsSidebar: View {
++    @Bindable var viewModel: OpenClawChatViewModel
++    let hide: () -> Void
++
++    var body: some View {
++        VStack(alignment: .leading, spacing: 0) {
++            HStack(spacing: 10) {
++                VStack(alignment: .leading, spacing: 2) {
++                    Text("Sessions")
++                        .font(.headline)
++                    Text("Recent conversations")
++                        .font(.caption)
++                        .foregroundStyle(.secondary)
++                }
++                Spacer()
++                Button(action: self.hide) {
++                    Image(systemName: "sidebar.right")
++                }
++                .buttonStyle(.borderless)
++                .help("Hide Sessions Sidebar")
++            }
++            .padding(.horizontal, 16)
++            .padding(.vertical, 14)
++
++            Divider()
++
++            ChatSessionsList(
++                viewModel: self.viewModel,
++                dismissAfterSelection: false,
++                dismiss: nil)
++            .listStyle(.sidebar)
++            .scrollContentBackground(.hidden)
++        }
++        .background(Color(nsColor: .underPageBackgroundColor))
++    }
++}
++#endif
+diff --git a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatView.swift b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatView.swift
+index 0675ffc21..0a947ae8b 100644
+--- a/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatView.swift
++++ b/apps/shared/OpenClawKit/Sources/OpenClawChatUI/ChatView.swift
+@@ -14,6 +14,9 @@ public struct OpenClawChatView: View {
+     @State private var scrollerBottomID = UUID()
+     @State private var scrollPosition: UUID?
+     @State private var showSessions = false
++    #if os(macOS)
++    @State private var showDesktopSessionsSidebar: Bool
++    #endif
+     @State private var hasPerformedInitialScroll = false
+     @State private var isPinnedToBottom = true
+     @State private var lastUserMessageID: UUID?
+@@ -21,6 +24,7 @@ public struct OpenClawChatView: View {
+     private let style: Style
+     private let markdownVariant: ChatMarkdownVariant
+     private let userAccent: Color?
++    private let prefersPersistentSessionSidebar: Bool
+ 
+     private enum Layout {
+         #if os(macOS)
+@@ -49,13 +53,19 @@ public struct OpenClawChatView: View {
+         showsSessionSwitcher: Bool = false,
+         style: Style = .standard,
+         markdownVariant: ChatMarkdownVariant = .standard,
++        prefersPersistentSessionSidebar: Bool = false,
+         userAccent: Color? = nil)
+     {
+         self._viewModel = State(initialValue: viewModel)
+         self.showsSessionSwitcher = showsSessionSwitcher
+         self.style = style
+         self.markdownVariant = markdownVariant
++        self.prefersPersistentSessionSidebar = prefersPersistentSessionSidebar
+         self.userAccent = userAccent
++        #if os(macOS)
++        self._showDesktopSessionsSidebar = State(
++            initialValue: showsSessionSwitcher && style == .standard && prefersPersistentSessionSidebar)
++        #endif
+     }
+ 
+     public var body: some View {
+@@ -65,21 +75,17 @@ public struct OpenClawChatView: View {
+                     .ignoresSafeArea()
+             }
+ 
+-            VStack(spacing: Layout.stackSpacing) {
+-                self.messageList
+-                    .padding(.horizontal, Layout.outerPaddingHorizontal)
+-                OpenClawChatComposer(
+-                    viewModel: self.viewModel,
+-                    style: self.style,
+-                    showsSessionSwitcher: self.showsSessionSwitcher)
+-                    .padding(.horizontal, Layout.composerPaddingHorizontal)
+-            }
+-            .padding(.vertical, Layout.outerPaddingVertical)
+-            .frame(maxWidth: .infinity)
+-            .frame(maxHeight: .infinity, alignment: .top)
++            self.chatContainer
+         }
+         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+-        .onAppear { self.viewModel.load() }
++        .onAppear {
++            self.viewModel.load()
++            #if os(macOS)
++            if self.usesPersistentSessionSidebar {
++                self.viewModel.refreshSessions(limit: 200)
++            }
++            #endif
++        }
+         .sheet(isPresented: self.$showSessions) {
+             if self.showsSessionSwitcher {
+                 ChatSessionsSheet(viewModel: self.viewModel)
+@@ -89,6 +95,76 @@ public struct OpenClawChatView: View {
+         }
+     }
+ 
++    @ViewBuilder
++    private var chatContainer: some View {
++        #if os(macOS)
++        if self.usesPersistentSessionSidebar {
++            HSplitView {
++                self.chatMainColumn
++                if self.showDesktopSessionsSidebar {
++                    ChatSessionsSidebar(
++                        viewModel: self.viewModel,
++                        hide: { self.showDesktopSessionsSidebar = false })
++                        .frame(minWidth: 260, idealWidth: 320, maxWidth: 420)
++                }
++            }
++            .animation(.snappy(duration: 0.22), value: self.showDesktopSessionsSidebar)
++        } else {
++            self.chatMainColumn
++        }
++        #else
++        self.chatMainColumn
++        #endif
++    }
++
++    private var chatMainColumn: some View {
++        VStack(spacing: Layout.stackSpacing) {
++            self.messageList
++                .padding(.horizontal, Layout.outerPaddingHorizontal)
++            OpenClawChatComposer(
++                viewModel: self.viewModel,
++                style: self.style,
++                showsSessionSwitcher: self.showsSessionSwitcher,
++                usesPersistentSessionSidebar: self.usesPersistentSessionSidebar,
++                sessionSidebarVisible: self.desktopSessionSidebarVisible,
++                toggleSessionSidebar: self.toggleDesktopSessionSidebar)
++                .padding(.horizontal, Layout.composerPaddingHorizontal)
++        }
++        .padding(.vertical, Layout.outerPaddingVertical)
++        .frame(maxWidth: .infinity)
++        .frame(maxHeight: .infinity, alignment: .top)
++    }
++
++    private var usesPersistentSessionSidebar: Bool {
++        #if os(macOS)
++        self.prefersPersistentSessionSidebar && self.style == .standard && self.showsSessionSwitcher
++        #else
++        false
++        #endif
++    }
++
++    private var desktopSessionSidebarVisible: Bool {
++        #if os(macOS)
++        self.showDesktopSessionsSidebar
++        #else
++        false
++        #endif
++    }
++
++    private var toggleDesktopSessionSidebar: (() -> Void)? {
++        guard self.usesPersistentSessionSidebar else { return nil }
++        #if os(macOS)
++        return {
++            if !self.showDesktopSessionsSidebar {
++                self.viewModel.refreshSessions(limit: 200)
++            }
++            self.showDesktopSessionsSidebar.toggle()
++        }
++        #else
++        return nil
++        #endif
++    }
++
+     private var messageList: some View {
+         ZStack {
+             ScrollView {

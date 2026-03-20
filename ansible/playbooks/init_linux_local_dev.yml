@@ -1,0 +1,7 @@
+- name: Initialize Linux local development machine
+  hosts: all
+  gather_facts: true
+  become: true
+  roles:
+    - role: dev_desktop_linux_local
+

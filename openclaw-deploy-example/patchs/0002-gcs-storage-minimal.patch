@@ -1,0 +1,103 @@
+commit 0c5de37dba521d0b42135d2e5a852337b9383e33
+Author: Haitao Pan <manbuzhe2009@qq.com>
+Date:   Wed Mar 4 15:10:41 2026 +0800
+
+    feat: consolidate Cloud Run, GCS storage, FUSE tweaks, and macOS UI layout
+
+diff --git a/example/config/openclaw.json b/example/config/openclaw.json
+new file mode 100644
+index 000000000..6218a4b6b
+--- /dev/null
++++ b/example/config/openclaw.json
+@@ -0,0 +1,91 @@
++{
++  "meta": {
++    "lastTouchedVersion": "2026.2.9",
++    "lastTouchedAt": "2026-02-12T04:34:43.299Z"
++  },
++  "wizard": {
++    "lastRunAt": "2026-02-12T04:34:43.288Z",
++    "lastRunVersion": "2026.2.9",
++    "lastRunCommand": "onboard",
++    "lastRunMode": "local"
++  },
++  "diagnostics": {
++    "otel": {
++      "enabled": false
++    }
++  },
++  "update": {
++    "checkOnStart": true
++  },
++  "auth": {
++    "profiles": {
++      "zai:default": {
++        "provider": "zai",
++        "mode": "api_key"
++      }
++    }
++  },
++  "agents": {
++    "defaults": {
++      "model": {
++        "primary": "zai/glm-4.7"
++      },
++      "models": {
++        "zai/glm-4.7": {
++          "alias": "GLM"
++        }
++      },
++      "workspace": "/data/workspace",
++      "compaction": {
++        "mode": "safeguard"
++      },
++      "maxConcurrent": 4,
++      "subagents": {
++        "maxConcurrent": 8
++      }
++    }
++  },
++  "messages": {
++    "ackReactionScope": "group-mentions"
++  },
++  "commands": {
++    "native": "auto",
++    "nativeSkills": "auto"
++  },
++  "channels": {
++    "whatsapp": {}
++  },
++  "gateway": {
++    "port": 8080,
++    "mode": "local",
++    "bind": "auto",
++    "controlUi": {
++      "enabled": true,
++      "allowedOrigins": ["*"],
++      "dangerouslyDisableDeviceAuth": true
++    },
++    "auth": {
++      "mode": "token"
++    },
++    "trustedProxies": [],
++    "tailscale": {
++      "mode": "off",
++      "resetOnExit": false
++    }
++  },
++  "plugins": {
++    "entries": {
++      "googlechat": {
++        "enabled": true
++      },
++      "whatsapp": {
++        "enabled": true
++      }
++    }
++  },
++  "skills": {
++    "install": {
++      "nodeManager": "npm"
++    }
++  }
++}

@@ -1,0 +1,14 @@
+- name: Install Azure CLI and Google Cloud CLI on local Linux machine
+  ansible.builtin.import_role:
+    name: cloud_cli_prereqs
+
+- name: Verify Azure CLI on local Linux machine
+  ansible.builtin.command: az version
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Verify Google Cloud CLI on local Linux machine
+  ansible.builtin.command: gcloud version
+  changed_when: false
+  when: not ansible_check_mode
+

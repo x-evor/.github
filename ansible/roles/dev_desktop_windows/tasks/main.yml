@@ -1,6 +1,9 @@
+- name: Install Azure CLI and Google Cloud CLI on Windows
+  ansible.builtin.import_role:
+    name: cloud_cli_prereqs
+
 - name: Install Windows desktop toolchain
   ansible.builtin.import_tasks: tools.yml
 
 - name: Configure Windows remote desktop access
   ansible.builtin.import_tasks: remote_access.yml
-

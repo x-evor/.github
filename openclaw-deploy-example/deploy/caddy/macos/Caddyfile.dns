@@ -1,0 +1,84 @@
+{
+	email {$CADDY_ACME_EMAIL}
+	http_port {$LOCAL_EDGE_HTTP_PORT:8080}
+	https_port {$LOCAL_EDGE_HTTPS_PORT:8443}
+	admin 127.0.0.1:{$CADDY_ADMIN_PORT:2019}
+}
+
+(edge_common) {
+	encode zstd gzip
+
+	tls {
+		dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+		resolvers {$DNS_RESOLVER:1.1.1.1}
+	}
+
+	header {
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		X-Local-Edge "macos-caddy"
+	}
+}
+
+ai.svc.plus {
+	import edge_common
+
+	reverse_proxy 127.0.0.1:9080 {$AI_REMOTE_UPSTREAM_HOSTPORT:api.svc.plus:443} {
+		lb_policy first
+		lb_try_duration 5s
+		lb_try_interval 250ms
+		fail_duration 30s
+		max_fails 1
+		unhealthy_status 5xx
+		flush_interval -1
+
+		header_up Host {$AI_UPSTREAM_HOST:api.svc.plus}
+
+		transport http {
+			tls_server_name {$AI_REMOTE_SERVER_NAME:api.svc.plus}
+			tls_except_ports 9080
+		}
+	}
+}
+
+vault.svc.plus {
+	import edge_common
+
+	reverse_proxy 127.0.0.1:8200 {$VAULT_REMOTE_UPSTREAM_HOSTPORT} {
+		lb_policy first
+		lb_try_duration 5s
+		lb_try_interval 250ms
+		fail_duration 30s
+		max_fails 1
+		unhealthy_status 5xx
+
+		header_up Host vault.svc.plus
+
+		transport http {
+			tls_server_name {$VAULT_REMOTE_SERVER_NAME:vault.svc.plus}
+			tls_except_ports 8200
+		}
+	}
+}
+
+openclaw.svc.plus {
+	import edge_common
+
+	reverse_proxy 127.0.0.1:18789 {$OPENCLAW_REMOTE_UPSTREAM_HOSTPORT} {
+		lb_policy first
+		lb_try_duration 5s
+		lb_try_interval 250ms
+		fail_duration 30s
+		max_fails 1
+		unhealthy_status 5xx
+		flush_interval -1
+
+		header_up Host openclaw.svc.plus
+
+		transport http {
+			tls_server_name {$OPENCLAW_REMOTE_SERVER_NAME:openclaw.svc.plus}
+			tls_except_ports 18789
+		}
+	}
+}

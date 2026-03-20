@@ -42,6 +42,11 @@ Provider-specific fields:
 - Azure: `region`, optional `image_offer`, `image_sku`, `azure_subscription_id`
 - GCP: `zone`, optional `image_family`, `gcp_project_id`
 
+Default GCP values in this repo:
+
+- `gcp_project_id: xzerolab-480008`
+- `zone: asia-east2-a` which maps to region `asia-east2` (Hong Kong)
+
 ## Local usage
 
 ```bash
@@ -78,6 +83,58 @@ Use `.github/workflows/cloud-dev-desktop.yml`.
 
 The workflow keeps orchestration in YAML and defers operational logic to the
 checked-in wrapper scripts.
+
+## Pre Role: Cloud CLI Prereqs
+
+For hosts that need local cloud tooling before other automation, use:
+
+- `ansible/playbooks/install_cloud_cli_prereqs.yml`
+- `ansible/roles/cloud_cli_prereqs/`
+
+This pre role installs:
+
+- macOS: `azure-cli`, `google-cloud-sdk`
+- Windows: `Microsoft.AzureCLI`, `Google.CloudSDK`
+- Linux: `az`, `gcloud`
+
+Example:
+
+```bash
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
+  -i ansible/inventory.ini \
+  ansible/playbooks/install_cloud_cli_prereqs.yml
+```
+
+The same cloud CLI installation is also embedded into the platform roles:
+
+- `ansible/roles/dev_desktop_macos_local/`
+- `ansible/roles/dev_desktop_windows_local/`
+- `ansible/roles/dev_desktop_linux_local/`
+- `ansible/roles/dev_desktop_windows/`
+- `ansible/roles/dev_desktop_fedora_gnome/`
+- `ansible/roles/dev_desktop_debian_kde/`
+
+For local workstation initialization:
+
+```bash
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
+  -i "localhost," \
+  -c local \
+  ansible/playbooks/init_macos_local_dev.yml
+
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
+  -i "localhost," \
+  -c local \
+  ansible/playbooks/init_linux_local_dev.yml
+```
+
+For Windows local machines, run:
+
+```bash
+ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook \
+  -i inventory.ini \
+  ansible/playbooks/init_windows_local_dev.yml
+```
 
 Recommended secrets/vars:
 

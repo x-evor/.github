@@ -4,6 +4,7 @@
       - "azure_resource_group={{ azure_resource_group | default('n/a') }}"
       - "azure_vm_name={{ azure_vm_name | default(profile_name | default('n/a')) }}"
       - "azure_cleanup_mode={{ azure_cleanup_mode | default(false) }}"
+      - "cloud_vm_destroy_mode={{ cloud_vm_destroy_mode | default('destroy') }}"
 
 - name: Build Azure cleanup query
   ansible.builtin.set_fact:
@@ -29,6 +30,24 @@
     - azure_cleanup_mode | default(false)
     - not ansible_check_mode
 
+- name: Park Azure VM in lowest-consumption mode
+  ansible.builtin.command:
+    argv:
+      - az
+      - vm
+      - deallocate
+      - --subscription
+      - "{{ azure_subscription_id }}"
+      - --resource-group
+      - "{{ azure_resource_group }}"
+      - --name
+      - "{{ azure_vm_name }}"
+  changed_when: true
+  when:
+    - not azure_cleanup_mode | default(false)
+    - (cloud_vm_destroy_mode | default('destroy')) == 'park'
+    - not ansible_check_mode
+
 - name: Delete Azure VM directly
   ansible.builtin.command:
     argv:
@@ -45,6 +64,7 @@
   changed_when: true
   when:
     - not azure_cleanup_mode | default(false)
+    - (cloud_vm_destroy_mode | default('destroy')) == 'destroy'
     - not ansible_check_mode
 
 - name: Delete Azure expired VMs
@@ -73,4 +93,4 @@
   when:
     - cloud_vm_state_file is defined
     - not azure_cleanup_mode | default(false)
-
+    - (cloud_vm_destroy_mode | default('destroy')) == 'destroy'

@@ -50,6 +50,8 @@ Default GCP values in this repo:
 ## Local usage
 
 ```bash
+bash scripts/cloud-dev-desktop/precheck-local.sh
+
 bash scripts/cloud-dev-desktop/create.sh \
   --provider azure \
   --request ansible/vars/cloud_dev_desktop.request.example.yml \
@@ -70,6 +72,67 @@ bash scripts/cloud-dev-desktop/destroy.sh \
   --request ansible/vars/cloud_dev_desktop.request.example.yml \
   --dry-run
 ```
+
+For the cross-cloud desktop set requested in this repo, start from:
+
+- `ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml`
+- `ansible/vars/cloud_dev_desktop.gcp.fedora-gnome.example.yml`
+- `ansible/vars/cloud_dev_desktop.gcp.ubuntu-kde.example.yml`
+
+The orchestration wrapper below reuses the checked-in `create.sh`,
+`bootstrap.sh`, and `verify.sh` scripts, creates the Azure Windows machine
+first, appends its public IP to the two GCP Linux allowlists, generates a
+dedicated SSH key for the Windows-to-GCP hop, and then writes SSH aliases on
+the Windows host for the two Linux desktops:
+
+```bash
+bash scripts/cloud-dev-desktop/create-cross-cloud-dev-machines.sh --dry-run
+
+bash scripts/cloud-dev-desktop/create-cross-cloud-dev-machines.sh \
+  --windows-request ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml \
+  --fedora-request ansible/vars/cloud_dev_desktop.gcp.fedora-gnome.example.yml \
+  --kde-request ansible/vars/cloud_dev_desktop.gcp.ubuntu-kde.example.yml
+```
+
+## Shutdown and teardown modes
+
+There are now two retirement modes for cloud dev desktops:
+
+- `park`: lowest-consumption mode without deleting the VM
+- `destroy`: delete the VM and remove the local state file
+
+Provider behavior:
+
+- Azure `park`: `az vm deallocate`
+- GCP `park`: `gcloud compute instances stop`
+- Azure/GCP `destroy`: delete the VM
+
+Single machine examples:
+
+```bash
+bash scripts/cloud-dev-desktop/destroy.sh \
+  --provider azure \
+  --request ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml \
+  --mode park
+
+bash scripts/cloud-dev-desktop/destroy.sh \
+  --provider gcp \
+  --request ansible/vars/cloud_dev_desktop.gcp.fedora-gnome.example.yml \
+  --mode destroy
+```
+
+Fleet examples:
+
+```bash
+bash scripts/cloud-dev-desktop/teardown-cross-cloud-dev-machines.sh --mode park
+
+bash scripts/cloud-dev-desktop/teardown-cross-cloud-dev-machines.sh --mode destroy
+```
+
+Recommended usage:
+
+- Use `park` when you want to keep the machine and its disk contents for later reuse.
+- Use `destroy` when the environment is no longer needed and should be fully removed.
 
 State files are written under `.ansible/cloud-dev-desktop/` and are used to
 carry connection details between lifecycle stages.

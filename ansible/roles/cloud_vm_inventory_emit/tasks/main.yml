@@ -25,7 +25,8 @@
       }
   when:
     - cloud_vm_state_file is defined
-    - cloud_vm_public_ip is defined or ansible_check_mode
+    - cloud_vm_public_ip is defined
+    - not ansible_check_mode
 
 - name: Show resulting cloud desktop state path
   ansible.builtin.debug:

@@ -161,7 +161,8 @@ fi
 
 windows_cidr="${windows_public_ip}/32"
 
-fedora_overlay_json="$(mktemp "${runtime_root}/fedora-overlay.XXXXXX.json")"
+fedora_overlay_json="$(mktemp "${runtime_root}/fedora-overlay.XXXXXX")"
+fedora_overlay_json="${fedora_overlay_json}.json"
 fedora_runtime_request="${runtime_root}/$(basename "${fedora_request%.yml}")-runtime.yml"
 cat > "${fedora_overlay_json}" <<EOF
 {
@@ -195,7 +196,8 @@ PY
 EOF
 render_overlay_request "${fedora_request}" "${fedora_overlay_json}" "${fedora_runtime_request}"
 
-kde_overlay_json="$(mktemp "${runtime_root}/kde-overlay.XXXXXX.json")"
+kde_overlay_json="$(mktemp "${runtime_root}/kde-overlay.XXXXXX")"
+kde_overlay_json="${kde_overlay_json}.json"
 kde_runtime_request="${runtime_root}/$(basename "${kde_request%.yml}")-runtime.yml"
 cat > "${kde_overlay_json}" <<EOF
 {
@@ -289,7 +291,8 @@ Host gcp-ubuntu-kde
   ServerAliveInterval 30
 EOF
 
-windows_overlay_json="$(mktemp "${runtime_root}/windows-overlay.XXXXXX.json")"
+windows_overlay_json="$(mktemp "${runtime_root}/windows-overlay.XXXXXX")"
+windows_overlay_json="${windows_overlay_json}.json"
 windows_runtime_request="${runtime_root}/$(basename "${windows_request%.yml}")-runtime.yml"
 cat > "${windows_overlay_json}" <<EOF
 {

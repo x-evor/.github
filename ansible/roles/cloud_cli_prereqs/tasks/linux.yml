@@ -50,6 +50,10 @@
         cloud_cli_prereqs_gcloud_archive_map[ansible_architecture]
         | default('google-cloud-cli-linux-x86_64.tar.gz')
       }}
+  when: cloud_cli_prereqs_install_gcloud_cli | bool
+
+- name: Build Google Cloud CLI download URL for Linux
+  ansible.builtin.set_fact:
     cloud_cli_prereqs_gcloud_url: >-
       https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/{{ cloud_cli_prereqs_gcloud_archive_name }}
   when: cloud_cli_prereqs_install_gcloud_cli | bool

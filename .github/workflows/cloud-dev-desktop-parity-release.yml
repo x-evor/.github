@@ -1,0 +1,118 @@
+name: Cloud Dev Desktop Parity Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Parity release action"
+        required: true
+        default: brief
+        type: choice
+        options:
+          - provision
+          - brief
+          - status
+          - park
+          - destroy
+      manifest_file:
+        description: "Repo-relative parity manifest"
+        required: true
+        default: ansible/vars/cloud_dev_desktop.parity_release.example.yml
+        type: string
+      windows_request_file:
+        description: "Repo-relative Windows request YAML"
+        required: true
+        default: ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml
+        type: string
+      fedora_request_file:
+        description: "Repo-relative Fedora GNOME request YAML"
+        required: true
+        default: ansible/vars/cloud_dev_desktop.gcp.fedora-gnome.example.yml
+        type: string
+      kde_request_file:
+        description: "Repo-relative Ubuntu KDE request YAML"
+        required: true
+        default: ansible/vars/cloud_dev_desktop.gcp.ubuntu-kde.example.yml
+        type: string
+      dry_run:
+        description: "Run wrapper in dry-run mode where supported"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  parity-release:
+    name: "${{ inputs.action }} parity release"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible runtime
+        shell: bash
+        run: bash scripts/github-actions/install-python-tools.sh ansible
+
+      - name: Azure login
+        if: ${{ secrets.AZURE_CREDENTIALS_JSON != '' }}
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS_JSON }}
+
+      - name: Select Azure subscription
+        if: ${{ secrets.AZURE_CREDENTIALS_JSON != '' && (vars.AZURE_SUBSCRIPTION_ID != '' || secrets.AZURE_SUBSCRIPTION_ID != '') }}
+        shell: bash
+        run: az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}"
+
+      - name: Authenticate to GCP
+        if: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
+
+      - name: Set up gcloud
+        if: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Select GCP project
+        if: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON != '' && (vars.GCP_PROJECT_ID != '' || secrets.GCP_PROJECT_ID != '') }}
+        shell: bash
+        run: gcloud config set project "${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}"
+
+      - name: Run parity release wrapper
+        shell: bash
+        env:
+          AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}
+          GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}
+          AZURE_WINDOWS_ADMIN_PASSWORD: ${{ secrets.AZURE_WINDOWS_ADMIN_PASSWORD }}
+          CLOUD_DEV_DESKTOP_WINDOWS_PASSWORD: ${{ secrets.CLOUD_DEV_DESKTOP_WINDOWS_PASSWORD }}
+        run: |
+          set -euo pipefail
+          args=(
+            --action "${{ inputs.action }}"
+            --manifest "${{ inputs.manifest_file }}"
+            --windows-request "${{ inputs.windows_request_file }}"
+            --fedora-request "${{ inputs.fedora_request_file }}"
+            --kde-request "${{ inputs.kde_request_file }}"
+          )
+          if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+            args+=(--dry-run)
+          fi
+          bash scripts/cloud-dev-desktop/parity-release.sh "${args[@]}"
+
+      - name: Upload parity release brief
+        if: ${{ inputs.action == 'provision' || inputs.action == 'brief' || inputs.action == 'status' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-release-brief
+          path: .ansible/cloud-dev-desktop/runtime/parity-release-brief.md

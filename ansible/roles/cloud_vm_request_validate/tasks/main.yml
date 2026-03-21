@@ -68,7 +68,7 @@
         allowed_tcp_ports
         | default(
             (os_family == 'windows')
-            | ternary([3389, 5985], [22, 3389])
+            | ternary([22, 3389, 5985], [22, 3389])
           )
       }}
   when: cloud_vm_request_validation_mode != "cleanup"

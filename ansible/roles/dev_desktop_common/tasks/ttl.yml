@@ -8,7 +8,6 @@
       OS_FAMILY={{ os_family }}
       OWNER={{ owner }}
       PURPOSE={{ purpose }}
-      CREATED_AT={{ cloud_vm_created_at }}
-      EXPIRES_AT={{ cloud_vm_expires_at }}
+      CREATED_AT={{ vars.get('cloud_vm_created_at', '') }}
+      EXPIRES_AT={{ vars.get('cloud_vm_expires_at', '') }}
       TTL_HOURS={{ ttl_hours }}
-

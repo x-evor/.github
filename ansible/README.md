@@ -87,8 +87,16 @@ desktop VMs used for app development and testing.
 See:
 
 - `ansible/README-cloud-dev-desktop.md`
+- `ansible/vars/cloud_dev_desktop.parity_release.example.yml`
 - `ansible/playbooks/create_cloud_dev_desktop.yml`
 - `ansible/playbooks/bootstrap_cloud_dev_desktop.yml`
 - `ansible/playbooks/verify_cloud_dev_desktop.yml`
 - `ansible/playbooks/destroy_cloud_dev_desktop.yml`
 - `ansible/playbooks/cleanup_expired_cloud_dev_desktops.yml`
+
+Tokyo defaults and the parity release workflow are documented in
+`ansible/README-cloud-dev-desktop.md`.
+
+That document is also the entrypoint for the GitHub Actions pipeline plus
+skills-driven parity release handoff used after the three cloud desktops are
+provisioned.

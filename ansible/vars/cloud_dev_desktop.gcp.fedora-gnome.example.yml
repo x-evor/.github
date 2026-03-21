@@ -1,5 +1,5 @@
 provider: gcp
-profile_name: gcp-fedora-gnome-gtk
+profile_name: gcp-fedora-gnome-desktop
 os_family: fedora-gnome
 zone: asia-northeast1-a
 vm_size: n2-standard-8
@@ -9,7 +9,7 @@ allowed_cidrs:
   - 203.0.113.10/32
 ttl_hours: 12
 owner: shenlan
-purpose: fedora-gnome-gtk-build
+purpose: fedora-gnome-desktop-build
 toolchains:
   codex: true
   android_studio: false

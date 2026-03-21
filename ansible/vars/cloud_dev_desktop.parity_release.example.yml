@@ -11,15 +11,15 @@ constraints:
 hosts:
   windows:
     provider: azure
-    profile_name: azure-win11-flutter-android
+    profile_name: azure-win11-desktop
     request_file: ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml
   fedora_gnome:
     provider: gcp
-    profile_name: gcp-fedora-gnome-gtk
+    profile_name: gcp-fedora-gnome-desktop
     request_file: ansible/vars/cloud_dev_desktop.gcp.fedora-gnome.example.yml
   ubuntu_kde:
     provider: gcp
-    profile_name: gcp-ubuntu-kde-gtk
+    profile_name: gcp-ubuntu-kde-desktop
     request_file: ansible/vars/cloud_dev_desktop.gcp.ubuntu-kde.example.yml
 tasks:
   - name: windows-desktop-parity

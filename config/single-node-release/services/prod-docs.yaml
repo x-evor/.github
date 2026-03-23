@@ -3,4 +3,4 @@ track: prod
 enabled: true
 stable_domain: docs.svc.plus
 release_prefix: docs
-host_port: 18084
+host_port: 18086

@@ -251,6 +251,7 @@ jobs:
           "${{ env.CONTROL_REPO_PATH }}"
           "${{ needs.stage-1-build-image.outputs.release_domain }}"
           "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
+          "${{ needs.stage-1-build-image.outputs.stable_domain }}"
 
       - name: Summarize Stage 2
         shell: bash

@@ -79,6 +79,9 @@
     {
       "name": "x-ops-agent.svc.plus",
       "path": "../x-ops-agent.svc.plus"
+    },
+    {
+      "path": "../xworkmate.svc.plus"
     }
   ],
   "settings": {

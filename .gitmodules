@@ -10,3 +10,7 @@
 	path = subrepos/docs.svc.plus
 	url = https://github.com/x-evor/docs.svc.plus.git
 	branch = main
+[submodule "subrepos/knowledge"]
+	path = subrepos/knowledge
+	url = https://github.com/x-evor/knowledge.git
+	branch = main

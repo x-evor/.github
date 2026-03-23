@@ -13,7 +13,11 @@ public_vars_path="$4"
 secret_vars_file="$5"
 runtime_vars_file="$6"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+control_repo_path="${CONTROL_REPO_PATH:-$(dirname "$(dirname "${script_dir}")")}"
 merged_vars_file="$(mktemp)"
+
+# Set ANSIBLE_ROLES_PATH to include control repo's roles directory
+export ANSIBLE_ROLES_PATH="${control_repo_path}/ansible/roles"
 
 cleanup() {
   rm -f "${merged_vars_file}"

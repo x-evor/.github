@@ -47,10 +47,10 @@ services:
   docs:
     repo_name: docs.svc.plus
     repo_category: api
-    repo_url: https://github.com/cloud-neutral-toolkit/docs.svc.plus.git
+    repo_url: https://github.com/x-evor/docs.svc.plus.git
     playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_docs_compose.yml
     public_vars_path: ../cloud-neutral-toolkit/ansible/vars/docs.release.public.yml
-    deploy_server_alias: cn-front.svc.plus
+    deploy_server_alias: us-xhttp.svc.plus
     secret_env_map:
       INTERNAL_SERVICE_TOKEN: INTERNAL_SERVICE_TOKEN
     docker:

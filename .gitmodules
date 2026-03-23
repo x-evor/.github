@@ -6,3 +6,7 @@
 	path = subrepos/console.svc.plus
 	url = https://github.com/cloud-neutral-toolkit/console.svc.plus.git
 	branch = main
+[submodule "subrepos/docs.svc.plus"]
+	path = subrepos/docs.svc.plus
+	url = https://github.com/x-evor/docs.svc.plus.git
+	branch = main

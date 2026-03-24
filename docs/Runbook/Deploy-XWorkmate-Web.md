@@ -5,14 +5,11 @@
 ## 目标架构
 
 ```
-Cloudflare DNS
-  ├── xworkmate.svc.plus (CNAME) → xworkmate-web-us-xhttp.svc.plus-{git-sha}.svc.plus
-  └── xworkmate-web-us-xhttp.svc.plus-{git-sha}.svc.plus (CNAME) → us-xhttp.svc.plus
-
-us-xhttp.svc.plus (5.78.45.49)
-  └── Caddy (80/443)
-      └── xworkmate-web:{host_port} [atomic release]
-          └── Flutter Web App
+{STABLE_DOMAIN} → CNAME → {RELEASE_DOMAIN} → {DEPLOY_HOST}
+                                              ↓
+                                         Caddy (80/443)
+                                              ↓
+                                    xworkmate-web:{host_port}
 ```
 
 ## 端口分配
@@ -44,15 +41,15 @@ gh workflow run service_release-xworkmate-web-deploy.yml \
 | Stage | Name | Description |
 |-------|------|-------------|
 | 1 | Build Image | 构建 Flutter Web 镜像，推送到 GHCR |
-| 2 | Update DNS | CNAME: release-domain → us-xhttp.svc.plus, stable-domain → release-domain |
-| 3 | Deploy | Ansible: atomic release with Caddy site config |
+| 2 | Update DNS | CNAME 链: stable-domain → release-domain → us-xhttp.svc.plus (节点 IP) |
+| 3 | Deploy | Ansible: 原子化 release，Caddy 反向代理到 xworkmate-web 容器 |
 | 4 | Verify | 循环验证直到 https://xworkmate.svc.plus 返回 200 |
 
 ### Release Name 格式
 
 ```
 Release Domain: xworkmate-web-us-xhttp.svc.plus-{git-short-commit}.svc.plus
-Stable Domain:  xworkmate.svc.plus (CNAME → release domain)
+Stable Domain:  xworkmate.svc.plus
 ```
 
 每次部署生成唯一的 release domain，旧的 Caddy site config 和容器自动清理。

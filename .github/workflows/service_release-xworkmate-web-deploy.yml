@@ -1,0 +1,252 @@
+name: Service Release XWorkmate Web Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      service_ref:
+        description: "Service repository ref (branch/tag/sha)"
+        required: true
+        default: "main"
+        type: string
+      run_apply:
+        description: "Run the deployment stage"
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  CONTROL_REPO_DIR: cloud-neutral-toolkit
+  SERVICE_PATH: subrepos/xworkmate.svc.plus
+  DEPLOY_HOST: 5.78.45.49
+  DEPLOY_SERVER_ALIAS: us-xhttp.svc.plus
+  DEPLOY_DIR: /opt/xworkmate-svc-plus
+  STABLE_DOMAIN: xworkmate.svc.plus
+  RELEASE_PREFIX: xworkmate-web
+  GHCR_REGISTRY: ghcr.io
+  GHCR_USERNAME: svc-design
+  XWORKMATE_WEB_HOST_PORT: "18087"
+  XWORKMATE_WEB_CONTAINER_PORT: "8080"
+
+concurrency:
+  group: xworkmate-web-release-prod
+  cancel-in-progress: false
+
+jobs:
+  stage-1-build-image:
+    name: "1. Build And Push Image"
+    runs-on: ubuntu-latest
+    environment: production
+    outputs:
+      git_short_commit: ${{ steps.meta.outputs.git_short_commit }}
+      image_tag: ${{ steps.meta.outputs.image_tag }}
+      image_ref: ${{ steps.meta.outputs.image_ref }}
+      release_domain: ${{ steps.meta.outputs.release_domain }}
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          path: ${{ env.CONTROL_REPO_DIR }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          submodules: recursive
+
+      - name: Checkout xworkmate Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: x-evor/xworkmate.svc.plus
+          ref: ${{ inputs.service_ref }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: ${{ env.SERVICE_PATH }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f
+
+      - name: Login To GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9
+        with:
+          registry: ${{ env.GHCR_REGISTRY }}
+          username: ${{ env.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Compute Image Metadata
+        id: meta
+        shell: bash
+        run: |
+          git_short="$(echo ${{ github.sha }} | cut -c1-7)"
+          echo "git_short_commit=${git_short}" >> $GITHUB_OUTPUT
+          echo "image_tag=${git_short}" >> $GITHUB_OUTPUT
+          echo "image_ref=${{ env.GHCR_REGISTRY }}/${{ env.GHCR_USERNAME }}/xworkmate-web:${git_short}" >> $GITHUB_OUTPUT
+          echo "release_domain=${{ env.RELEASE_PREFIX }}-${{ env.DEPLOY_SERVER_ALIAS }}-${git_short}.${{ env.STABLE_DOMAIN }}" >> $GITHUB_OUTPUT
+
+      - name: Build And Push Flutter Web Image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8
+        with:
+          context: ${{ env.SERVICE_PATH }}/lib/web
+          file: ${{ env.SERVICE_PATH }}/lib/web/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.image_ref }}
+
+      - name: Summarize Stage 1
+        shell: bash
+        run: >
+          bash "${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          stage1
+          "${{ env.STABLE_DOMAIN }}"
+          "prod"
+          "${{ steps.meta.outputs.image_ref }}"
+          "${{ steps.meta.outputs.release_domain }}"
+          "${{ env.STABLE_DOMAIN }}"
+
+  stage-2-update-release-dns:
+    name: "2. Update Release DNS"
+    runs-on: ubuntu-latest
+    needs: stage-1-build-image
+    env:
+      CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          path: ${{ env.CONTROL_REPO_DIR }}
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        shell: bash
+        run: bash "${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh" ansible
+
+      - name: Update DNS For Release Domain
+        shell: bash
+        run: >
+          bash "${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/update-release-dns.sh"
+          "${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}"
+          "${{ needs.stage-1-build-image.outputs.release_domain }}"
+          "${{ env.DEPLOY_SERVER_ALIAS }}"
+          "${{ env.STABLE_DOMAIN }}"
+
+      - name: Summarize Stage 2
+        shell: bash
+        run: >
+          bash "${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          stage2
+          "prod"
+          "${{ needs.stage-1-build-image.outputs.release_domain }}"
+          "${{ env.DEPLOY_SERVER_ALIAS }}"
+
+  stage-3-deploy:
+    name: "3. Deploy XWorkmate Web Stack (Ansible)"
+    runs-on: ubuntu-latest
+    needs:
+      - stage-1-build-image
+      - stage-2-update-release-dns
+    if: ${{ inputs.run_apply }}
+    environment: production
+    steps:
+      - name: Checkout Control Repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          path: ${{ env.CONTROL_REPO_DIR }}
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible
+        run: bash ${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/install-python-tools.sh ansible
+
+      - name: Prepare runner SSH key
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          python3 ${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
+      - name: Deploy XWorkmate Web Stack With Ansible
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/ansible/ansible.cfg
+          GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
+          SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
+          SERVICE_HOST_PORT: ${{ env.XWORKMATE_WEB_HOST_PORT }}
+          GHCR_PASSWORD: ${{ secrets.GHCR_TOKEN }}
+          GHCR_REGISTRY: ${{ env.GHCR_REGISTRY }}
+          GHCR_USERNAME: ${{ env.GHCR_USERNAME }}
+        run: >
+          ansible-playbook
+          -i ${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/ansible/inventory.ini
+          -l xworkmate
+          ${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/ansible/playbooks/deploy_xworkmate_web_compose.yml
+
+      - name: Summarize Stage 3
+        if: always()
+        shell: bash
+        run: >
+          bash "${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/scripts/github-actions/summarize-service-release-stage.sh"
+          stage3
+          "${{ env.STABLE_DOMAIN }}"
+          "prod"
+          "${{ github.workspace }}/${{ env.CONTROL_REPO_DIR }}/ansible/playbooks/deploy_xworkmate_web_compose.yml"
+
+  stage-4-verify:
+    name: "4. Verify XWorkmate Web Release"
+    runs-on: ubuntu-latest
+    needs: stage-3-deploy
+    if: ${{ inputs.run_apply }}
+    steps:
+      - name: Verify DNS resolves to deploy host
+        shell: bash
+        run: |
+          echo "Waiting for DNS propagation..."
+          for i in {1..30}; do
+            resolved_ip="$(dig +short ${{ env.STABLE_DOMAIN }} | tail -n1)"
+            echo "Attempt $i: ${{ env.STABLE_DOMAIN }} resolved to -> ${resolved_ip}"
+            if [[ "${resolved_ip}" == "${{ env.DEPLOY_HOST }}" ]]; then
+              echo "DNS resolved correctly to ${{ env.DEPLOY_HOST }}"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "DNS did not resolve to expected IP after 30 attempts" >&2
+          exit 1
+
+      - name: Verify xworkmate.svc.plus returns 200
+        shell: bash
+        run: |
+          echo "Waiting for service to be ready..."
+          for i in {1..30}; do
+            status_code="$(curl -fsSL -o /dev/null -w '%{http_code}' https://${{ env.STABLE_DOMAIN }}/ || echo "000")"
+            echo "Attempt $i: HTTP status -> ${status_code}"
+            if [[ "${status_code}" == "200" ]]; then
+              echo "Service is responding correctly"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Service did not return 200 after 30 attempts" >&2
+          exit 1
+
+      - name: Verify Flutter web assets accessible
+        shell: bash
+        run: |
+          homepage_html="$(curl -fsSL https://${{ env.STABLE_DOMAIN }}/)"
+          echo "Homepage fetched successfully, checking for assets..."
+          if echo "${homepage_html}" | grep -q "flutter"; then
+            echo "Flutter web app detected"
+          fi
+          if echo "${homepage_html}" | grep -qE "(index_html|flutter|web-app)"; then
+            echo "Verified: Flutter web app is served correctly"
+          else
+            echo "Warning: Could not verify Flutter web app structure"
+          fi

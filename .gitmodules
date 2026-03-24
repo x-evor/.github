@@ -14,3 +14,6 @@
 	path = subrepos/knowledge
 	url = https://github.com/x-evor/knowledge.git
 	branch = main
+[submodule "subrepos/xworkmate.svc.plus"]
+	path = subrepos/xworkmate.svc.plus
+	url = https://github.com/x-evor/xworkmate.svc.plus.git

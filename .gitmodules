@@ -16,4 +16,4 @@
 	branch = main
 [submodule "subrepos/xworkmate.svc.plus"]
 	path = subrepos/xworkmate.svc.plus
-	url = https://github.com/x-evor/xworkmate.svc.plus.git
+	url = https://github.com/x-evor/xworkmate.git

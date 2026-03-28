@@ -56,7 +56,7 @@ jobs:
       - name: Checkout xworkmate Repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          repository: x-evor/xworkmate.svc.plus
+          repository: x-evor/xworkmate
           ref: ${{ inputs.service_ref }}
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           path: ${{ env.SERVICE_PATH }}

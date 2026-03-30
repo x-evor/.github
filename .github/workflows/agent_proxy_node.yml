@@ -15,7 +15,6 @@ on:
         description: "Target host IP"
         required: true
         default: "46.250.251.132"
-        type: string
 
 permissions:
   contents: read

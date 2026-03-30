@@ -1,0 +1,61 @@
+name: Agent Proxy Node
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - deploy
+      target_host_ip:
+        description: "Target host IP"
+        required: true
+        default: "46.250.251.132"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-proxy-node-${{ inputs.target_host_ip }}-${{ inputs.mode }}
+  cancel-in-progress: false
+
+jobs:
+  agent-proxy-node:
+    name: "${{ inputs.mode }} -> ${{ inputs.target_host_ip }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible runtime
+        shell: bash
+        run: bash scripts/github-actions/install-python-tools.sh ansible
+
+      - name: Prepare runner SSH key
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
+      - name: Run agent proxy node playbook
+        shell: bash
+        env:
+          INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+          CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+        run: bash scripts/github-actions/run-agent-proxy-node.sh "${{ inputs.mode }}" "${{ inputs.target_host_ip }}"

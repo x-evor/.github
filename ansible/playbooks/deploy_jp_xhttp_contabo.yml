@@ -1,0 +1,28 @@
+---
+- name: Deploy jp-xhttp-contabo proxy node
+  hosts: agent_proxy
+  become: true
+  gather_facts: true
+  vars:
+    target_host_ip: 46.250.251.132
+    agent_proxy_domain: jp-xhttp-contabo.svc.plus
+    agent_proxy_target_ip: "{{ target_host_ip }}"
+    agent_proxy_auth_url: https://accounts.svc.plus
+    agent_proxy_internal_service_token: "{{ lookup('env', 'INTERNAL_SERVICE_TOKEN') }}"
+  roles:
+    - role: agent_proxy_node
+
+- name: Update jp-xhttp-contabo DNS
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    target_host_ip: 46.250.251.132
+    cloudflare_dns_records:
+      - type: A
+        name: jp-xhttp-contabo.svc.plus
+        content: "{{ target_host_ip }}"
+        ttl: 1
+        proxied: false
+  roles:
+    - role: cloudflare_dns

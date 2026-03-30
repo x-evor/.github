@@ -15,7 +15,11 @@ Workflow usage reference:
   - Brings up the new release and retires older releases for the same logical service.
 - `playbooks/update_cloudflare_dns.yml`
   - Reusable DNS automation for `svc.plus`.
-  - Accepts either `CLOUDFLARE_API_TOKEN` or `CLOUDFLARE_DNS_API_TOKEN`.
+  - Backed by the `cloudflare_dns` role.
+- `roles/cloudflare_dns/`
+  - Reusable Cloudflare DNS reconciliation role.
+- `roles/agent_proxy_node/`
+  - Provisions the agent proxy node runtime.
 
 ## Migration Order
 

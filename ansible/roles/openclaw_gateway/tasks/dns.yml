@@ -1,0 +1,40 @@
+---
+---
+- name: Resolve Cloudflare zone id
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones?name={{ openclaw_cloudflare_zone_name | urlencode }}"
+    method: GET
+    headers:
+      Authorization: "Bearer {{ openclaw_cloudflare_api_token }}"
+      Content-Type: "application/json"
+    return_content: true
+  register: openclaw_cloudflare_zone_lookup
+  no_log: true
+  when:
+    - openclaw_cloudflare_zone_id | length == 0
+    - openclaw_cloudflare_zone_name | length > 0
+
+- name: Set Cloudflare zone id from lookup
+  ansible.builtin.set_fact:
+    openclaw_cloudflare_zone_id: "{{ (openclaw_cloudflare_zone_lookup.json.result[0].id if (openclaw_cloudflare_zone_lookup.json.result | length) > 0 else '') }}"
+  when:
+    - openclaw_cloudflare_zone_id | length == 0
+    - openclaw_cloudflare_zone_name | length > 0
+
+- name: Ensure Cloudflare DNS record exists
+  ansible.builtin.uri:
+    url: "https://api.cloudflare.com/client/v4/zones/{{ openclaw_cloudflare_zone_id }}/dns_records"
+    method: POST
+    headers:
+      Authorization: "Bearer {{ openclaw_cloudflare_api_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      type: "{{ openclaw_cloudflare_record_type }}"
+      name: "{{ openclaw_domain }}"
+      content: "{{ openclaw_cloudflare_record_content }}"
+      proxied: "{{ openclaw_cloudflare_proxied }}"
+      ttl: 1
+    status_code: [200, 201, 409]
+  register: openclaw_dns_result
+  no_log: true

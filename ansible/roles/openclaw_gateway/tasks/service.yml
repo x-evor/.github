@@ -1,0 +1,66 @@
+---
+- name: Read Node.js major version
+  ansible.builtin.command: node --version
+  register: openclaw_node_version
+  changed_when: false
+
+- name: Assert Node.js version is new enough
+  ansible.builtin.assert:
+    that:
+      - (openclaw_node_version.stdout | trim | regex_replace('^v', '')).split('.')[0] | int >= 22
+    fail_msg: "Node.js 22+ is required for OpenClaw gateway"
+
+- name: Install openclaw npm package
+  ansible.builtin.command: "npm install -g {{ openclaw_node_package }} --force"
+  changed_when: true
+  when: openclaw_runtime_mode == 'systemd'
+
+- name: Configure local data directory
+  ansible.builtin.file:
+    path: "{{ openclaw_workspace }}"
+    state: directory
+    mode: "0775"
+  when: openclaw_data_backend == 'local'
+
+- name: Install openclaw gcsfuse mount service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/openclawbot-data.mount.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Mount gs://{{ openclaw_bucket_name }} to {{ openclaw_workspace }} with gcsfuse
+      Wants=network-online.target xray-client.service
+      After=network-online.target xray-client.service
+
+      [Service]
+      Type=simple
+      User=root
+      Environment="HTTP_PROXY=socks5h://127.0.0.1:1080"
+      Environment="HTTPS_PROXY=socks5h://127.0.0.1:1080"
+      Environment="ALL_PROXY=socks5h://127.0.0.1:1080"
+      Environment="NO_PROXY=localhost,127.0.0.1,::1"
+      ExecStartPre=/bin/mkdir -p {{ openclaw_workspace }} /var/log/gcsfuse /var/cache/gcsfuse
+      ExecStartPre=-/bin/sh -c 'mountpoint -q {{ openclaw_workspace }} && fusermount3 -u {{ openclaw_workspace }} || true'
+      ExecStart=/usr/bin/gcsfuse --foreground --implicit-dirs --uid 1000 --gid 1000 --file-mode 0664 --dir-mode 0775 --key-file {{ openclaw_root_config_dir }}/openclawbot-sa.json --log-file /var/log/gcsfuse/{{ openclaw_bucket_name }}.log --o allow_other {{ openclaw_bucket_name }} {{ openclaw_workspace }}
+      ExecStop=/bin/fusermount3 -u {{ openclaw_workspace }}
+      Restart=on-failure
+      RestartSec=5
+      TimeoutStopSec=30
+
+      [Install]
+      WantedBy=multi-user.target
+  when: openclaw_data_backend == 'gcs'
+
+- name: Enable and start gcsfuse mount
+  ansible.builtin.systemd:
+    name: openclawbot-data.mount
+    enabled: true
+    state: started
+  when: openclaw_data_backend == 'gcs'
+
+- name: Enable and start openclaw gateway user service
+  ansible.builtin.command: systemctl --user enable --now openclaw-gateway.service
+  environment:
+    XDG_RUNTIME_DIR: /run/user/0
+  changed_when: true
+  when: openclaw_runtime_mode == 'systemd'

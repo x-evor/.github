@@ -1,0 +1,60 @@
+---
+- name: Add NodeSource keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add NodeSource signing key
+  ansible.builtin.get_url:
+    url: https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key
+    dest: /etc/apt/keyrings/nodesource.gpg
+    mode: "0644"
+
+- name: Add NodeSource repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/nodesource.list
+    mode: "0644"
+    content: |
+      deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_24.x nodistro main
+
+- name: Install Node.js runtime
+  ansible.builtin.apt:
+    name:
+      - nodejs
+    state: present
+    update_cache: true
+
+- name: Install Caddy
+  ansible.builtin.command: snap install caddy --classic
+  register: caddy_snap_install
+  changed_when: "'already installed' not in (caddy_snap_install.stderr | default('') ~ caddy_snap_install.stdout | default(''))"
+  failed_when:
+    - caddy_snap_install.rc != 0
+    - "'already installed' not in (caddy_snap_install.stderr | default('') ~ caddy_snap_install.stdout | default(''))"
+
+- name: Install gcsfuse repository keyring directory
+  ansible.builtin.file:
+    path: /etc/apt/keyrings
+    state: directory
+    mode: "0755"
+
+- name: Add gcsfuse signing key
+  ansible.builtin.get_url:
+    url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+    dest: /etc/apt/keyrings/gcsfuse.gpg
+    mode: "0644"
+
+- name: Add gcsfuse repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/gcsfuse.list
+    mode: "0644"
+    content: |
+      deb [signed-by=/etc/apt/keyrings/gcsfuse.gpg] https://packages.cloud.google.com/apt gcsfuse-{{ ansible_distribution_release | lower }} main
+
+- name: Install gcsfuse
+  ansible.builtin.apt:
+    name:
+      - gcsfuse
+    state: present
+    update_cache: true

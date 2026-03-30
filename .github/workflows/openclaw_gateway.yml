@@ -1,0 +1,117 @@
+name: OpenClaw Gateway
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to run"
+        required: true
+        default: deploy
+        type: choice
+        options:
+          - deploy
+          - migrate
+      target_host_ip:
+        description: "Target host IP"
+        required: true
+        default: "46.250.251.132"
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: openclaw-gateway-${{ inputs.target_host_ip }}-${{ inputs.action }}
+  cancel-in-progress: false
+
+jobs:
+  openclaw-gateway:
+    name: "${{ inputs.action }} -> ${{ inputs.target_host_ip }}"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible runtime
+        shell: bash
+        run: bash scripts/github-actions/install-python-tools.sh ansible
+
+      - name: Prepare runner SSH key
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
+      - name: Build temporary inventory
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > /tmp/openclaw-gateway-inventory.ini <<EOF
+          [gateway]
+          openclaw-target ansible_host=${{ inputs.target_host_ip }} ansible_user=root
+
+          [all:vars]
+          ansible_port=22
+          ansible_user=root
+          ansible_ssh_transfer_method=piped
+          ansible_host_key_checking=False
+          ansible_ssh_private_key_file=~/.ssh/id_rsa
+          EOF
+
+      - name: Run OpenClaw gateway playbook
+        shell: bash
+        env:
+          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
+          OPENCLAW_GATEWAY_TARGET_IP: ${{ inputs.target_host_ip }}
+        run: |
+          set -euo pipefail
+          extra_vars=(
+            -e "openclaw_source_host=openclaw.svc.plus"
+            -e "openclaw_domain=openclaw.svc.plus"
+            -e "openclaw_manage_caddy=true"
+            -e "openclaw_manage_dns=true"
+            -e "openclaw_cloudflare_zone_name=svc.plus"
+            -e "openclaw_cloudflare_record_content=${{ inputs.target_host_ip }}"
+          )
+
+          case "${{ inputs.action }}" in
+            deploy)
+              extra_vars+=(
+                -e "openclaw_manage_migration=false"
+                -e "openclaw_migrate_data_dir=false"
+                -e "openclaw_data_backend=local"
+                -e "openclaw_runtime_mode=systemd"
+              )
+              playbook="ansible/playbooks/openclaw_gateway.yml"
+              ;;
+            migrate)
+              extra_vars+=(
+                -e "openclaw_manage_migration=true"
+                -e "openclaw_migrate_data_dir=true"
+                -e "openclaw_data_backend=local"
+                -e "openclaw_runtime_mode=systemd"
+              )
+              playbook="ansible/playbooks/migrate_openclaw_gateway.yml"
+              ;;
+            *)
+              echo "Unsupported action: ${{ inputs.action }}" >&2
+              exit 1
+              ;;
+          esac
+
+          ansible-playbook \
+            -i /tmp/openclaw-gateway-inventory.ini \
+            -D \
+            "${playbook}" \
+            "${extra_vars[@]}"

@@ -1,0 +1,7 @@
+---
+- name: Deploy OpenClaw gateway
+  hosts: gateway
+  become: true
+  gather_facts: true
+  roles:
+    - role: openclaw_gateway

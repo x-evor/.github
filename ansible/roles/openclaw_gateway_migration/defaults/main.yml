@@ -1,0 +1,12 @@
+---
+openclaw_source_host: openclaw.svc.plus
+openclaw_domain: openclaw.svc.plus
+openclaw_service_port: 18789
+openclaw_workspace: /opt/data
+openclaw_bucket_name: openclawbot-data
+openclaw_user_name: root
+openclaw_node_package: "openclaw@2026.3.24"
+openclaw_caddyfile_path: /etc/caddy/Caddyfile
+openclaw_user_systemd_dir: /root/.config/systemd/user
+openclaw_root_config_dir: /root/.config/openclawbot
+openclaw_runtime_dir: /root/.openclaw

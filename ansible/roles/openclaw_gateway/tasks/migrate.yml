@@ -1,0 +1,92 @@
+---
+- name: Ensure openclaw config directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ openclaw_user_systemd_dir }}"
+    - "{{ openclaw_root_config_dir }}"
+    - "{{ openclaw_runtime_dir }}"
+    - "{{ openclaw_workspace }}"
+
+- name: Enable linger for root user
+  ansible.builtin.command: loginctl enable-linger root
+  changed_when: false
+
+- name: Read source openclaw service unit
+  ansible.builtin.slurp:
+    src: /root/.config/systemd/user/openclaw-gateway.service
+  delegate_to: "{{ openclaw_source_host }}"
+  register: source_openclaw_unit
+  changed_when: false
+  no_log: true
+  when: openclaw_manage_runtime_state | bool
+
+- name: Read source openclaw env file
+  ansible.builtin.slurp:
+    src: /root/.env
+  delegate_to: "{{ openclaw_source_host }}"
+  register: source_root_env
+  changed_when: false
+  no_log: true
+  when: openclaw_manage_runtime_state | bool
+
+- name: Read source service account json
+  ansible.builtin.slurp:
+    src: /root/.config/openclawbot/openclawbot-sa.json
+  delegate_to: "{{ openclaw_source_host }}"
+  register: source_sa_json
+  changed_when: false
+  no_log: true
+  when: openclaw_data_backend == 'gcs' and openclaw_manage_runtime_state | bool
+
+- name: Read source openclaw runtime config
+  ansible.builtin.slurp:
+    src: /root/.openclaw/openclaw.json
+  delegate_to: "{{ openclaw_source_host }}"
+  register: source_openclaw_json
+  changed_when: false
+  no_log: true
+  when: openclaw_manage_runtime_state | bool
+
+- name: Write openclaw service account json
+  ansible.builtin.copy:
+    dest: "{{ openclaw_root_config_dir }}/openclawbot-sa.json"
+    mode: "0600"
+    content: "{{ source_sa_json.content | b64decode }}"
+  no_log: true
+  when: openclaw_data_backend == 'gcs' and openclaw_manage_runtime_state | bool
+
+- name: Write root environment file
+  ansible.builtin.copy:
+    dest: /root/.env
+    mode: "0600"
+    content: "{{ source_root_env.content | b64decode }}"
+  no_log: true
+  when: openclaw_manage_runtime_state | bool
+
+- name: Write openclaw runtime config
+  ansible.builtin.copy:
+    dest: "{{ openclaw_runtime_dir }}/openclaw.json"
+    mode: "0600"
+    content: "{{ source_openclaw_json.content | b64decode }}"
+  no_log: true
+  when: openclaw_manage_runtime_state | bool
+
+- name: Migrate /opt/data from source host
+  ansible.posix.synchronize:
+    mode: pull
+    src: /opt/data/
+    dest: "{{ openclaw_workspace }}/"
+    archive: true
+    compress: true
+    delete: false
+    rsync_opts:
+      - "--exclude=.openclaw"
+      - "--exclude=logs"
+      - "--exclude=sessions"
+  delegate_to: "{{ openclaw_source_host }}"
+  when:
+    - openclaw_migrate_data_dir | bool
+    - openclaw_data_backend == 'local'

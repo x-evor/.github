@@ -1,0 +1,77 @@
+---
+- name: Install openclaw npm package
+  ansible.builtin.command: "npm install -g {{ openclaw_node_package }} --force"
+  changed_when: true
+
+- name: Install openclaw gcsfuse mount service
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/openclawbot-data.mount.service
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=Mount gs://{{ openclaw_bucket_name }} to {{ openclaw_workspace }} with gcsfuse
+      Wants=network-online.target xray-client.service
+      After=network-online.target xray-client.service
+
+      [Service]
+      Type=simple
+      User=root
+      Environment="HTTP_PROXY=socks5h://127.0.0.1:1080"
+      Environment="HTTPS_PROXY=socks5h://127.0.0.1:1080"
+      Environment="ALL_PROXY=socks5h://127.0.0.1:1080"
+      Environment="NO_PROXY=localhost,127.0.0.1,::1"
+      ExecStartPre=/bin/mkdir -p {{ openclaw_workspace }} /var/log/gcsfuse /var/cache/gcsfuse
+      ExecStartPre=-/bin/sh -c 'mountpoint -q {{ openclaw_workspace }} && fusermount3 -u {{ openclaw_workspace }} || true'
+      ExecStart=/usr/bin/gcsfuse --foreground --implicit-dirs --uid 1000 --gid 1000 --file-mode 0664 --dir-mode 0775 --key-file {{ openclaw_root_config_dir }}/openclawbot-sa.json --log-file /var/log/gcsfuse/{{ openclaw_bucket_name }}.log --o allow_other {{ openclaw_bucket_name }} {{ openclaw_workspace }}
+      ExecStop=/bin/fusermount3 -u {{ openclaw_workspace }}
+      Restart=on-failure
+      RestartSec=5
+      TimeoutStopSec=30
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Render openclaw gateway systemd user unit
+  ansible.builtin.copy:
+    dest: "{{ openclaw_user_systemd_dir }}/openclaw-gateway.service"
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=OpenClaw Gateway
+      After=network-online.target openclawbot-data.mount.service
+      Wants=network-online.target openclawbot-data.mount.service
+
+      [Service]
+      ExecStart=/usr/bin/node /usr/lib/node_modules/openclaw/dist/index.js gateway --port {{ openclaw_service_port }}
+      Restart=always
+      RestartSec=5
+      KillMode=process
+      Environment=HOME=/root
+      Environment=TMPDIR=/tmp
+      Environment=PATH=/root/.local/bin:/root/.npm-global/bin:/root/bin:/root/.volta/bin:/root/.asdf/shims:/root/.bun/bin:/root/.nvm/current/bin:/root/.fnm/current/bin:/root/.local/share/pnpm:/usr/local/bin:/usr/bin:/bin
+      Environment=HTTP_PROXY=http://127.0.0.1:1081
+      Environment=HTTPS_PROXY=http://127.0.0.1:1081
+      Environment=OPENCLAW_GATEWAY_PORT={{ openclaw_service_port }}
+      Environment=OPENCLAW_SYSTEMD_UNIT=openclaw-gateway.service
+      Environment=OPENCLAW_SERVICE_MARKER=openclaw
+      Environment=OPENCLAW_SERVICE_KIND=gateway
+      Environment=OPENCLAW_SERVICE_VERSION=2026.3.24
+
+      [Install]
+      WantedBy=default.target
+
+- name: Reload systemd daemon
+  ansible.builtin.command: systemctl daemon-reload
+  changed_when: false
+
+- name: Enable and start gcsfuse mount
+  ansible.builtin.systemd:
+    name: openclawbot-data.mount
+    enabled: true
+    state: started
+
+- name: Enable and start openclaw gateway user service
+  ansible.builtin.command: systemctl --user enable --now openclaw-gateway.service
+  environment:
+    XDG_RUNTIME_DIR: /run/user/0
+  changed_when: true

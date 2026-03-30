@@ -26,7 +26,7 @@ concurrency:
 
 jobs:
   agent-proxy-node:
-    name: "${{ inputs.mode }} -> ${{ inputs.target_host_ip }}"
+    name: agent-proxy-node
     runs-on: ubuntu-latest
     steps:
       - name: Checkout control repo

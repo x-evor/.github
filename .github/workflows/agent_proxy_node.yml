@@ -11,10 +11,6 @@ on:
         options:
           - dry-run
           - deploy
-      target_host_ip:
-        description: "Target host IP"
-        required: true
-        default: "46.250.251.132"
 
 permissions:
   contents: read
@@ -57,4 +53,4 @@ jobs:
         env:
           INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
           CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
-        run: bash scripts/github-actions/run-agent-proxy-node.sh "${{ inputs.mode }}" "${{ inputs.target_host_ip }}"
+        run: bash scripts/github-actions/run-agent-proxy-node.sh "${{ inputs.mode }}" "46.250.251.132"

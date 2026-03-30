@@ -5,7 +5,7 @@
       - openclaw_runtime_mode in ['systemd', 'docker']
       - openclaw_data_backend in ['local', 'gcs']
       - not (openclaw_runtime_mode == 'docker' and openclaw_docker_image | length == 0)
-      - not (openclaw_manage_dns | bool and openclaw_cloudflare_api_token | length == 0)
+      - not (openclaw_manage_dns | bool and not ansible_check_mode and openclaw_cloudflare_api_token | length == 0)
       - not (openclaw_manage_dns | bool and openclaw_cloudflare_zone_name | length == 0 and openclaw_cloudflare_zone_id | length == 0)
     fail_msg: "Invalid openclaw_gateway configuration"
 
@@ -24,7 +24,9 @@
 
 - name: Include migration tasks
   ansible.builtin.include_tasks: migrate.yml
-  when: openclaw_manage_migration | bool
+  when:
+    - openclaw_manage_migration | bool
+    - not ansible_check_mode
 
 - name: Include service tasks
   ansible.builtin.include_tasks: service.yml

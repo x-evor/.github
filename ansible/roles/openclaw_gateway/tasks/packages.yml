@@ -38,12 +38,14 @@
     path: /etc/apt/keyrings
     state: directory
     mode: "0755"
+  when: openclaw_data_backend == 'gcs'
 
 - name: Add gcsfuse signing key
   ansible.builtin.get_url:
     url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
     dest: /etc/apt/keyrings/gcsfuse.gpg
     mode: "0644"
+  when: openclaw_data_backend == 'gcs'
 
 - name: Add gcsfuse repository
   ansible.builtin.copy:
@@ -51,6 +53,7 @@
     mode: "0644"
     content: |
       deb [signed-by=/etc/apt/keyrings/gcsfuse.gpg] https://packages.cloud.google.com/apt gcsfuse-{{ ansible_distribution_release | lower }} main
+  when: openclaw_data_backend == 'gcs'
 
 - name: Install gcsfuse
   ansible.builtin.apt:
@@ -58,3 +61,4 @@
       - gcsfuse
     state: present
     update_cache: true
+  when: openclaw_data_backend == 'gcs'

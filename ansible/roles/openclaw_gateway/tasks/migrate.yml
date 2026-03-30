@@ -21,7 +21,9 @@
   register: source_openclaw_unit
   changed_when: false
   no_log: true
-  when: openclaw_manage_runtime_state | bool
+  when:
+    - openclaw_manage_runtime_state | bool
+    - not ansible_check_mode
 
 - name: Read source openclaw env file
   ansible.builtin.slurp:
@@ -30,7 +32,9 @@
   register: source_root_env
   changed_when: false
   no_log: true
-  when: openclaw_manage_runtime_state | bool
+  when:
+    - openclaw_manage_runtime_state | bool
+    - not ansible_check_mode
 
 - name: Read source service account json
   ansible.builtin.slurp:
@@ -39,7 +43,10 @@
   register: source_sa_json
   changed_when: false
   no_log: true
-  when: openclaw_data_backend == 'gcs' and openclaw_manage_runtime_state | bool
+  when:
+    - openclaw_data_backend == 'gcs'
+    - openclaw_manage_runtime_state | bool
+    - not ansible_check_mode
 
 - name: Read source openclaw runtime config
   ansible.builtin.slurp:
@@ -48,7 +55,9 @@
   register: source_openclaw_json
   changed_when: false
   no_log: true
-  when: openclaw_manage_runtime_state | bool
+  when:
+    - openclaw_manage_runtime_state | bool
+    - not ansible_check_mode
 
 - name: Write openclaw service account json
   ansible.builtin.copy:
@@ -56,7 +65,10 @@
     mode: "0600"
     content: "{{ source_sa_json.content | b64decode }}"
   no_log: true
-  when: openclaw_data_backend == 'gcs' and openclaw_manage_runtime_state | bool
+  when:
+    - openclaw_data_backend == 'gcs'
+    - openclaw_manage_runtime_state | bool
+    - not ansible_check_mode
 
 - name: Write root environment file
   ansible.builtin.copy:
@@ -64,7 +76,9 @@
     mode: "0600"
     content: "{{ source_root_env.content | b64decode }}"
   no_log: true
-  when: openclaw_manage_runtime_state | bool
+  when:
+    - openclaw_manage_runtime_state | bool
+    - not ansible_check_mode
 
 - name: Write openclaw runtime config
   ansible.builtin.copy:
@@ -72,7 +86,9 @@
     mode: "0600"
     content: "{{ source_openclaw_json.content | b64decode }}"
   no_log: true
-  when: openclaw_manage_runtime_state | bool
+  when:
+    - openclaw_manage_runtime_state | bool
+    - not ansible_check_mode
 
 - name: Migrate /opt/data from source host
   ansible.posix.synchronize:
@@ -90,3 +106,4 @@
   when:
     - openclaw_migrate_data_dir | bool
     - openclaw_data_backend == 'local'
+    - not ansible_check_mode

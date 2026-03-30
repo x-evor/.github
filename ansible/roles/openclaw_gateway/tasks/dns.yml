@@ -1,5 +1,4 @@
 ---
----
 - name: Resolve Cloudflare zone id
   ansible.builtin.uri:
     url: "https://api.cloudflare.com/client/v4/zones?name={{ openclaw_cloudflare_zone_name | urlencode }}"
@@ -13,6 +12,7 @@
   when:
     - openclaw_cloudflare_zone_id | length == 0
     - openclaw_cloudflare_zone_name | length > 0
+    - not ansible_check_mode
 
 - name: Set Cloudflare zone id from lookup
   ansible.builtin.set_fact:
@@ -20,6 +20,7 @@
   when:
     - openclaw_cloudflare_zone_id | length == 0
     - openclaw_cloudflare_zone_name | length > 0
+    - not ansible_check_mode
 
 - name: Ensure Cloudflare DNS record exists
   ansible.builtin.uri:
@@ -38,3 +39,4 @@
     status_code: [200, 201, 409]
   register: openclaw_dns_result
   no_log: true
+  when: not ansible_check_mode

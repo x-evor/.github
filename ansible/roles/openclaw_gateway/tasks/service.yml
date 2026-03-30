@@ -3,17 +3,21 @@
   ansible.builtin.command: node --version
   register: openclaw_node_version
   changed_when: false
+  when: not ansible_check_mode
 
 - name: Assert Node.js version is new enough
   ansible.builtin.assert:
     that:
       - (openclaw_node_version.stdout | trim | regex_replace('^v', '')).split('.')[0] | int >= 22
     fail_msg: "Node.js 22+ is required for OpenClaw gateway"
+  when: not ansible_check_mode
 
 - name: Install openclaw npm package
   ansible.builtin.command: "npm install -g {{ openclaw_node_package }} --force"
   changed_when: true
-  when: openclaw_runtime_mode == 'systemd'
+  when:
+    - openclaw_runtime_mode == 'systemd'
+    - not ansible_check_mode
 
 - name: Configure local data directory
   ansible.builtin.file:
@@ -56,11 +60,15 @@
     name: openclawbot-data.mount
     enabled: true
     state: started
-  when: openclaw_data_backend == 'gcs'
+  when:
+    - openclaw_data_backend == 'gcs'
+    - not ansible_check_mode
 
 - name: Enable and start openclaw gateway user service
   ansible.builtin.command: systemctl --user enable --now openclaw-gateway.service
   environment:
     XDG_RUNTIME_DIR: /run/user/0
   changed_when: true
-  when: openclaw_runtime_mode == 'systemd'
+  when:
+    - openclaw_runtime_mode == 'systemd'
+    - not ansible_check_mode

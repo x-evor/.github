@@ -53,27 +53,10 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
 
-      - name: Build temporary inventory
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > /tmp/openclaw-gateway-inventory.ini <<EOF
-          [gateway]
-          openclaw-target ansible_host=${{ inputs.target_host_ip }} ansible_user=root
-
-          [all:vars]
-          ansible_port=22
-          ansible_user=root
-          ansible_ssh_transfer_method=piped
-          ansible_host_key_checking=False
-          ansible_ssh_private_key_file=~/.ssh/id_rsa
-          EOF
-
       - name: Run OpenClaw gateway playbook
         shell: bash
         env:
           ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
-          OPENCLAW_GATEWAY_TARGET_IP: ${{ inputs.target_host_ip }}
         run: |
           set -euo pipefail
           extra_vars=(
@@ -82,7 +65,9 @@ jobs:
             -e "openclaw_manage_caddy=true"
             -e "openclaw_manage_dns=true"
             -e "openclaw_cloudflare_zone_name=svc.plus"
+            -e "openclaw_cloudflare_api_token=${{ secrets.CLOUDFLARE_DNS_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}"
             -e "openclaw_cloudflare_record_content=${{ inputs.target_host_ip }}"
+            -e "target_host_ip=${{ inputs.target_host_ip }}"
           )
 
           case "${{ inputs.action }}" in
@@ -93,7 +78,6 @@ jobs:
                 -e "openclaw_data_backend=local"
                 -e "openclaw_runtime_mode=systemd"
               )
-              playbook="ansible/playbooks/openclaw_gateway.yml"
               ;;
             migrate)
               extra_vars+=(
@@ -102,7 +86,6 @@ jobs:
                 -e "openclaw_data_backend=local"
                 -e "openclaw_runtime_mode=systemd"
               )
-              playbook="ansible/playbooks/migrate_openclaw_gateway.yml"
               ;;
             *)
               echo "Unsupported action: ${{ inputs.action }}" >&2
@@ -111,7 +94,7 @@ jobs:
           esac
 
           ansible-playbook \
-            -i /tmp/openclaw-gateway-inventory.ini \
+            -i ansible/inventory.ini \
             -D \
-            "${playbook}" \
+            ansible/playbooks/openclaw_gateway.yml \
             "${extra_vars[@]}"

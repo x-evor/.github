@@ -55,10 +55,12 @@ case "${stage}" in
     } >> "${GITHUB_STEP_SUMMARY}"
     ;;
   stage4)
-    if [[ $# -ne 5 ]]; then
-      echo "usage: $0 stage4 <service> <track> <playbook> <release-domain> <stable-domain>" >&2
+    if [[ $# -lt 5 || $# -gt 7 ]]; then
+      echo "usage: $0 stage4 <service> <track> <playbook> <release-domain> <stable-domain> [local-gate] [stable-smoke]" >&2
       exit 1
     fi
+    local_gate="${6:-passed}"
+    stable_smoke="${7:-skipped}"
     {
       echo "## Stage 4"
       echo "- service: \`$1\`"
@@ -67,6 +69,8 @@ case "${stage}" in
       echo "- mode: \`ansible-playbook -D\`"
       echo "- release domain: \`$4\`"
       echo "- stable domain: \`$5\`"
+      echo "- local gate: \`${local_gate}\`"
+      echo "- stable smoke: \`${stable_smoke}\`"
     } >> "${GITHUB_STEP_SUMMARY}"
     ;;
   *)

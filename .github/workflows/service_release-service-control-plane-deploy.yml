@@ -45,6 +45,11 @@ on:
         required: false
         default: ""
         type: string
+      target_domain:
+        description: "Optional target domain override"
+        required: false
+        default: ""
+        type: string
   workflow_dispatch:
     inputs:
       service:
@@ -95,6 +100,11 @@ on:
         required: false
         default: ""
         type: string
+      target_domain:
+        description: "Optional target domain override"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -111,6 +121,7 @@ env:
   SINGLE_NODE_VPS_SSH_PORT: ${{ inputs.ssh_port != '' && inputs.ssh_port || '22' }}
   SINGLE_NODE_VPS_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
   DEPLOY_SERVER_ALIAS_OVERRIDE: ${{ inputs.deploy_server_alias }}
+  TARGET_DOMAIN_OVERRIDE: ${{ inputs.target_domain }}
   INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
   ACCOUNTS_DB_PASSWORD: ${{ secrets.ACCOUNTS_DB_PASSWORD }}
   ACCOUNTS_SMTP_PASSWORD: ${{ secrets.ACCOUNTS_SMTP_PASSWORD }}
@@ -159,14 +170,14 @@ jobs:
       release_vhost_name: ${{ steps.meta.outputs.release_vhost_name }}
       release_version_strategy: ${{ steps.meta.outputs.release_version_strategy }}
       release_version_value: ${{ steps.meta.outputs.release_version_value }}
-      stable_domain: ${{ steps.meta.outputs.stable_domain }}
-      public_domain: ${{ steps.meta.outputs.public_domain }}
+      stable_domain: ${{ inputs.target_domain != '' && inputs.target_domain || steps.meta.outputs.stable_domain }}
+      public_domain: ${{ inputs.target_domain != '' && inputs.target_domain || steps.meta.outputs.public_domain }}
       host_port: ${{ steps.meta.outputs.host_port }}
       container_port: ${{ steps.meta.outputs.container_port }}
       healthcheck_path: ${{ steps.meta.outputs.healthcheck_path }}
       stable_smoke_enabled: ${{ steps.meta.outputs.stable_smoke_enabled }}
-      deploy_server_alias: ${{ steps.meta.outputs.deploy_server_alias }}
-      domain: ${{ steps.meta.outputs.domain }}
+      deploy_server_alias: ${{ inputs.deploy_server_alias != '' && inputs.deploy_server_alias || steps.meta.outputs.deploy_server_alias }}
+      domain: ${{ inputs.target_domain != '' && inputs.target_domain || steps.meta.outputs.domain }}
       git_short_commit: ${{ steps.artifact.outputs.git_short_commit }}
       release_version: ${{ steps.artifact.outputs.release_version }}
       release_version_dns_label: ${{ steps.artifact.outputs.release_version_dns_label }}
@@ -227,7 +238,7 @@ jobs:
         id: artifact
         shell: bash
         env:
-          PRIMARY_DOMAIN: ${{ steps.meta.outputs.public_domain || steps.meta.outputs.stable_domain }}
+          PRIMARY_DOMAIN: ${{ inputs.target_domain != '' && inputs.target_domain || steps.meta.outputs.public_domain || steps.meta.outputs.stable_domain }}
           NEXT_PUBLIC_APP_BASE_URL: ${{ vars.NEXT_PUBLIC_APP_BASE_URL }}
           NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
           NEXT_PUBLIC_LOGIN_URL: ${{ vars.NEXT_PUBLIC_LOGIN_URL }}
@@ -258,7 +269,7 @@ jobs:
           "${{ steps.meta.outputs.release_dns_enabled }}"
           "${{ steps.meta.outputs.release_dns_prefix }}"
           "${{ steps.meta.outputs.release_vhost_name }}"
-          "${{ steps.meta.outputs.domain }}"
+          "${{ inputs.target_domain != '' && inputs.target_domain || steps.meta.outputs.domain }}"
           "${{ steps.meta.outputs.build_prepare_script }}"
           "${{ steps.meta.outputs.build_args_script }}"
 
@@ -274,7 +285,7 @@ jobs:
           "${{ steps.artifact.outputs.release_version }}"
           "${{ steps.artifact.outputs.image_ref }}"
           "${{ steps.artifact.outputs.release_domain }}"
-          "${{ steps.meta.outputs.public_domain || steps.meta.outputs.stable_domain }}"
+          "${{ inputs.target_domain != '' && inputs.target_domain || steps.meta.outputs.public_domain || steps.meta.outputs.stable_domain }}"
 
   stage-2-release-dns:
     name: "2. Release DNS"

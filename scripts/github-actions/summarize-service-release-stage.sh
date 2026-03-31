@@ -41,16 +41,17 @@ case "${stage}" in
     } >> "${GITHUB_STEP_SUMMARY}"
     ;;
   stage3)
-    if [[ $# -ne 3 ]]; then
-      echo "usage: $0 stage3 <service> <track> <playbook>" >&2
+    if [[ $# -lt 3 || $# -gt 4 ]]; then
+      echo "usage: $0 stage3 <service> <track> <playbook> [mode]" >&2
       exit 1
     fi
+    mode="${4:-dry-run}"
     {
       echo "## Stage 3"
       echo "- service: \`$1\`"
       echo "- track: \`$2\`"
       echo "- playbook: \`$3\`"
-      echo "- mode: \`ansible-playbook -D -C\`"
+      echo "- mode: \`${mode}\`"
     } >> "${GITHUB_STEP_SUMMARY}"
     ;;
   stage4)

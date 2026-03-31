@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -53,6 +54,7 @@ def build_secret_payload() -> dict:
 
 def build_runtime_payload() -> dict:
     runtime_profile = os.environ.get("SERVICE_RUNTIME_PROFILE", "").strip()
+    service_name = os.environ.get("SERVICE_NAME", "").strip()
     release_version = os.environ.get("SERVICE_RELEASE_VERSION", "").strip()
     release_version_dns_label = os.environ.get("SERVICE_RELEASE_VERSION_DNS_LABEL", "").strip()
     stable_domain = os.environ.get("SERVICE_STABLE_DOMAIN", "").strip()
@@ -78,8 +80,30 @@ def build_runtime_payload() -> dict:
         if not isinstance(shared_stunnel, dict):
             raise SystemExit("SERVICE_SHARED_STUNNEL_JSON must decode to an object")
 
+    shared_stunnel_mode = str(shared_stunnel.get("mode", "")).strip()
+    if not shared_stunnel_mode:
+        if bool(shared_stunnel.get("enabled", False)):
+            shared_stunnel_mode = "sidecar"
+        elif bool(shared_stunnel.get("attach_network", False)):
+            shared_stunnel_mode = "external-client"
+        else:
+            shared_stunnel_mode = "disabled"
+
+    if shared_stunnel_mode not in {"disabled", "sidecar", "external-client"}:
+        raise SystemExit(
+            "shared_stunnel.mode must be one of: disabled, sidecar, external-client"
+        )
+
+    shared_stunnel_service_slug = re.sub(r"[^a-zA-Z0-9-]+", "-", service_name).strip("-") or "service"
+    shared_stunnel_network_name = str(shared_stunnel.get("network_name", "")).strip()
+    if not shared_stunnel_network_name:
+        if shared_stunnel_mode == "sidecar":
+            shared_stunnel_network_name = f"cn-toolkit-{shared_stunnel_service_slug}-stunnel"
+        else:
+            shared_stunnel_network_name = "cn-toolkit-shared"
+
     runtime_payload = {
-        "service_name": os.environ.get("SERVICE_NAME", "").strip(),
+        "service_name": service_name,
         "service_runtime_profile": runtime_profile,
         "service_image_ref": os.environ.get("SERVICE_COMPOSE_IMAGE", "").strip(),
         "service_release_version": release_version,
@@ -114,18 +138,25 @@ def build_runtime_payload() -> dict:
                         "env": track_env,
                     }
                 ],
-                "service_compose_shared_stunnel_enabled": bool(shared_stunnel.get("enabled", False)),
+                "service_compose_shared_stunnel_mode": shared_stunnel_mode,
+                "service_compose_shared_stunnel_enabled": shared_stunnel_mode == "sidecar",
+                "service_compose_shared_stunnel_attach_network": shared_stunnel_mode
+                in {"sidecar", "external-client"},
                 "service_compose_shared_stunnel_container_name": str(
-                    shared_stunnel.get("container_name", "cn-toolkit-stunnel-client")
+                    shared_stunnel.get(
+                        "container_name",
+                        f"cn-toolkit-{shared_stunnel_service_slug}-stunnel-client",
+                    )
                 ),
-                "service_compose_shared_stunnel_network_name": str(
-                    shared_stunnel.get("network_name", "cn-toolkit-shared")
-                ),
+                "service_compose_shared_stunnel_network_name": shared_stunnel_network_name,
                 "service_compose_shared_stunnel_image": str(
                     shared_stunnel.get("image", "dweomer/stunnel")
                 ),
                 "service_compose_shared_stunnel_accept_port": int(
                     shared_stunnel.get("accept_port", 15432)
+                ),
+                "service_compose_shared_stunnel_publish_host_port": bool(
+                    shared_stunnel.get("publish_host_port", False)
                 ),
             }
         )

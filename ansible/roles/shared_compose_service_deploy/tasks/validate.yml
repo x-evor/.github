@@ -17,6 +17,12 @@
       - service_compose_deploy_targets | length > 0
     fail_msg: "Set service_compose_service_slug, service_compose_release_version, service_compose_release_vhost_name, and at least one deploy target."
 
+- name: Validate shared stunnel mode selection
+  ansible.builtin.assert:
+    that:
+      - service_compose_shared_stunnel_mode in ['disabled', 'sidecar', 'external-client']
+    fail_msg: "service_compose_shared_stunnel_mode must be disabled, sidecar, or external-client."
+
 - name: Validate deploy target definitions
   ansible.builtin.assert:
     that:
@@ -33,11 +39,18 @@
 - name: Validate shared stunnel inputs
   ansible.builtin.assert:
     that:
+      - service_compose_shared_stunnel_network_name | length > 0
+    fail_msg: "Shared stunnel network mode requires a valid network name."
+  when: service_compose_shared_stunnel_attach_network | bool
+
+- name: Validate sidecar shared stunnel inputs
+  ansible.builtin.assert:
+    that:
       - service_compose_env_common.DB_TLS_HOST | default('') | length > 0
       - service_compose_env_common.DB_TLS_PORT is defined
       - service_compose_shared_stunnel_container_name | length > 0
-      - service_compose_shared_stunnel_network_name | length > 0
+      - service_compose_shared_stunnel_runtime_dir | length > 0
       - service_compose_shared_stunnel_image | length > 0
       - service_compose_shared_stunnel_accept_port | int > 0
-    fail_msg: "Shared stunnel requires DB_TLS_HOST/DB_TLS_PORT and valid container/network settings."
+    fail_msg: "Sidecar shared stunnel requires DB_TLS_HOST/DB_TLS_PORT and valid container/runtime settings."
   when: service_compose_shared_stunnel_enabled | bool

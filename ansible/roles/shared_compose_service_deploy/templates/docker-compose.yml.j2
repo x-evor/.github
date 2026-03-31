@@ -50,12 +50,12 @@ services:
       - {{ value | to_json }}
 {% endfor %}
 {% endif %}
-{% if service_compose_shared_stunnel_enabled | bool %}
+{% if service_compose_shared_stunnel_enabled | bool or service_compose_shared_stunnel_attach_network | bool %}
     networks:
       - default
       - shared_stunnel
 {% endif %}
-{% if service_compose_shared_stunnel_enabled | bool %}
+{% if service_compose_shared_stunnel_enabled | bool or service_compose_shared_stunnel_attach_network | bool %}
 
 networks:
   shared_stunnel:

@@ -23,6 +23,10 @@
     state: directory
     mode: "0755"
 
+- name: Remove legacy shared stunnel sidecar when it is no longer managed
+  ansible.builtin.import_tasks: shared_stunnel_cleanup.yml
+  when: service_compose_shared_stunnel_mode != 'sidecar'
+
 - name: Ensure shared stunnel component is ready
   ansible.builtin.import_tasks: shared_stunnel.yml
   when: service_compose_shared_stunnel_enabled | bool

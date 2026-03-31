@@ -10,8 +10,10 @@ services:
       STUNNEL_CONNECT: "{{ service_compose_env_common.DB_TLS_HOST }}:{{ service_compose_env_common.DB_TLS_PORT }}"
       STUNNEL_VERIFY: "2"
       STUNNEL_VERIFY_CHAIN: "yes"
+{% if service_compose_shared_stunnel_publish_host_port | bool %}
     ports:
       - "127.0.0.1:{{ service_compose_shared_stunnel_accept_port }}:{{ service_compose_shared_stunnel_accept_port }}"
+{% endif %}
 {% if service_compose_dns | length > 0 %}
     dns:
 {% for value in service_compose_dns %}

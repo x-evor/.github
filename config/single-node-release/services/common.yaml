@@ -160,10 +160,7 @@ services:
     runtime_profile: shared-compose
     stable_smoke_enabled: true
     shared_stunnel:
-      enabled: true
-      container_name: cn-toolkit-stunnel-client
-      network_name: cn-toolkit-shared
-      image: dweomer/stunnel
+      mode: external-client
       accept_port: 15432
     secret_env_map:
       INTERNAL_SERVICE_TOKEN: INTERNAL_SERVICE_TOKEN

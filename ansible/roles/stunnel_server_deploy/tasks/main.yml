@@ -54,20 +54,15 @@
     - stunnel_server_caddy_cert_stat.stat.exists
     - stunnel_server_caddy_key_stat.stat.exists
 
-- name: Generate fallback self-signed certificate when Caddy cert is unavailable
-  ansible.builtin.shell: |
-    set -euo pipefail
-    openssl req -x509 -nodes -newkey rsa:2048 \
-      -keyout "{{ stunnel_server_key_file }}" \
-      -out "{{ stunnel_server_cert_file }}" \
-      -days 30 \
-      -subj "/CN={{ stunnel_server_cert_domain }}"
-  args:
-    executable: /bin/bash
-  changed_when: true
-  when:
-    - not stunnel_server_caddy_cert_stat.stat.exists or not stunnel_server_caddy_key_stat.stat.exists
-    - not ansible_check_mode
+- name: Fail when Caddy certificate is unavailable
+  ansible.builtin.assert:
+    that:
+      - stunnel_server_caddy_cert_stat.stat.exists
+      - stunnel_server_caddy_key_stat.stat.exists
+    fail_msg: >-
+      Missing Caddy-managed certificate for {{ stunnel_server_cert_domain }} under
+      {{ stunnel_server_caddy_cert_dir }}. Run the postgresql stable domain release first so
+      Caddy can issue the real certificate, then re-run stunnel-server deployment.
 
 - name: Render stunnel-server config
   ansible.builtin.template:
@@ -97,4 +92,3 @@
     port: "{{ stunnel_server_host_port }}"
     timeout: 60
   when: not ansible_check_mode
-

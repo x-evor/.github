@@ -30,6 +30,8 @@ service_compose_user: ""
 service_compose_pull_policy: always
 service_compose_remove_previous_releases: true
 service_compose_remove_previous_caddy: true
+service_compose_host_port_autoincrement: true
+service_compose_host_port_autoincrement_max_attempts: 20
 service_compose_shared_stunnel_mode: disabled
 service_compose_shared_stunnel_enabled: false
 service_compose_shared_stunnel_attach_network: false

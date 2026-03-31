@@ -8,6 +8,7 @@
     service_compose_release_image: "{{ deploy_target.image | default(service_compose_image) }}"
     service_compose_release_image_archive: "{{ deploy_target.image_archive | default(service_compose_image_archive) }}"
     service_compose_release_pull_images: "{{ (deploy_target.pull_images | default(service_compose_pull_images)) | bool }}"
+    service_compose_requested_host_port: "{{ deploy_target.host_port | int }}"
 
 - name: Compute release pull policy for {{ deploy_target.name | default(deploy_target.deploy_subdomain_prefix) }}
   ansible.builtin.set_fact:
@@ -23,6 +24,60 @@
             else 'never'
           )
       }}
+
+- name: Resolve available host port for {{ service_compose_release_name }}
+  ansible.builtin.shell: |
+    set -euo pipefail
+    requested_port="{{ service_compose_requested_host_port }}"
+    max_attempts="{{ service_compose_host_port_autoincrement_max_attempts | int }}"
+    candidate_port="$requested_port"
+    attempt=0
+
+    is_port_free() {
+      local port="$1"
+      if command -v ss >/dev/null 2>&1; then
+        ! ss -ltnH "( sport = :${port} )" | grep -q .
+        return
+      fi
+      if command -v lsof >/dev/null 2>&1; then
+        ! lsof -nP -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1
+        return
+      fi
+      python3 - "${port}" <<'PY'
+import socket
+import sys
+
+port = int(sys.argv[1])
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+try:
+    sock.bind(("127.0.0.1", port))
+except OSError:
+    sys.exit(1)
+finally:
+    sock.close()
+PY
+    }
+
+    while [ "$attempt" -lt "$max_attempts" ]; do
+      if is_port_free "$candidate_port"; then
+        printf '%s' "$candidate_port"
+        exit 0
+      fi
+      candidate_port=$((candidate_port + 1))
+      attempt=$((attempt + 1))
+    done
+
+    echo "Unable to find a free host port starting from ${requested_port} after ${max_attempts} attempts." >&2
+    exit 1
+  args:
+    executable: /bin/bash
+  register: service_compose_resolved_host_port_result
+  changed_when: false
+
+- name: Persist resolved host port for {{ service_compose_release_name }}
+  ansible.builtin.set_fact:
+    service_compose_resolved_host_port: "{{ service_compose_resolved_host_port_result.stdout | trim | int }}"
 
 - name: Ensure release directories exist for {{ service_compose_release_name }}
   ansible.builtin.file:
@@ -129,7 +184,7 @@
 
 - name: Wait for loopback health endpoint on {{ service_compose_release_name }}
   ansible.builtin.uri:
-    url: "http://127.0.0.1:{{ deploy_target.host_port }}{{ deploy_target.healthcheck_path | default(service_compose_healthcheck_path) }}"
+    url: "http://127.0.0.1:{{ service_compose_resolved_host_port }}{{ deploy_target.healthcheck_path | default(service_compose_healthcheck_path) }}"
     method: GET
     status_code: [200, 204]
   register: service_compose_health_result

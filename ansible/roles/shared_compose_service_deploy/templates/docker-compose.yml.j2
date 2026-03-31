@@ -9,7 +9,7 @@ services:
     environment:
       PORT: "{{ service_compose_container_port }}"
     ports:
-      - "127.0.0.1:{{ deploy_target.host_port }}:{{ service_compose_container_port }}"
+      - "127.0.0.1:{{ service_compose_resolved_host_port }}:{{ service_compose_container_port }}"
 {% if service_compose_entrypoint | length > 0 %}
     entrypoint:
 {% for value in service_compose_entrypoint %}

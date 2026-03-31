@@ -73,6 +73,11 @@ jobs:
   cloud-dev-desktop:
     name: "${{ inputs.workflow_mode }} / ${{ inputs.action }}"
     runs-on: ubuntu-latest
+    env:
+      HAS_AZURE_CREDENTIALS_JSON: ${{ secrets.AZURE_CREDENTIALS_JSON != '' }}
+      HAS_GCP_SERVICE_ACCOUNT_JSON: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
+      HAS_AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID != '' || secrets.AZURE_SUBSCRIPTION_ID != '' }}
+      HAS_GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID != '' || secrets.GCP_PROJECT_ID != '' }}
     steps:
       - name: Checkout control repo
         uses: actions/checkout@v4

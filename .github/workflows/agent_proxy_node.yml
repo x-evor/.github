@@ -11,31 +11,26 @@ on:
         options:
           - dry-run
           - deploy
-      target_host_ip:
-        description: "Target host IP"
-        required: true
-        default: "46.250.251.132"
-        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: agent-proxy-node-${{ inputs.target_host_ip }}-${{ inputs.mode }}
+  group: agent-proxy-node
   cancel-in-progress: false
 
 jobs:
   agent-proxy-node:
-    name: "${{ inputs.mode }} -> ${{ inputs.target_host_ip }}"
+    name: agent-proxy-node
     runs-on: ubuntu-latest
     steps:
       - name: Checkout control repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: recursive
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
         with:
           python-version: "3.11"
 
@@ -58,4 +53,4 @@ jobs:
         env:
           INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
           CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
-        run: bash scripts/github-actions/run-agent-proxy-node.sh "${{ inputs.mode }}" "${{ inputs.target_host_ip }}"
+        run: bash scripts/github-actions/run-agent-proxy-node.sh "${{ inputs.mode }}" "46.250.251.132"

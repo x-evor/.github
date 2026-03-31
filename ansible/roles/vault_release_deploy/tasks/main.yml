@@ -40,14 +40,14 @@
 - name: Discover legacy Vault Caddy files
   ansible.builtin.find:
     paths: "{{ vault_release_caddy_conf_dir }}"
-    patterns: "vault-*.caddy"
+    patterns: "vault*.caddy"
     file_type: file
   register: vault_release_existing_caddy_files
 
 - name: Render Vault Caddy site file
   ansible.builtin.template:
     src: site.caddy.j2
-    dest: "{{ vault_release_caddy_conf_dir }}/vault-{{ service_release_version_dns_label | default(service_release_version | default('manual')) }}.caddy"
+    dest: "{{ vault_release_caddy_conf_dir }}/{{ vault_release_primary_domain }}.caddy"
     mode: "0644"
 
 - name: Remove superseded Vault Caddy site files
@@ -58,7 +58,7 @@
   loop_control:
     label: "{{ item.path }}"
   when:
-    - item.path != vault_release_caddy_conf_dir ~ '/vault-' ~ (service_release_version_dns_label | default(service_release_version | default('manual'))) ~ '.caddy'
+    - item.path != vault_release_caddy_conf_dir ~ '/' ~ vault_release_primary_domain ~ '.caddy'
 
 - name: Validate Caddy configuration for Vault
   ansible.builtin.command: caddy validate --config /etc/caddy/Caddyfile

@@ -1,7 +1,8 @@
-# Single-Node Vault
+# Vault Migration Runbook
 
-This deployment keeps Vault as a host process and lets Caddy terminate TLS
-for `vault.svc.plus`, proxying to `127.0.0.1:8200`.
+This deployment keeps Vault behind Caddy for `vault.svc.plus` and documents
+the supported raft-join migration path from the current source node to a new
+target node.
 
 ## Topology
 
@@ -13,13 +14,17 @@ for `vault.svc.plus`, proxying to `127.0.0.1:8200`.
 
 Use this deployment in three stages:
 
-1. Deploy Vault as a host process and put Caddy in front of it for public TLS.
-2. Initialize and unseal the node once, then store the root token offline.
-3. Optionally configure daily admin access with `userpass + TOTP Login MFA`.
+1. Expose the current leader's raft listener temporarily so a second node can
+   join.
+2. Start a new Vault node with `retry_join`, let raft data replicate, then
+   unseal the new node with the original cluster unseal material.
+3. Cut traffic to the new node and then restore the source node's raft bind
+   address back to loopback.
 
 ## Config files
 
 - Vault config template: `deploy/vault/vault.hcl.example`
+- Caddy site template: `deploy/vault/vault.svc.plus.caddy`
 - Host config path: `/etc/vault.d/vault.hcl`
 - Local secret file: repository root `.env`
   - `VAULT_SERVER_ROOT_ACCESS_TOKEN=<initial-root-token>`
@@ -39,6 +44,10 @@ vault.svc.plus {
 }
 ```
 
+The Ansible Vault role writes the same block to
+`/etc/caddy/conf.d/vault.svc.plus.caddy` and imports it from the main
+`/etc/caddy/Caddyfile`.
+
 Use `tls internal` only before public DNS is pointed at the host. Once
 `vault.svc.plus` resolves to the target host, remove `tls internal` and let
 Caddy obtain a public certificate.
@@ -48,6 +57,15 @@ Caddy obtain a public certificate.
 The current `vault.svc.plus` instance is already initialized and unsealed. Do
 not run `vault operator init` again unless you intentionally wipe the Raft
 storage directory and rebuild the node.
+
+Current migration constraint on the source host:
+
+- Raft cluster traffic was originally bound to `127.0.0.1:8201`, so a new host
+  could not join the existing node as a live raft peer.
+- The source host can be switched temporarily to `0.0.0.0:8201` so the target
+  node can join, replicate, and then be cut over.
+- If the original unseal material is missing, the join can still be prepared
+  but the new node cannot be fully activated until those keys are recovered.
 
 For emergency root access only:
 
@@ -168,55 +186,43 @@ Recommended practice:
 Vault Enterprise also supports automated snapshots, but this single-node guide
 assumes Vault OSS and therefore documents the manual snapshot flow only.
 
-## Restore and host migration
+## Raft Join Migration
 
-The cleanest host migration path for this single-node deployment is:
+This is the preferred host migration path when the source node is still
+healthy:
 
-1. Take a Raft snapshot on the current node.
-2. Copy the snapshot file to the new node.
-3. Install Vault and Caddy on the new node with the same topology.
-4. Initialize the new node once to create fresh local storage and a temporary
-   root token.
-5. Force-restore the copied snapshot.
-6. Unseal using the original cluster's unseal key, not the temporary key from
-   the new node.
-7. Repoint DNS or cut traffic over to the new host.
+1. Temporarily change the source node's raft bind address to `0.0.0.0:8201`.
+2. Keep `api_addr` pointed at the public Vault hostname so clients continue to
+   use Caddy.
+3. Start the new node with `retry_join { leader_api_addr = "https://vault.svc.plus" }`
+   and publish its own raft port on `0.0.0.0:8201`.
+4. Let raft synchronize and confirm the new node appears in
+   `vault operator raft list-peers`.
+5. Unseal the new node with the original cluster unseal material.
+6. Switch DNS or reverse-proxy traffic to the new host.
+7. Revert the source node's raft bind address back to loopback and keep it as
+   a standby until the migration is fully validated.
 
-Example recovery on the target host:
+Example target-node bootstrap:
 
 ```bash
 export VAULT_ADDR=http://127.0.0.1:8200
 export VAULT_CLIENT_TIMEOUT=10m
 
-# Fresh node bootstrap first.
-vault operator init \
-  -address="$VAULT_ADDR" \
-  -key-shares=1 \
-  -key-threshold=1 \
-  -format=json > /root/vault-init.json
+# Start the node with retry_join enabled, then wait for it to appear in the
+# raft peer list.
+vault operator raft list-peers
 
-chmod 600 /root/vault-init.json
-
-vault operator unseal \
-  -address="$VAULT_ADDR" \
-  "$(jq -r '.unseal_keys_b64[0]' /root/vault-init.json)"
-
-export VAULT_TOKEN="$(jq -r '.root_token' /root/vault-init.json)"
-
-# Copy an existing snapshot onto the new host first, for example /root/backup.snap.
-vault operator raft snapshot restore -force /root/backup.snap
-
-# After restore, unseal with the original cluster's unseal key.
+# If the node is still sealed, unseal it using the original cluster key
+# material. Do not re-init the new node if the goal is to join the existing
+# cluster.
 vault operator unseal -address="$VAULT_ADDR"
 ```
 
 Important migration notes:
 
 - Restore testing should happen in an isolated network environment first.
-- `snapshot restore -force` is required when the snapshot comes from a different
-  cluster instance.
-- After force restore, the cluster state comes from the snapshot. Keep the
-  original unseal key material available.
+- Keep the original unseal key material available before starting the join.
 - If you are replacing the current host in place, stop Vault on the old node
   before final cutover to avoid split-brain or stale operator actions.
 

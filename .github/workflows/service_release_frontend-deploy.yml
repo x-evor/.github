@@ -69,3 +69,7 @@ jobs:
       ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
     secrets: inherit
 
+# Console release behavior:
+# - source checkout comes from x-evor/console.svc.plus via remote-checkout metadata
+# - image build/push happens on the GitHub Actions runner during stage-1 prep
+# - target host only pulls and starts the published image during apply

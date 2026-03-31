@@ -36,7 +36,7 @@ The control repo owns:
 - immutable release DNS creation
 - Ansible SSH bootstrap and runtime variable injection
 
-Each sub repo still owns:
+Each service repo still owns:
 
 - its own Dockerfile
 - its own Ansible playbook path
@@ -90,7 +90,7 @@ Optional service-level host targeting:
 - `ssh_known_hosts`
   - Optional override for the runner-side `known_hosts` payload
 
-For repositories declared with `source_kind=git-submodule`, the actual source revision comes from the submodule pointer committed in the control repo. In that mode, `service_ref` is informational and is only used for `remote-checkout` services.
+For release-enabled repositories, `service_ref` is the source revision used for the service checkout.
 
 CLI example:
 
@@ -124,7 +124,7 @@ The caller repo should pass:
 ### Stage 1. Build And Push Image
 
 - resolve repo/service metadata from workspace + catalogs
-- checkout the target service repo or initialize the matching submodule
+- checkout the target service repo from the sibling repository workspace
 - build the service image
 - push to `ghcr.io`
 - compute the immutable release domain
@@ -227,7 +227,7 @@ These checked-in values are not GitHub Variables:
 
 Those live in `config/single-node-release/repositories.json` and `config/single-node-release/services/*.yaml`.
 
-For `accounts.svc.plus`, non-sensitive release defaults are checked in at `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. GitHub Secrets only carry `INTERNAL_SERVICE_TOKEN`, the shared database password, and the SMTP password.
+For `accounts.svc.plus`, non-sensitive release defaults are checked in with the service repo's release vars. GitHub Secrets only carry `INTERNAL_SERVICE_TOKEN`, the shared database password, and the SMTP password.
 
 ## Example Service-Repo Wrapper
 

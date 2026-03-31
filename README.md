@@ -160,7 +160,7 @@ Workflow input model:
 - `service_ref`: branch, tag, or commit SHA in the service repo
 - `run_apply`: `false` for dry-run only, `true` for final apply
 
-For `git-submodule` services such as `accounts.svc.plus`, the effective source revision is the submodule pointer currently committed in this control repo. `service_ref` only applies to `remote-checkout` services.
+For release-enabled services, the effective source revision comes from the service repo ref passed in `service_ref`.
 
 Release behavior:
 
@@ -207,7 +207,7 @@ For manual `workflow_dispatch` runs, these values can be overridden with optiona
 - `ssh_port`
 - `ssh_known_hosts`
 
-For `accounts.svc.plus`, non-sensitive release defaults live in the checked-in file `subrepos/accounts.svc.plus/ansible/vars/accounts.release.public.yml`. Only `INTERNAL_SERVICE_TOKEN`, `ACCOUNTS_DB_PASSWORD`, and `ACCOUNTS_SMTP_PASSWORD` need to be synced from the local control-repo `.env` into GitHub Organization Secrets.
+For `accounts.svc.plus`, non-sensitive release defaults live in the checked-in file `ansible/vars/console.release.public.yml` and `ansible/vars/agent-svc-plus.release.public.yml` style service vars, while service secrets remain in GitHub Secrets.
 
 Manual run in GitHub UI:
 
@@ -221,7 +221,7 @@ Manual run in GitHub UI:
    - `run_apply`: `false` for dry-run only, `true` to continue through the final apply stage
    - optional `ssh_host`, `ssh_user`, `ssh_port`, `ssh_known_hosts`: override the built-in SSH target defaults for this run only
 
-For `accounts.svc.plus`, update and push the control-repo submodule pointer first, then run the workflow. The `service_ref` input is ignored for that `git-submodule` source.
+For `accounts.svc.plus`, update the service repository branch or tag first, then run the workflow with the desired `service_ref`.
 
 Manual run with GitHub CLI:
 

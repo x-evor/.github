@@ -18,7 +18,7 @@
 - [ ] Control-plane release metadata is updated when repo/domain/port/catalog entries change
 - [ ] Required GitHub Actions secrets exist and any workflow SSH overrides are set correctly for the single-node release workflow
 - [ ] Service-specific secrets are split correctly: public defaults checked in, secret-only fields in GitHub Secrets
-- [ ] For `git-submodule` services, the submodule pointer in the control repo is updated and pushed before dispatching the release workflow
+- [ ] For release-enabled services, the target service repository ref is updated and pushed before dispatching the release workflow
 - [ ] Stable domains already point to the single deploy host before promoting a new revision
 - [ ] `docs.svc.plus` has `KNOWLEDGE_REPO_PATH`, `DOCS_SERVICE_PORT`, `DOCS_RELOAD_INTERVAL`, and `INTERNAL_SERVICE_TOKEN` configured
 - [ ] The deploy host has a readable `knowledge` Git checkout mounted at the `docs.svc.plus` host path expected by the release vars

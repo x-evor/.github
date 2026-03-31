@@ -103,11 +103,8 @@ def main() -> None:
         raise SystemExit("repo owner is required")
 
     source_kind = repo_entry.get("source_kind", "remote-checkout")
-    workspace_repo_path = repo_entry["workspace_path"]
-    if source_kind == "git-submodule":
-        service_checkout_path = str(Path(control_repo_dir) / workspace_repo_path)
-    elif source_kind == "remote-checkout":
-        service_checkout_path = repo_name
+    if source_kind == "remote-checkout":
+        service_checkout_path = str(Path(control_repo_dir).parent / repo_name)
     elif source_kind == "control-repo":
         service_checkout_path = control_repo_dir
     else:

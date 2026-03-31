@@ -69,7 +69,7 @@ flowchart TB
 
 - `docs/architecture/project-deploy-overview.md`
 - `docs/architecture/web-console/overview.md`
-- `subrepos/accounts.svc.plus/docs/architecture/accounts/overview.md`
+- `../accounts.svc.plus/docs/architecture/accounts/overview.md`
 - `rag-server.svc.plus/docs/architecture/rag-server/overview.md`
 - `rag-server.svc.plus/docs/architecture/rag-server/proxy-server/overview.md`
 

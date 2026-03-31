@@ -12,7 +12,7 @@ This skill includes:
 - A policy doc (this file)
 - A ruleset JSON template (GitHub Rulesets API)
 - A `gh` script to apply the ruleset to one or many repos
-- A sync script to copy this skill into all local sub-repos
+- A sync script to copy this skill into all local sibling repos
 - A script to generate a cross-repo release manifest (for tag association)
 
 Non-goals:
@@ -93,9 +93,9 @@ Script: `skills/release-branch-policy/scripts/apply_ruleset.sh`
 - Uses `gh api` and a JSON payload
 - Does not modify branches/tags
 
-### 2) Sync Skill Into All Local Sub-Repos
+### 2) Sync Skill Into All Local Sibling Repos
 
-Script: `skills/release-branch-policy/scripts/sync_skill_to_subrepos.sh`
+Script: `skills/release-branch-policy/scripts/sync_skill_to_sibling_repos.sh`
 
 - Copies this skill folder into each local repo under `/Users/shenlan/workspaces/cloud-neutral-toolkit/*`
 - Skips repos without `.git`

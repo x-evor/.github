@@ -3,10 +3,10 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-Copy this skill into all local Cloud-Neutral Toolkit sub-repos.
+Copy this skill into all local Cloud-Neutral Toolkit sibling repos.
 
 Usage:
-  sync_skill_to_subrepos.sh
+  sync_skill_to_sibling_repos.sh
 
 Copies:
   skills/release-branch-policy -> <repo>/skills/release-branch-policy

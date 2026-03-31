@@ -60,7 +60,7 @@ Stable Domain:  xworkmate.svc.plus
 
 ```bash
 # 在本地构建 Flutter Web
-cd subrepos/xworkmate.svc.plus
+cd ../xworkmate.svc.plus
 flutter build web --release
 
 # 或者使用 Docker 多阶段构建
@@ -157,7 +157,7 @@ curl -fsSL -o /dev/null -w '%{http_code}' https://xworkmate.svc.plus/
 | `ansible/vars/xworkmate-web.release.public.yml` | Release 公共变量 |
 | `ansible/roles/shared_compose_service_deploy/` | 共享部署角色 (复用) |
 | `ansible/inventory.ini` | 主机清单 (含 [xworkmate-web] 组) |
-| `subrepos/xworkmate.svc.plus/lib/web/Dockerfile` | Flutter Web Docker 镜像 |
+| `../xworkmate.svc.plus/lib/web/Dockerfile` | Flutter Web Docker 镜像 |
 
 ## 故障排查
 

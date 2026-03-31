@@ -4,6 +4,6 @@
   gather_facts: false
   vars:
     console_frontend_control_repo_root: "{{ playbook_dir }}/../.."
-    console_frontend_repo_path: "{{ console_frontend_control_repo_root }}/subrepos/console.svc.plus"
+    console_frontend_repo_path: "{{ console_frontend_control_repo_root }}/../console.svc.plus"
   roles:
     - role: console_frontend_deploy

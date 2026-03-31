@@ -46,16 +46,16 @@
     },
     "console.svc.plus": {
       "category": "frontend",
-      "repo_url": "https://github.com/cloud-neutral-toolkit/console.svc.plus.git",
-      "workspace_path": "subrepos/console.svc.plus",
-      "source_kind": "git-submodule",
+      "repo_url": "https://github.com/x-evor/console.svc.plus.git",
+      "workspace_path": "../console.svc.plus",
+      "source_kind": "remote-checkout",
       "release_enabled": true
     },
     "accounts.svc.plus": {
       "category": "api",
       "repo_url": "https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git",
-      "workspace_path": "subrepos/accounts.svc.plus",
-      "source_kind": "git-submodule",
+      "workspace_path": "../accounts.svc.plus",
+      "source_kind": "remote-checkout",
       "release_enabled": true
     },
     "rag-server.svc.plus": {

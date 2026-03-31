@@ -39,7 +39,7 @@ service_compose_env_common:
   CLOUDFLARE_ZONE_TAG: "{{ lookup('ansible.builtin.env', 'CLOUDFLARE_ZONE_TAG') | default('', true) }}"
   ROOT_EMAIL_WHITELIST: "{{ lookup('ansible.builtin.env', 'ROOT_EMAIL_WHITELIST') | default('admin@svc.plus', true) }}"
   NEXT_PUBLIC_PAYPAL_CLIENT_ID: "{{ lookup('ansible.builtin.env', 'NEXT_PUBLIC_PAYPAL_CLIENT_ID') | default('', true) }}"
-  NEXT_PUBLIC_GISCUS_REPO: "{{ lookup('ansible.builtin.env', 'NEXT_PUBLIC_GISCUS_REPO') | default('cloud-neutral-toolkit/console.svc.plus', true) }}"
+  NEXT_PUBLIC_GISCUS_REPO: "{{ lookup('ansible.builtin.env', 'NEXT_PUBLIC_GISCUS_REPO') | default('x-evor/console.svc.plus', true) }}"
   NEXT_PUBLIC_GISCUS_REPO_ID: "{{ lookup('ansible.builtin.env', 'NEXT_PUBLIC_GISCUS_REPO_ID') | default('', true) }}"
   NEXT_PUBLIC_GISCUS_CATEGORY: "{{ lookup('ansible.builtin.env', 'NEXT_PUBLIC_GISCUS_CATEGORY') | default('General', true) }}"
   NEXT_PUBLIC_GISCUS_CATEGORY_ID: "{{ lookup('ansible.builtin.env', 'NEXT_PUBLIC_GISCUS_CATEGORY_ID') | default('', true) }}"

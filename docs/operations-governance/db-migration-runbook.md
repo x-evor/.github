@@ -223,7 +223,7 @@ ssh root@TARGET_HOST "docker exec postgresql-svc-plus psql -U postgres -d knowle
 - 依赖：`build-essential git postgresql-server-dev-17 cmake`
 - 源码：
   - `git clone https://github.com/jaiminpan/pg_jieba.git`
-  - `git submodule update --init --recursive`
+  - `git fetch --all --prune`
   - `cmake .. -DPostgreSQL_TYPE_INCLUDE_DIR=/usr/include/postgresql/17/server`
   - `make && make install`
 

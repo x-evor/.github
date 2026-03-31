@@ -74,7 +74,7 @@ services:
   console:
     repo_name: console.svc.plus
     repo_category: frontend
-    repo_url: https://github.com/cloud-neutral-toolkit/console.svc.plus.git
+    repo_url: https://github.com/x-evor/console.svc.plus.git
     playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_console_compose.yml
     public_vars_path: ../cloud-neutral-toolkit/ansible/vars/console.release.public.yml
     deploy_server_alias: jp-xhttp-contabo.svc.plus

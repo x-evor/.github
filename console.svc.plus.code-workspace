@@ -6,11 +6,11 @@
     },
     {
       "name": "console.svc.plus",
-      "path": "subrepos/console.svc.plus"
+      "path": "../console.svc.plus"
     },
     {
       "name": "accounts.svc.plus",
-      "path": "subrepos/accounts.svc.plus"
+      "path": "../accounts.svc.plus"
     },
     {
       "name": "rag-server.svc.plus",

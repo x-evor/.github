@@ -21,22 +21,22 @@ on:
         default: false
         type: boolean
       ssh_host:
-        description: "Optional SSH host override"
+        description: "Optional Ansible transport host override"
         required: false
         default: ""
         type: string
       ssh_user:
-        description: "Optional SSH user override"
+        description: "Optional Ansible transport user override"
         required: false
         default: ""
         type: string
       ssh_port:
-        description: "Optional SSH port override"
+        description: "Optional Ansible transport port override"
         required: false
         default: ""
         type: string
       ssh_known_hosts:
-        description: "Optional known_hosts payload override"
+        description: "Optional Ansible transport known_hosts payload override"
         required: false
         default: ""
         type: string
@@ -76,22 +76,22 @@ on:
         default: false
         type: boolean
       ssh_host:
-        description: "Optional SSH host override"
+        description: "Optional Ansible transport host override"
         required: false
         default: ""
         type: string
       ssh_user:
-        description: "Optional SSH user override"
+        description: "Optional Ansible transport user override"
         required: false
         default: ""
         type: string
       ssh_port:
-        description: "Optional SSH port override"
+        description: "Optional Ansible transport port override"
         required: false
         default: ""
         type: string
       ssh_known_hosts:
-        description: "Optional known_hosts payload override"
+        description: "Optional Ansible transport known_hosts payload override"
         required: false
         default: ""
         type: string
@@ -131,6 +131,11 @@ env:
   X_CLOUD_FLOW_ANSIBLE_VARS_YAML: ${{ secrets.X_CLOUD_FLOW_ANSIBLE_VARS_YAML }}
   X_OPS_AGENT_ANSIBLE_VARS_YAML: ${{ secrets.X_OPS_AGENT_ANSIBLE_VARS_YAML }}
   X_SCOPE_HUB_ANSIBLE_VARS_YAML: ${{ secrets.X_SCOPE_HUB_ANSIBLE_VARS_YAML }}
+
+# Workflow policy:
+# 1. Do not perform ad-hoc remote deployment commands from the runner.
+# 2. Use SSH inputs only to bootstrap Ansible transport/inventory.
+# 3. Execute deployment and migration through Ansible playbooks first.
 
 concurrency:
   group: ghcr-release-${{ inputs.service }}-${{ inputs.track }}
@@ -363,7 +368,7 @@ jobs:
         shell: bash
         run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/install-python-tools.sh" ansible
 
-      - name: Prepare runner SSH and inventory
+      - name: Prepare Ansible transport and inventory
         id: ssh
         shell: bash
         run: >
@@ -397,7 +402,7 @@ jobs:
           SERVICE_LOGICAL_NAME: ${{ needs.stage-1-prep.outputs.deploy_subdomain_prefix }}
         run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/materialize-ansible-vars.sh"
 
-      - name: Run ansible deploy or migrate
+      - name: Run deployment via Ansible playbook
         shell: bash
         working-directory: ${{ needs.stage-1-prep.outputs.service_checkout_path }}
         env:
@@ -462,6 +467,8 @@ jobs:
           NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO }}
           NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION }}
         run: |
+          # Deployment must flow through the playbook so the runner avoids
+          # direct host-side operational commands beyond Ansible transport setup.
           action="dry-run"
           if [[ "${{ inputs.run_apply }}" == "true" ]]; then
             action="apply"

@@ -43,20 +43,14 @@
         ! lsof -nP -iTCP:"${port}" -sTCP:LISTEN >/dev/null 2>&1
         return
       fi
-      python3 - "${port}" <<'PY'
-      import socket
-      import sys
-
-      port = int(sys.argv[1])
-      sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-      try:
-          sock.bind(("127.0.0.1", port))
-      except OSError:
-          sys.exit(1)
-      finally:
-          sock.close()
-      PY
+      python3 -c 'import socket, sys; port = int(sys.argv[1]); sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM); sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1); rc = 0
+try:
+    sock.bind(("127.0.0.1", port))
+except OSError:
+    rc = 1
+finally:
+    sock.close()
+raise SystemExit(rc)' "${port}"
     }
 
     while [ "$attempt" -lt "$max_attempts" ]; do

@@ -16,8 +16,19 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 control_repo_path="${CONTROL_REPO_PATH:-$(dirname "$(dirname "${script_dir}")")}"
 merged_vars_file="$(mktemp)"
 
-# Set ANSIBLE_ROLES_PATH to include control repo's roles directory
-export ANSIBLE_ROLES_PATH="${control_repo_path}/ansible/roles"
+role_paths=(
+  "${control_repo_path}/ansible/roles"
+)
+
+if [[ -d "${PWD}/ansible/roles" ]]; then
+  role_paths+=("${PWD}/ansible/roles")
+fi
+
+if [[ -d "${PWD}/deploy/ansible/roles" ]]; then
+  role_paths+=("${PWD}/deploy/ansible/roles")
+fi
+
+export ANSIBLE_ROLES_PATH="$(IFS=:; echo "${role_paths[*]}")"
 
 cleanup() {
   rm -f "${merged_vars_file}"

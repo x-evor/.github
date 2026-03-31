@@ -1,0 +1,11 @@
+stunnel_client_release_root: /opt/cloud-neutral/stunnel-client
+stunnel_client_conf_dir: "{{ stunnel_client_release_root }}/conf"
+stunnel_client_compose_file: "{{ stunnel_client_release_root }}/docker-compose.yml"
+stunnel_client_image: "{{ service_image_ref }}"
+stunnel_client_container_name: cn-toolkit-stunnel-client-global
+stunnel_client_accept_port: 15432
+stunnel_client_remote_host: "{{ lookup('ansible.builtin.env', 'POSTGRES_STUNNEL_REMOTE_HOST') | default('postgresql-contabo.svc.plus', true) }}"
+stunnel_client_remote_port: "{{ lookup('ansible.builtin.env', 'POSTGRES_STUNNEL_REMOTE_PORT') | default('5443', true) }}"
+stunnel_client_verify_mode: "{{ lookup('ansible.builtin.env', 'POSTGRES_STUNNEL_VERIFY') | default('2', true) }}"
+stunnel_client_shared_network_name: cn-toolkit-shared
+

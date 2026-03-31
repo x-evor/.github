@@ -1,0 +1,15 @@
+{{ apisix_release_domains | join(", ") }} {
+  handle /healthz {
+    respond "ok" 200
+  }
+
+  reverse_proxy 127.0.0.1:{{ apisix_release_http_port }} {
+    header_up Host {{ apisix_public_host }}
+  }
+
+  header {
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "no-referrer"
+  }
+}

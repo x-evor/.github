@@ -1,0 +1,19 @@
+foreground = yes
+debug = 5
+
+[postgres-tls-server]
+client = no
+accept = 0.0.0.0:5433
+connect = {{ stunnel_server_upstream_host }}:{{ stunnel_server_upstream_port }}
+cert = /etc/stunnel/certs/server-cert.pem
+key = /etc/stunnel/certs/server-key.pem
+sslVersionMin = TLSv1.2
+options = NO_SSLv2
+options = NO_SSLv3
+socket = l:TCP_NODELAY=1
+socket = r:TCP_NODELAY=1
+socket = l:SO_KEEPALIVE=1
+socket = r:SO_KEEPALIVE=1
+TIMEOUTclose = 0
+TIMEOUTidle = 43200
+

@@ -1,0 +1,7 @@
+service: console
+track: prod
+enabled: true
+stable_domain: console.svc.plus
+release_prefix: console
+host_port: 18083
+

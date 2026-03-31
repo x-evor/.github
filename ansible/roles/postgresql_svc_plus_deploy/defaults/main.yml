@@ -1,0 +1,13 @@
+postgresql_release_root: /opt/cloud-neutral/postgresql
+postgresql_release_data_dir: "{{ postgresql_release_root }}/data"
+postgresql_release_conf_dir: "{{ postgresql_release_root }}/conf"
+postgresql_release_compose_file: "{{ postgresql_release_root }}/docker-compose.yml"
+postgresql_release_image: "{{ service_image_ref }}"
+postgresql_release_container_name: cn-toolkit-postgresql
+postgresql_release_local_port: 15432
+postgresql_release_caddy_conf_dir: /etc/caddy/conf.d
+postgresql_release_domains: "{{ service_release_domains | default([service_public_domain, service_release_domain]) | reject('equalto', '') | list }}"
+postgresql_release_user: "{{ lookup('ansible.builtin.env', 'POSTGRES_USER') | default('postgres', true) }}"
+postgresql_release_password: "{{ lookup('ansible.builtin.env', 'POSTGRESQL_SUPERUSER_PASSWORD') | default('', true) }}"
+postgresql_release_database: "{{ lookup('ansible.builtin.env', 'POSTGRES_DB') | default('postgres', true) }}"
+

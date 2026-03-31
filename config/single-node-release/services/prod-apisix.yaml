@@ -1,0 +1,6 @@
+service: apisix
+track: prod
+enabled: true
+stable_domain: api.svc.plus
+release_prefix: api
+

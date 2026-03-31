@@ -1,0 +1,6 @@
+agent_id: "jp-xhttp-contabo.svc.plus"
+agent_controller_url: "https://accounts.svc.plus"
+xray_enabled: true
+xray_sync_interval: "5m"
+UUID: "{{ lookup('ansible.builtin.env', 'AGENT_XRAY_UUID') | default('00000000-0000-0000-0000-000000000000', true) }}"
+agent_log_level: "info"

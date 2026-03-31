@@ -1,0 +1,6 @@
+service: stunnel-server
+track: prod
+enabled: true
+stable_domain: ""
+release_prefix: stunnel-server
+

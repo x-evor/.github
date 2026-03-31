@@ -1,0 +1,11 @@
+apisix_release_root: /opt/cloud-neutral/apisix
+apisix_release_http_port: 19080
+apisix_release_container_name: cn-toolkit-apisix
+apisix_release_caddy_conf_dir: /etc/caddy/conf.d
+apisix_release_conf_dir: "{{ apisix_release_root }}/conf"
+apisix_release_compose_file: "{{ apisix_release_root }}/docker-compose.yml"
+apisix_release_env_file: "{{ apisix_release_root }}/.env"
+apisix_release_image: "{{ service_image_ref }}"
+apisix_release_domains: "{{ service_release_domains | default([service_public_domain, service_release_domain]) | reject('equalto', '') | list }}"
+apisix_example_root: "{{ role_path }}/../../../openclaw-deploy-example/deploy/apisix/example/vps"
+apisix_public_host: "{{ service_public_domain | default('api.svc.plus', true) }}"

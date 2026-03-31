@@ -11,8 +11,8 @@ shift
 
 case "${stage}" in
   stage1)
-    if [[ $# -ne 6 ]]; then
-      echo "usage: $0 stage1 <service> <track> <repo> <image> <release-domain> <stable-domain>" >&2
+    if [[ $# -ne 8 ]]; then
+      echo "usage: $0 stage1 <service> <track> <repo> <artifact-mode> <release-version> <image> <release-domain> <stable-domain>" >&2
       exit 1
     fi
     {
@@ -20,14 +20,16 @@ case "${stage}" in
       echo "- service: \`$1\`"
       echo "- track: \`$2\`"
       echo "- repo: \`$3\`"
-      echo "- image: \`$4\`"
-      echo "- release domain: \`$5\`"
-      echo "- stable domain: \`$6\`"
+      echo "- artifact mode: \`$4\`"
+      echo "- release version: \`$5\`"
+      echo "- image: \`$6\`"
+      echo "- release domain: \`$7\`"
+      echo "- stable domain: \`$8\`"
     } >> "${GITHUB_STEP_SUMMARY}"
     ;;
   stage2)
-    if [[ $# -ne 3 ]]; then
-      echo "usage: $0 stage2 <track> <release-domain> <deploy-server-alias>" >&2
+    if [[ $# -ne 4 ]]; then
+      echo "usage: $0 stage2 <track> <release-domain> <deploy-server-alias> <result>" >&2
       exit 1
     fi
     {
@@ -35,6 +37,7 @@ case "${stage}" in
       echo "- track: \`$1\`"
       echo "- updated release DNS: \`$2\`"
       echo "- cname target: \`$3\`"
+      echo "- result: \`$4\`"
     } >> "${GITHUB_STEP_SUMMARY}"
     ;;
   stage3)

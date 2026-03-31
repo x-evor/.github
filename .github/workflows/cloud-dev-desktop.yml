@@ -3,8 +3,16 @@ name: Cloud Dev Desktop
 on:
   workflow_dispatch:
     inputs:
+      workflow_mode:
+        description: "Workflow mode"
+        required: true
+        default: lifecycle
+        type: choice
+        options:
+          - lifecycle
+          - parity-release
       action:
-        description: "Lifecycle action"
+        description: "Lifecycle or parity action"
         required: true
         default: create
         type: choice
@@ -14,6 +22,10 @@ on:
           - verify
           - destroy
           - cleanup-expired
+          - provision
+          - brief
+          - status
+          - park
       provider:
         description: "Cloud provider"
         required: true
@@ -27,6 +39,26 @@ on:
         required: false
         default: ansible/vars/cloud_dev_desktop.request.example.yml
         type: string
+      manifest_file:
+        description: "Repo-relative parity manifest"
+        required: false
+        default: ansible/vars/cloud_dev_desktop.parity_release.example.yml
+        type: string
+      windows_request_file:
+        description: "Repo-relative Windows request YAML"
+        required: false
+        default: ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml
+        type: string
+      fedora_request_file:
+        description: "Repo-relative Fedora GNOME request YAML"
+        required: false
+        default: ansible/vars/cloud_dev_desktop.gcp.fedora-gnome.example.yml
+        type: string
+      kde_request_file:
+        description: "Repo-relative Ubuntu KDE request YAML"
+        required: false
+        default: ansible/vars/cloud_dev_desktop.gcp.ubuntu-kde.example.yml
+        type: string
       dry_run:
         description: "Run in Ansible check mode"
         required: true
@@ -39,7 +71,7 @@ permissions:
 
 jobs:
   cloud-dev-desktop:
-    name: "${{ inputs.action }} (${{ inputs.provider }})"
+    name: "${{ inputs.workflow_mode }} / ${{ inputs.action }}"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout control repo
@@ -57,32 +89,32 @@ jobs:
         run: bash scripts/github-actions/install-python-tools.sh ansible
 
       - name: Azure login
-        if: ${{ inputs.provider == 'azure' && secrets.AZURE_CREDENTIALS_JSON != '' }}
+        if: ${{ ((inputs.workflow_mode == 'lifecycle' && inputs.provider == 'azure') || inputs.workflow_mode == 'parity-release') && secrets.AZURE_CREDENTIALS_JSON != '' }}
         uses: azure/login@v2
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS_JSON }}
 
       - name: Select Azure subscription
-        if: ${{ inputs.provider == 'azure' && secrets.AZURE_CREDENTIALS_JSON != '' && (vars.AZURE_SUBSCRIPTION_ID != '' || secrets.AZURE_SUBSCRIPTION_ID != '') }}
+        if: ${{ ((inputs.workflow_mode == 'lifecycle' && inputs.provider == 'azure') || inputs.workflow_mode == 'parity-release') && secrets.AZURE_CREDENTIALS_JSON != '' && (vars.AZURE_SUBSCRIPTION_ID != '' || secrets.AZURE_SUBSCRIPTION_ID != '') }}
         shell: bash
         run: az account set --subscription "${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}"
 
       - name: Authenticate to GCP
-        if: ${{ inputs.provider == 'gcp' && secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
+        if: ${{ ((inputs.workflow_mode == 'lifecycle' && inputs.provider == 'gcp') || inputs.workflow_mode == 'parity-release') && secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_JSON }}
 
       - name: Set up gcloud
-        if: ${{ inputs.provider == 'gcp' && secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
+        if: ${{ ((inputs.workflow_mode == 'lifecycle' && inputs.provider == 'gcp') || inputs.workflow_mode == 'parity-release') && secrets.GCP_SERVICE_ACCOUNT_JSON != '' }}
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Select GCP project
-        if: ${{ inputs.provider == 'gcp' && secrets.GCP_SERVICE_ACCOUNT_JSON != '' && (vars.GCP_PROJECT_ID != '' || secrets.GCP_PROJECT_ID != '') }}
+        if: ${{ ((inputs.workflow_mode == 'lifecycle' && inputs.provider == 'gcp') || inputs.workflow_mode == 'parity-release') && secrets.GCP_SERVICE_ACCOUNT_JSON != '' && (vars.GCP_PROJECT_ID != '' || secrets.GCP_PROJECT_ID != '') }}
         shell: bash
         run: gcloud config set project "${{ vars.GCP_PROJECT_ID || secrets.GCP_PROJECT_ID }}"
 
-      - name: Run lifecycle wrapper
+      - name: Run desktop workflow
         shell: bash
         env:
           AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID || secrets.AZURE_SUBSCRIPTION_ID }}
@@ -92,15 +124,49 @@ jobs:
           CLOUD_DEV_DESKTOP_WINDOWS_PASSWORD: ${{ secrets.CLOUD_DEV_DESKTOP_WINDOWS_PASSWORD }}
         run: |
           set -euo pipefail
+          if [[ "${{ inputs.workflow_mode }}" == "parity-release" ]]; then
+            case "${{ inputs.action }}" in
+              provision|brief|status|park|destroy)
+                args=(
+                  --action "${{ inputs.action }}"
+                  --manifest "${{ inputs.manifest_file }}"
+                  --windows-request "${{ inputs.windows_request_file }}"
+                  --fedora-request "${{ inputs.fedora_request_file }}"
+                  --kde-request "${{ inputs.kde_request_file }}"
+                )
+                if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+                  args+=(--dry-run)
+                fi
+                bash scripts/cloud-dev-desktop/parity-release.sh "${args[@]}"
+                ;;
+              *)
+                echo "Unsupported parity-release action: ${{ inputs.action }}" >&2
+                exit 1
+                ;;
+            esac
+            exit 0
+          fi
+
           suffix=""
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             suffix="--dry-run"
           fi
+
           case "${{ inputs.action }}" in
             create) bash scripts/cloud-dev-desktop/create.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
             bootstrap) bash scripts/cloud-dev-desktop/bootstrap.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
             verify) bash scripts/cloud-dev-desktop/verify.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
             destroy) bash scripts/cloud-dev-desktop/destroy.sh --provider "${{ inputs.provider }}" --request "${{ inputs.request_file }}" ${suffix} ;;
             cleanup-expired) bash scripts/cloud-dev-desktop/cleanup-expired.sh --provider "${{ inputs.provider }}" ${suffix} ;;
-            *) echo "Unsupported action"; exit 1 ;;
+            *)
+              echo "Unsupported lifecycle action: ${{ inputs.action }}" >&2
+              exit 1
+              ;;
           esac
+
+      - name: Upload parity release brief
+        if: ${{ inputs.workflow_mode == 'parity-release' && (inputs.action == 'provision' || inputs.action == 'brief' || inputs.action == 'status') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: parity-release-brief
+          path: .ansible/cloud-dev-desktop/runtime/parity-release-brief.md

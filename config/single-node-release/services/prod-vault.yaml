@@ -1,0 +1,6 @@
+service: vault
+track: prod
+enabled: true
+stable_domain: vault.svc.plus
+release_prefix: vault
+

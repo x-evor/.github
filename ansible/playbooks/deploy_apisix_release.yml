@@ -1,0 +1,6 @@
+- name: Deploy APISIX release
+  hosts: server
+  become: true
+  gather_facts: true
+  roles:
+    - role: apisix_release_deploy

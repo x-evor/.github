@@ -1,0 +1,6 @@
+service: agent-svc-plus
+track: prod
+enabled: true
+stable_domain: jp-xhttp-contabo.svc.plus
+release_prefix: agent
+

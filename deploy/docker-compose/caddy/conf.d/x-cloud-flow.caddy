@@ -1,0 +1,4 @@
+x-cloud-flow-contabo-458f542.caddy {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:18087
+}

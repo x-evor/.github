@@ -1,0 +1,4 @@
+postgresql-17-contabo.svc.plus {
+  encode zstd gzip
+  respond "postgresql tls tunnel endpoint" 200
+}

@@ -1,0 +1,63 @@
+observability.svc.plus {
+  encode zstd gzip
+
+  handle_path /ingest/* {
+    reverse_proxy 127.0.0.1:18090
+  }
+
+  handle_path /grafana/* {
+    reverse_proxy 127.0.0.1:18091
+  }
+
+  handle_path /vmetrics/* {
+    reverse_proxy 127.0.0.1:18092
+  }
+
+  handle_path /vlogs/* {
+    reverse_proxy 127.0.0.1:18093
+  }
+
+  handle_path /vtraces/* {
+    reverse_proxy 127.0.0.1:18094
+  }
+
+  handle_path /vmalert/* {
+    reverse_proxy 127.0.0.1:18095
+  }
+
+  handle_path /alertmgr/* {
+    reverse_proxy 127.0.0.1:18096
+  }
+
+  handle_path /blackbox/* {
+    reverse_proxy 127.0.0.1:18097
+  }
+
+  handle_path /code/* {
+    reverse_proxy 127.0.0.1:18098
+  }
+
+  handle_path /jupyter/* {
+    reverse_proxy 127.0.0.1:18099
+  }
+
+  handle_path /haproxy/pg-meta-1/* {
+    reverse_proxy 127.0.0.1:18100
+  }
+
+  handle_path /nginx {
+    reverse_proxy 127.0.0.1:18101
+  }
+
+  handle_path /www {
+    reverse_proxy 127.0.0.1:18102
+  }
+
+  handle_path /zh {
+    reverse_proxy 127.0.0.1:18103
+  }
+
+  handle_path /pev {
+    reverse_proxy 127.0.0.1:18104
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "mode": "gateway",
+  "browser": {
+    "defaultProfile": "openclaw",
+    "cdpUrl": "http://127.0.0.1:18792"
+  },
+  "agents": {
+    "defaults": {
+      "workspace": "/home/node/.openclaw/workspace"
+    }
+  },
+  "providers": {
+    "openai": {
+      "baseUrl": "https://api.svc.plus/v1"
+    }
+  }
+}

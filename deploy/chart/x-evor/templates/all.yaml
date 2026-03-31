@@ -1,0 +1,938 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-caddyfile
+  labels:
+    {{- include "x-evor.labels" . | nindent 4 }}
+data:
+  Caddyfile: |
+    {
+      admin off
+    }
+
+    {{ .Values.global.domain }} {
+      encode zstd gzip
+      @grpc path /split/*
+      handle @grpc {
+        reverse_proxy {{ include "x-evor.fullname" . }}-xray:8080
+      }
+      respond "Agent Service Plus Node"
+    }
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-caddy-sites
+  labels:
+    {{- include "x-evor.labels" . | nindent 4 }}
+data:
+  accounts.caddy: |
+    {{ .Values.global.accountsDomain }}, {{ .Values.global.secondaryAccountsDomain }} {
+      encode zstd gzip
+      reverse_proxy {{ include "x-evor.fullname" . }}-apisix:9080
+    }
+  api.caddy: |
+    {{ .Values.global.apiDomain }} {
+      encode zstd gzip
+      header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+      }
+      reverse_proxy {{ include "x-evor.fullname" . }}-apisix:9080
+    }
+  console.caddy: |
+    {{ .Values.global.consoleDomain }}, {{ .Values.global.secondaryConsoleDomain }} {
+      encode zstd gzip
+      reverse_proxy {{ include "x-evor.fullname" . }}-console:3000
+    }
+  vault.caddy: |
+    {{ .Values.global.vaultDomain }} {
+      encode zstd gzip
+      header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+      }
+      reverse_proxy {{ include "x-evor.fullname" . }}-vault:8200
+    }
+  openclaw.caddy: |
+    {{ .Values.global.openclawDomain }} {
+      encode zstd gzip
+      reverse_proxy {{ include "x-evor.fullname" . }}-openclaw:18789
+    }
+  docs.caddy: |
+    docs.svc.plus {
+      encode zstd gzip
+      reverse_proxy 127.0.0.1:18083
+    }
+  observability.caddy: |
+    observability.svc.plus {
+      encode zstd gzip
+      handle_path /grafana/* { reverse_proxy 127.0.0.1:18091 }
+      handle_path /vmetrics/* { reverse_proxy 127.0.0.1:18092 }
+      handle_path /vlogs/* { reverse_proxy 127.0.0.1:18093 }
+      handle_path /vtraces/* { reverse_proxy 127.0.0.1:18094 }
+      handle_path /vmalert/* { reverse_proxy 127.0.0.1:18095 }
+      handle_path /alertmgr/* { reverse_proxy 127.0.0.1:18096 }
+      handle_path /blackbox/* { reverse_proxy 127.0.0.1:18097 }
+      handle_path /code/* { reverse_proxy 127.0.0.1:18098 }
+      handle_path /jupyter/* { reverse_proxy 127.0.0.1:18099 }
+      handle_path /haproxy/pg-meta-1/* { reverse_proxy 127.0.0.1:18100 }
+      handle_path /nginx { reverse_proxy 127.0.0.1:18101 }
+      handle_path /www { reverse_proxy 127.0.0.1:18102 }
+      handle_path /zh { reverse_proxy 127.0.0.1:18103 }
+      handle_path /pev { reverse_proxy 127.0.0.1:18104 }
+    }
+  postgresql.caddy: |
+    postgresql-17-contabo.svc.plus {
+      encode zstd gzip
+      respond "postgresql tls tunnel endpoint" 200
+    }
+  x-cloud-flow.caddy: |
+    x-cloud-flow-contabo-458f542.caddy {
+      encode zstd gzip
+      reverse_proxy 127.0.0.1:18087
+    }
+  x-ops-agent.caddy: |
+    x-ops-agent-contabo-7499c4b.caddy {
+      encode zstd gzip
+      reverse_proxy 127.0.0.1:18086
+    }
+  x-scope-hub.caddy: |
+    x-scope-hub-contabo-9a1a482.caddy {
+      encode zstd gzip
+      reverse_proxy 127.0.0.1:18085
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-caddy
+spec:
+  replicas: {{ .Values.resources.caddy.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-caddy
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-caddy
+        {{- include "x-evor.labels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: caddy
+          image: {{ .Values.images.caddy }}
+          ports:
+            - containerPort: 80
+            - containerPort: 443
+          volumeMounts:
+            - name: caddyfile
+              mountPath: /etc/caddy/Caddyfile
+              subPath: Caddyfile
+            - name: caddy-sites
+              mountPath: /etc/caddy/conf.d
+            - name: xray-socket
+              mountPath: /dev/shm
+      volumes:
+        - name: caddyfile
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-caddyfile
+        - name: caddy-sites
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-caddy-sites
+        - name: xray-socket
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-caddy
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-caddy
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+    - name: https
+      port: 443
+      targetPort: 443
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-apisix-config
+data:
+  config.yaml: |
+    deployment:
+      role: data_plane
+      role_data_plane:
+        config_provider: yaml
+    apisix:
+      node_listen: 9080
+      enable_admin: true
+      admin_listen:
+        port: 9180
+      allow_admin:
+        - 0.0.0.0/0
+    nginx_config:
+      error_log_level: warn
+  apisix.yaml: |
+    routes:
+      - id: 1
+        uri: "/*"
+        hosts: [{{ .Values.global.accountsDomain | quote }}]
+        name: stable-accounts
+        upstream:
+          type: roundrobin
+          nodes:
+            "{{ include "x-evor.fullname" . }}-account:8080": 1
+      - id: 2
+        uri: "/*"
+        hosts: [{{ .Values.global.secondaryAccountsDomain | quote }}]
+        name: preview-accounts
+        upstream:
+          type: roundrobin
+          nodes:
+            "{{ include "x-evor.fullname" . }}-account:8080": 1
+      - id: 3
+        uri: "/*"
+        hosts: [{{ .Values.global.ragDomain | quote }}]
+        name: stable-rag-server
+        upstream:
+          type: roundrobin
+          nodes:
+            "{{ include "x-evor.fullname" . }}-rag-server:8080": 1
+      - id: 4
+        uri: "/*"
+        hosts: [{{ .Values.global.apiDomain | quote }}]
+        name: api-gateway
+        upstream:
+          type: roundrobin
+          nodes:
+            "{{ include "x-evor.fullname" . }}-account:8080": 1
+      #END
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-apisix
+spec:
+  replicas: {{ .Values.resources.apisix.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-apisix
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-apisix
+    spec:
+      containers:
+        - name: apisix
+          image: {{ .Values.images.apisix }}
+          env:
+            - name: APISIX_STAND_ALONE
+              value: "true"
+          ports:
+            - containerPort: 9080
+            - containerPort: 9180
+          command:
+            - /bin/sh
+            - -lc
+            - |
+              cp /opt/apisix-bootstrap/config.yaml /usr/local/apisix/conf/config.yaml &&
+              cp /opt/apisix-bootstrap/apisix.yaml /usr/local/apisix/conf/apisix.yaml &&
+              exec /docker-entrypoint.sh docker-start
+          volumeMounts:
+            - name: apisix-config
+              mountPath: /opt/apisix-bootstrap
+      volumes:
+        - name: apisix-config
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-apisix-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-apisix
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-apisix
+  ports:
+    - name: http
+      port: 9080
+      targetPort: 9080
+    - name: admin
+      port: 9180
+      targetPort: 9180
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-vault-config
+data:
+  vault.hcl: |
+    ui = true
+    disable_mlock = true
+    api_addr = "https://{{ .Values.global.vaultDomain }}"
+    cluster_addr = "http://vault:8201"
+    storage "raft" {
+      path = "/opt/vault/data"
+      node_id = "vault-1"
+    }
+    listener "tcp" {
+      address = "0.0.0.0:8200"
+      cluster_address = "0.0.0.0:8201"
+      tls_disable = true
+    }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "x-evor.fullname" . }}-vault
+spec:
+  serviceName: {{ include "x-evor.fullname" . }}-vault
+  replicas: {{ .Values.resources.vault.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-vault
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-vault
+    spec:
+      containers:
+        - name: vault
+          image: {{ .Values.images.vault }}
+          securityContext:
+            capabilities:
+              add: ["IPC_LOCK"]
+          command: ["server","-config=/vault/config/vault.hcl"]
+          ports:
+            - containerPort: 8200
+            - containerPort: 8201
+          volumeMounts:
+            - name: vault-config
+              mountPath: /vault/config/vault.hcl
+              subPath: vault.hcl
+            - name: vault-data
+              mountPath: /opt/vault/data
+      volumes:
+        - name: vault-config
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-vault-config
+  volumeClaimTemplates:
+    - metadata:
+        name: vault-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-vault
+  ports:
+    - name: api
+      port: 8200
+      targetPort: 8200
+    - name: cluster
+      port: 8201
+      targetPort: 8201
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-console-env
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  APP_BASE_URL: https://{{ .Values.global.consoleDomain }}
+  NEXT_PUBLIC_APP_BASE_URL: https://{{ .Values.global.consoleDomain }}
+  NEXT_PUBLIC_SITE_URL: https://{{ .Values.global.consoleDomain }}
+  ACCOUNT_SERVICE_URL: https://{{ .Values.global.accountsDomain }}
+  NEXT_PUBLIC_ACCOUNT_SERVICE_URL: https://{{ .Values.global.accountsDomain }}
+  SERVER_SERVICE_URL: https://{{ .Values.global.apiDomain }}
+  NEXT_PUBLIC_SERVER_SERVICE_URL: https://{{ .Values.global.apiDomain }}
+  OPENCLAW_GATEWAY_REMOTE_URL: https://{{ .Values.global.openclawDomain }}
+  OPENCLAW_GATEWAY_TOKEN: {{ .Values.global.openclawGatewayToken | quote }}
+  VAULT_SERVER_URL: https://{{ .Values.global.vaultDomain }}
+  INTERNAL_SERVICE_TOKEN: {{ .Values.global.internalServiceToken | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-console
+spec:
+  replicas: {{ .Values.resources.console.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-console
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-console
+    spec:
+      containers:
+        - name: console
+          image: {{ .Values.images.console }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "x-evor.fullname" . }}-console-env
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-console
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-console
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "x-evor.fullname" . }}-openclaw
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-openclaw-env
+data:
+  HOME: /home/node
+  TERM: xterm-256color
+  OPENCLAW_GATEWAY_TOKEN: {{ .Values.global.openclawGatewayToken | quote }}
+  OPENCLAW_ALLOW_INSECURE_PRIVATE_WS: ""
+  OPENCLAW_GATEWAY_BIND: lan
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-openclaw
+spec:
+  replicas: {{ .Values.resources.openclaw.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-openclaw
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-openclaw
+    spec:
+      containers:
+        - name: openclaw
+          image: {{ .Values.images.openclaw }}
+          envFrom:
+            - configMapRef:
+                name: {{ include "x-evor.fullname" . }}-openclaw-env
+          command: ["node","dist/index.js","gateway","--bind","lan","--port","18789"]
+          ports:
+            - containerPort: 18789
+            - containerPort: 18790
+          volumeMounts:
+            - name: openclaw-state
+              mountPath: /home/node/.openclaw
+      volumes:
+        - name: openclaw-state
+          persistentVolumeClaim:
+            claimName: {{ include "x-evor.fullname" . }}-openclaw
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-openclaw
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-openclaw
+  ports:
+    - name: gateway
+      port: 18789
+      targetPort: 18789
+    - name: bridge
+      port: 18790
+      targetPort: 18790
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-account-agent
+data:
+  account-agent.yaml: |
+    mode: "agent"
+    log:
+      level: info
+    agent:
+      id: "{{ .Values.global.domain }}"
+      controllerUrl: "https://{{ .Values.global.accountsDomain }}"
+      apiToken: "{{ .Values.global.agentApiToken }}"
+      httpTimeout: 15s
+      statusInterval: 1m
+      syncInterval: 5m
+      tls:
+        insecureSkipVerify: false
+    xray:
+      sync:
+        enabled: true
+        interval: 5m
+        targets:
+          - name: "xhttp"
+            outputPath: "/usr/local/etc/xray/config.json"
+            templatePath: "/etc/agent/config/xray.xhttp.template.json"
+            validateCommand: []
+            restartCommand: []
+          - name: "tcp"
+            outputPath: "/usr/local/etc/xray/tcp-config.json"
+            templatePath: "/etc/agent/config/xray.tcp.template.json"
+            validateCommand: []
+            restartCommand: []
+  xray.xhttp.template.json: |
+    { "log": { "loglevel": "debug" }, "inbounds": [ { "listen": "0.0.0.0", "port": 8080, "protocol": "vless", "settings": { "clients": [ { "id": "{{ .Values.global.xrayUuid }}" } ], "decryption": "none" }, "streamSettings": { "network": "xhttp", "xhttpSettings": { "mode": "auto", "path": "/split" } } } ], "outbounds": [ { "tag": "direct", "protocol": "freedom", "settings": {} }, { "tag": "blocked", "protocol": "blackhole", "settings": {} } ], "routing": { "domainStrategy": "AsIs", "rules": [ { "type": "field", "ip": [ "geoip:private" ], "outboundTag": "blocked" } ] } }
+  xray.tcp.template.json: |
+    { "log": { "loglevel": "warning" }, "routing": { "domainStrategy": "IPIfNonMatch", "rules": [ { "type": "field", "ip": [ "geoip:cn" ], "outboundTag": "block" } ] }, "inbounds": [ { "listen": "0.0.0.0", "port": 1443, "protocol": "vless", "settings": { "clients": [ { "id": "{{ .Values.global.xrayUuid }}", "flow": "xtls-rprx-vision" } ], "decryption": "none", "fallbacks": [ { "dest": "8001", "xver": 1 }, { "alpn": "h2", "dest": "8002", "xver": 1 } ] }, "streamSettings": { "network": "tcp", "security": "tls", "tlsSettings": { "rejectUnknownSni": true, "minVersion": "1.2", "certificates": [ { "ocspStapling": 3600, "certificateFile": "/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/{{ .Values.global.domain }}/{{ .Values.global.domain }}.crt", "keyFile": "/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/{{ .Values.global.domain }}/{{ .Values.global.domain }}.key" } ] } }, "sniffing": { "enabled": true, "destOverride": [ "http", "tls" ] } } ], "outbounds": [ { "protocol": "freedom", "tag": "direct" }, { "protocol": "blackhole", "tag": "block" } ], "policy": { "levels": { "0": { "handshake": 2, "connIdle": 120 } } } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-agent
+spec:
+  replicas: {{ .Values.resources.agent.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-agent
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-agent
+    spec:
+      containers:
+        - name: agent
+          image: {{ .Values.images.agent }}
+          command: ["/app/agent-svc-plus","-config","/etc/agent/account-agent.yaml"]
+          env:
+            - name: AGENT_ID
+              value: {{ .Values.global.domain | quote }}
+            - name: AGENT_CONTROLLER_URL
+              value: {{ printf "https://%s" .Values.global.accountsDomain | quote }}
+            - name: AGENT_API_TOKEN
+              value: {{ .Values.global.agentApiToken | quote }}
+            - name: INTERNAL_SERVICE_TOKEN
+              value: {{ .Values.global.internalServiceToken | quote }}
+          volumeMounts:
+            - name: agent-config
+              mountPath: /etc/agent
+            - name: agent-xray
+              mountPath: /usr/local/etc/xray
+      volumes:
+        - name: agent-config
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-account-agent
+        - name: agent-xray
+          emptyDir: {}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-xray-config
+data:
+  config.json: |
+    { "log": { "loglevel": "debug" }, "inbounds": [ { "listen": "/dev/shm/xray.sock,0666", "protocol": "vless", "settings": { "clients": [ { "id": "{{ .Values.global.xrayUuid }}" } ], "decryption": "none" }, "streamSettings": { "network": "xhttp", "xhttpSettings": { "mode": "auto", "path": "/split" } } } ], "outbounds": [ { "tag": "direct", "protocol": "freedom", "settings": {} }, { "tag": "blocked", "protocol": "blackhole", "settings": {} } ], "routing": { "domainStrategy": "AsIs", "rules": [ { "type": "field", "ip": [ "geoip:private" ], "outboundTag": "blocked" } ] } }
+  tcp-config.json: |
+    { "log": { "loglevel": "warning" }, "routing": { "domainStrategy": "IPIfNonMatch", "rules": [ { "type": "field", "ip": [ "geoip:cn" ], "outboundTag": "block" } ] }, "inbounds": [ { "listen": "0.0.0.0", "port": 1443, "protocol": "vless", "settings": { "clients": [ { "id": "{{ .Values.global.xrayUuid }}", "flow": "xtls-rprx-vision" } ], "decryption": "none", "fallbacks": [ { "dest": "8001", "xver": 1 }, { "alpn": "h2", "dest": "8002", "xver": 1 } ] }, "streamSettings": { "network": "tcp", "security": "tls", "tlsSettings": { "rejectUnknownSni": true, "minVersion": "1.2", "certificates": [ { "ocspStapling": 3600, "certificateFile": "/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/{{ .Values.global.domain }}/{{ .Values.global.domain }}.crt", "keyFile": "/var/lib/caddy/.local/share/caddy/certificates/acme-v02.api.letsencrypt.org-directory/{{ .Values.global.domain }}/{{ .Values.global.domain }}.key" } ] } }, "sniffing": { "enabled": true, "destOverride": [ "http", "tls" ] } } ], "outbounds": [ { "protocol": "freedom", "tag": "direct" }, { "protocol": "blackhole", "tag": "block" } ], "policy": { "levels": { "0": { "handshake": 2, "connIdle": 120 } } } }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-xray
+spec:
+  replicas: {{ .Values.resources.xray.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-xray
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-xray
+    spec:
+      containers:
+        - name: xray
+          image: {{ .Values.images.xray }}
+          command: ["run","-config","/usr/local/etc/xray/config.json"]
+          ports:
+            - containerPort: 8080
+          volumeMounts:
+            - name: xray-config
+              mountPath: /usr/local/etc/xray
+      volumes:
+        - name: xray-config
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-xray-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-xray
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-xray
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-account
+spec:
+  replicas: {{ .Values.resources.account.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-account
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-account
+    spec:
+      containers:
+        - name: account
+          image: {{ .Values.images.account }}
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DB_HOST
+              value: "{{ include "x-evor.fullname" . }}-stunnel-client"
+            - name: DB_PORT
+              value: "15432"
+            - name: INTERNAL_SERVICE_TOKEN
+              value: {{ .Values.global.internalServiceToken | quote }}
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-account
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-account
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-rag-server
+spec:
+  replicas: {{ .Values.resources.ragServer.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-rag-server
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-rag-server
+    spec:
+      containers:
+        - name: rag-server
+          image: local/rag-server:8ca3e271
+          env:
+            - name: PORT
+              value: "8080"
+            - name: DB_HOST
+              value: "{{ include "x-evor.fullname" . }}-stunnel-client"
+            - name: DB_PORT
+              value: "15432"
+            - name: POSTGRES_DB
+              value: knowledge_db
+            - name: INTERNAL_SERVICE_TOKEN
+              value: {{ .Values.global.internalServiceToken | quote }}
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-rag-server
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-rag-server
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-stunnel-server
+spec:
+  replicas: {{ .Values.resources.stunnelServer.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-stunnel-server
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-stunnel-server
+    spec:
+      containers:
+        - name: stunnel-server
+          image: {{ .Values.images.stunnelServer }}
+          command: ["stunnel","/etc/stunnel/stunnel.conf"]
+          ports:
+            - containerPort: 5433
+          volumeMounts:
+            - name: stunnel-conf
+              mountPath: /etc/stunnel/stunnel.conf
+              subPath: stunnel.conf
+            - name: stunnel-cert
+              mountPath: /etc/stunnel/certs/server-cert.pem
+              subPath: server-cert.pem
+            - name: stunnel-key
+              mountPath: /etc/stunnel/certs/server-key.pem
+              subPath: server-key.pem
+      volumes:
+        - name: stunnel-conf
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-stunnel-server
+        - name: stunnel-cert
+          secret:
+            secretName: {{ include "x-evor.fullname" . }}-stunnel-server
+            items:
+              - key: server-cert.pem
+                path: server-cert.pem
+        - name: stunnel-key
+          secret:
+            secretName: {{ include "x-evor.fullname" . }}-stunnel-server
+            items:
+              - key: server-key.pem
+                path: server-key.pem
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "x-evor.fullname" . }}-stunnel-server
+type: Opaque
+stringData:
+  server-cert.pem: |
+{{ .Values.global.stunnelServerCertPem | indent 4 }}
+  server-key.pem: |
+{{ .Values.global.stunnelServerKeyPem | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-stunnel-server
+data:
+  stunnel.conf: |
+    foreground = yes
+    debug = 5
+    [postgres-tls-server]
+    client = no
+    accept = 0.0.0.0:5433
+    connect = {{ include "x-evor.fullname" . }}-postgresql:5432
+    cert = /etc/stunnel/certs/server-cert.pem
+    key = /etc/stunnel/certs/server-key.pem
+    sslVersionMin = TLSv1.2
+    options = NO_SSLv2
+    options = NO_SSLv3
+    socket = l:TCP_NODELAY=1
+    socket = r:TCP_NODELAY=1
+    socket = l:SO_KEEPALIVE=1
+    socket = r:SO_KEEPALIVE=1
+    TIMEOUTclose = 0
+    TIMEOUTidle = 43200
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-stunnel-server
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-stunnel-server
+  ports:
+    - name: tls
+      port: 5433
+      targetPort: 5433
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "x-evor.fullname" . }}-stunnel-client
+spec:
+  replicas: {{ .Values.resources.stunnelClient.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-stunnel-client
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-stunnel-client
+    spec:
+      containers:
+        - name: stunnel-client
+          image: {{ .Values.images.stunnelClient }}
+          env:
+            - name: STUNNEL_CLIENT
+              value: "yes"
+            - name: STUNNEL_SERVICE
+              value: postgres-client
+            - name: STUNNEL_ACCEPT
+              value: "15432"
+            - name: STUNNEL_CONNECT
+              value: "{{ include "x-evor.fullname" . }}-stunnel-server:5433"
+            - name: STUNNEL_VERIFY
+              value: "2"
+            - name: STUNNEL_VERIFY_CHAIN
+              value: "yes"
+          ports:
+            - containerPort: 15432
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-stunnel-client
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-stunnel-client
+  ports:
+    - name: postgres
+      port: 15432
+      targetPort: 15432
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "x-evor.fullname" . }}-postgresql
+data:
+  postgresql.conf: |
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 100
+    superuser_reserved_connections = 3
+    shared_buffers = 256MB
+    effective_cache_size = 1GB
+    maintenance_work_mem = 64MB
+    work_mem = 16MB
+    wal_buffers = 16MB
+    min_wal_size = 1GB
+    max_wal_size = 4GB
+    checkpoint_completion_target = 0.9
+    wal_compression = on
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+    default_statistics_target = 100
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_rotation_age = 1d
+    log_rotation_size = 100MB
+    log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
+    log_timezone = 'UTC'
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+    log_duration = off
+    log_lock_waits = on
+    log_statement = 'none'
+    log_temp_files = 0
+    log_min_duration_statement = 1000
+    datestyle = 'iso, mdy'
+    timezone = 'UTC'
+    lc_messages = 'en_US.utf8'
+    lc_monetary = 'en_US.utf8'
+    lc_numeric = 'en_US.utf8'
+    lc_time = 'en_US.utf8'
+    default_text_search_config = 'pg_catalog.english'
+  init.sql: |
+    CREATE EXTENSION IF NOT EXISTS vector;
+    CREATE EXTENSION IF NOT EXISTS pg_jieba;
+    CREATE EXTENSION IF NOT EXISTS pgmq;
+    CREATE EXTENSION IF NOT EXISTS pg_trgm;
+    CREATE EXTENSION IF NOT EXISTS hstore;
+    CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "x-evor.fullname" . }}-postgresql
+spec:
+  serviceName: {{ include "x-evor.fullname" . }}-postgresql
+  replicas: {{ .Values.resources.postgresql.replicas }}
+  selector:
+    matchLabels:
+      app: {{ include "x-evor.fullname" . }}-postgresql
+  template:
+    metadata:
+      labels:
+        app: {{ include "x-evor.fullname" . }}-postgresql
+    spec:
+      containers:
+        - name: postgres
+          image: {{ .Values.images.postgresql }}
+          env:
+            - name: POSTGRES_USER
+              value: postgres
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.global.postgresPassword | quote }}
+            - name: POSTGRES_DB
+              value: account
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          command: ["postgres","-c","config_file=/etc/postgresql/postgresql.conf"]
+          ports:
+            - containerPort: 5432
+          volumeMounts:
+            - name: postgresql-config
+              mountPath: /etc/postgresql/postgresql.conf
+              subPath: postgresql.conf
+            - name: postgresql-data
+              mountPath: /var/lib/postgresql/data
+            - name: postgresql-init
+              mountPath: /docker-entrypoint-initdb.d
+      volumes:
+        - name: postgresql-config
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-postgresql
+        - name: postgresql-init
+          configMap:
+            name: {{ include "x-evor.fullname" . }}-postgresql
+  volumeClaimTemplates:
+    - metadata:
+        name: postgresql-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "x-evor.fullname" . }}-postgresql
+spec:
+  selector:
+    app: {{ include "x-evor.fullname" . }}-postgresql
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

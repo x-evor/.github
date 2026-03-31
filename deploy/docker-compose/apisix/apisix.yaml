@@ -1,0 +1,42 @@
+routes:
+  - id: 1
+    uri: "/*"
+    hosts:
+      - accounts.svc.plus
+    name: stable-accounts
+    upstream:
+      type: roundrobin
+      nodes:
+        "account:8080": 1
+
+  - id: 2
+    uri: "/*"
+    hosts:
+      - preview-accounts.svc.plus
+    name: preview-accounts
+    upstream:
+      type: roundrobin
+      nodes:
+        "account:8080": 1
+
+  - id: 3
+    uri: "/*"
+    hosts:
+      - rag-server.svc.plus
+    name: stable-rag-server
+    upstream:
+      type: roundrobin
+      nodes:
+        "rag-server:8080": 1
+
+  - id: 4
+    uri: "/*"
+    hosts:
+      - api.svc.plus
+    name: api-gateway
+    upstream:
+      type: roundrobin
+      nodes:
+        "account:8080": 1
+
+#END

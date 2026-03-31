@@ -1,0 +1,4 @@
+x-scope-hub-contabo-9a1a482.caddy {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:18085
+}

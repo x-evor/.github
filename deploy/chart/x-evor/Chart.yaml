@@ -1,0 +1,43 @@
+apiVersion: v2
+name: x-evor
+description: Umbrella Helm chart for the Cloud Neutral Toolkit all-in-one stack
+type: application
+version: 0.1.0
+appVersion: "2026.04.01"
+dependencies:
+  - name: caddy
+    version: 0.1.0
+    repository: file://charts/caddy
+  - name: apisix
+    version: 0.1.0
+    repository: file://charts/apisix
+  - name: vault
+    version: 0.1.0
+    repository: file://charts/vault
+  - name: console
+    version: 0.1.0
+    repository: file://charts/console
+  - name: openclaw
+    version: 0.1.0
+    repository: file://charts/openclaw
+  - name: account
+    version: 0.1.0
+    repository: file://charts/account
+  - name: agent
+    version: 0.1.0
+    repository: file://charts/agent
+  - name: rag-server
+    version: 0.1.0
+    repository: file://charts/rag-server
+  - name: stunnel-server
+    version: 0.1.0
+    repository: file://charts/stunnel-server
+  - name: stunnel
+    version: 0.1.0
+    repository: file://charts/stunnel
+  - name: postgresql
+    version: 0.1.0
+    repository: file://charts/postgresql
+  - name: xray
+    version: 0.1.0
+    repository: file://charts/xray

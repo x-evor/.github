@@ -1,0 +1,60 @@
+global:
+  domain: jp-xhttp-contabo.svc.plus
+  consoleDomain: console.svc.plus
+  apiDomain: api.svc.plus
+  vaultDomain: vault.svc.plus
+  openclawDomain: openclaw.svc.plus
+  accountsDomain: accounts.svc.plus
+  ragDomain: rag-server.svc.plus
+  secondaryConsoleDomain: console-8fa9cd3-contabo.svc.plus
+  secondaryAccountsDomain: preview-accounts.svc.plus
+  xrayUuid: "00000000-0000-0000-0000-000000000000"
+  internalServiceToken: replace-me
+  agentApiToken: replace-me
+  openclawGatewayToken: replace-me
+  postgresPassword: replace-me
+  stunnelServerCertPem: |
+    -----BEGIN CERTIFICATE-----
+    REPLACE_WITH_REAL_SERVER_CERT
+    -----END CERTIFICATE-----
+  stunnelServerKeyPem: |
+    -----BEGIN PRIVATE KEY-----
+    REPLACE_WITH_REAL_SERVER_KEY
+    -----END PRIVATE KEY-----
+images:
+  caddy: caddy:2.10-alpine
+  apisix: apache/apisix:3.15.0-debian
+  vault: hashicorp/vault:1.21.3
+  console: ghcr.io/x-evor/console:8fa9cd3
+  openclaw: openclaw:local
+  account: ghcr.io/x-evor/accounts:11f12ba
+  agent: agent-svc-plus:local
+  xray: ghcr.io/xtls/xray-core:26.2.6
+  stunnelServer: ghcr.io/x-evor/stunnel-server:2330d36
+  stunnelClient: dweomer/stunnel:latest
+  postgresql: postgres-extensions:17
+resources:
+  caddy:
+    replicas: 1
+  apisix:
+    replicas: 1
+  vault:
+    replicas: 1
+  console:
+    replicas: 1
+  openclaw:
+    replicas: 1
+  account:
+    replicas: 1
+  ragServer:
+    replicas: 1
+  agent:
+    replicas: 1
+  xray:
+    replicas: 1
+  stunnelServer:
+    replicas: 1
+  stunnelClient:
+    replicas: 1
+  postgresql:
+    replicas: 1

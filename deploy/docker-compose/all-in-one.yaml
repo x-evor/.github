@@ -1,0 +1,244 @@
+services:
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: x-evor-caddy
+    restart: unless-stopped
+    depends_on:
+      - apisix
+      - console-assets
+      - console
+      - openclaw
+      - vault
+      - xray
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./caddy/conf.d:/etc/caddy/conf.d:ro
+      - ./console/static:/srv:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - xray_socket:/dev/shm
+
+  console-assets:
+    image: ghcr.io/x-evor/console:8fa9cd3
+    container_name: x-evor-console-assets
+    restart: "no"
+    command:
+      - /bin/sh
+      - -lc
+      - |
+        set -eu
+        rm -rf /assets/_next /assets/chunks /assets/public
+        mkdir -p /assets /assets/public
+        cp -R /app/dashboard/static/. /assets/
+        cp -R /app/dashboard/public/. /assets/public
+    volumes:
+      - ./console/static:/assets
+
+  console:
+    image: ghcr.io/x-evor/console:8fa9cd3
+    container_name: x-evor-console
+    restart: unless-stopped
+    env_file:
+      - ./console/app.env
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "127.0.0.1:18080:3000"
+    volumes:
+      - ./console/static:/app/dashboard/.next/static:ro
+
+  apisix:
+    image: apache/apisix:3.15.0-debian
+    container_name: x-evor-apisix
+    restart: unless-stopped
+    depends_on:
+      - account
+      - rag-server
+    environment:
+      APISIX_STAND_ALONE: "true"
+    ports:
+      - "127.0.0.1:9080:9080"
+      - "127.0.0.1:9180:9180"
+    entrypoint:
+      - /bin/sh
+      - -lc
+      - |
+        cp /opt/apisix-bootstrap/config.yaml /usr/local/apisix/conf/config.yaml &&
+        cp /opt/apisix-bootstrap/apisix.yaml /usr/local/apisix/conf/apisix.yaml &&
+        exec /docker-entrypoint.sh docker-start
+    volumes:
+      - ./apisix/config.yaml:/opt/apisix-bootstrap/config.yaml:ro
+      - ./apisix/apisix.yaml:/opt/apisix-bootstrap/apisix.yaml:ro
+
+  vault:
+    image: hashicorp/vault:1.21.3
+    container_name: x-evor-vault
+    restart: unless-stopped
+    cap_add:
+      - IPC_LOCK
+    command:
+      - server
+      - -config=/vault/config/vault.hcl
+    ports:
+      - "127.0.0.1:8200:8200"
+      - "127.0.0.1:8201:8201"
+    volumes:
+      - ./vault/vault.hcl:/vault/config/vault.hcl:ro
+      - vault_data:/opt/vault/data
+
+  openclaw:
+    image: ${OPENCLAW_IMAGE:-openclaw:local}
+    container_name: x-evor-openclaw
+    restart: unless-stopped
+    init: true
+    env_file:
+      - ./openclaw/openclaw.env
+    environment:
+      HOME: /home/node
+      TERM: xterm-256color
+    ports:
+      - "127.0.0.1:18789:18789"
+      - "127.0.0.1:18790:18790"
+    command:
+      [
+        "node",
+        "dist/index.js",
+        "gateway",
+        "--bind",
+        "${OPENCLAW_GATEWAY_BIND:-lan}",
+        "--port",
+        "18789",
+      ]
+    volumes:
+      - ./openclaw:/home/node/.openclaw
+
+  account:
+    image: ghcr.io/x-evor/accounts:11f12ba
+    container_name: x-evor-account
+    restart: unless-stopped
+    env_file:
+      - ./account/app.env
+    environment:
+      PORT: "8080"
+      DB_HOST: stunnel-client
+      DB_PORT: "15432"
+    depends_on:
+      - stunnel-client
+
+  rag-server:
+    image: local/rag-server:8ca3e271
+    container_name: x-evor-rag-server
+    restart: unless-stopped
+    env_file:
+      - ./rag-server/app.env
+    environment:
+      PORT: "8080"
+      DB_HOST: stunnel-client
+      DB_PORT: "15432"
+    depends_on:
+      - stunnel-client
+
+  agent:
+    build:
+      context: ../../agent.svc.plus
+      dockerfile: Dockerfile.xhttp
+    container_name: x-evor-agent
+    restart: unless-stopped
+    env_file:
+      - ./agent/agent.env
+    environment:
+      AGENT_CONFIG_PATH: /etc/agent/account-agent.yaml
+      AGENT_ID: ${AGENT_ID:-jp-xhttp-contabo.svc.plus}
+      AGENT_CONTROLLER_URL: ${AGENT_CONTROLLER_URL:-https://accounts.svc.plus}
+      AGENT_API_TOKEN: ${AGENT_API_TOKEN:-replace-me}
+      INTERNAL_SERVICE_TOKEN: ${INTERNAL_SERVICE_TOKEN:-replace-me}
+    volumes:
+      - ./agent:/etc/agent:ro
+      - ./xray:/usr/local/etc/xray
+
+  xray:
+    image: ghcr.io/xtls/xray-core:26.2.6
+    container_name: x-evor-xray
+    restart: unless-stopped
+    depends_on:
+      - agent
+    command:
+      - run
+      - -config
+      - /usr/local/etc/xray/config.json
+    volumes:
+      - ./xray:/usr/local/etc/xray
+      - xray_socket:/dev/shm
+
+  xray-tcp:
+    image: ghcr.io/xtls/xray-core:26.2.6
+    container_name: x-evor-xray-tcp
+    restart: unless-stopped
+    depends_on:
+      - agent
+    command:
+      - run
+      - -config
+      - /usr/local/etc/xray/tcp-config.json
+    ports:
+      - "127.0.0.1:1443:1443"
+    volumes:
+      - ./xray:/usr/local/etc/xray
+
+  stunnel-server:
+    image: ghcr.io/x-evor/stunnel-server:2330d36
+    container_name: x-evor-stunnel-server
+    restart: unless-stopped
+    ports:
+      - "5433:5433"
+    volumes:
+      - ./stunnel-server/stunnel.conf:/etc/stunnel/stunnel.conf:ro
+      - ./stunnel-server/certs/server-cert.pem:/etc/stunnel/certs/server-cert.pem:ro
+      - ./stunnel-server/certs/server-key.pem:/etc/stunnel/certs/server-key.pem:ro
+
+  stunnel-client:
+    image: dweomer/stunnel:latest
+    container_name: x-evor-stunnel-client
+    restart: unless-stopped
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - "127.0.0.1:15432:15432"
+    environment:
+      STUNNEL_CLIENT: "yes"
+      STUNNEL_SERVICE: postgres-client
+      STUNNEL_ACCEPT: "15432"
+      STUNNEL_CONNECT: host.docker.internal:5433
+      STUNNEL_VERIFY: "2"
+      STUNNEL_VERIFY_CHAIN: "yes"
+
+  postgresql:
+    image: postgres-extensions:17
+    container_name: x-evor-postgresql
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: account
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command:
+      - postgres
+      - -c
+      - config_file=/etc/postgresql/postgresql.conf
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgresql_data:/var/lib/postgresql/data
+      - ./postgresql/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgresql/init-scripts:/docker-entrypoint-initdb.d:ro
+
+volumes:
+  caddy_data:
+  caddy_config:
+  vault_data:
+  postgresql_data:
+  xray_socket:

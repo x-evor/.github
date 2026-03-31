@@ -1,0 +1,20 @@
+{
+  admin off
+}
+
+jp-xhttp-contabo.svc.plus {
+  encode zstd gzip
+
+  @grpc path /split/*
+  handle @grpc {
+    reverse_proxy unix//dev/shm/xray.sock {
+      transport http {
+        versions h2c 2
+      }
+    }
+  }
+
+  respond "Agent Service Plus Node"
+}
+
+import /etc/caddy/conf.d/*.caddy

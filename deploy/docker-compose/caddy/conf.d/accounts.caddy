@@ -1,0 +1,4 @@
+accounts.svc.plus, preview-accounts.svc.plus {
+  encode zstd gzip
+  reverse_proxy apisix:9080
+}

@@ -21,6 +21,11 @@ on:
         default: false
         type: boolean
       ssh_host:
+        description: "Deprecated alias for target_host"
+        required: false
+        default: ""
+        type: string
+      target_host:
         description: "Optional Ansible transport host override"
         required: false
         default: ""
@@ -76,6 +81,11 @@ on:
         default: false
         type: boolean
       ssh_host:
+        description: "Deprecated alias for target_host"
+        required: false
+        default: ""
+        type: string
+      target_host:
         description: "Optional Ansible transport host override"
         required: false
         default: ""
@@ -116,7 +126,7 @@ env:
   GHCR_REGISTRY: ghcr.io
   GHCR_USERNAME: svc-design
   SERVICE_REPO_OWNER: ${{ github.repository_owner }}
-  ANSIBLE_OVERRIDE_SSH_HOST: ${{ inputs.ssh_host }}
+  ANSIBLE_OVERRIDE_SSH_HOST: ${{ inputs.target_host != '' && inputs.target_host || inputs.ssh_host }}
   ANSIBLE_OVERRIDE_SSH_USER: ${{ inputs.ssh_user }}
   ANSIBLE_OVERRIDE_SSH_PORT: ${{ inputs.ssh_port }}
   ANSIBLE_OVERRIDE_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}

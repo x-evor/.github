@@ -1,0 +1,4 @@
+{{ postgresql_release_domains | join(", ") }} {
+  respond "postgresql tls tunnel endpoint" 200
+}
+

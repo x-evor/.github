@@ -1,0 +1,99 @@
+---
+- name: Check docker CLI is present on the target node
+  ansible.builtin.command: docker --version
+  changed_when: false
+
+- name: Check docker compose plugin is present on the target node
+  ansible.builtin.command: docker compose version
+  changed_when: false
+
+- name: Validate APISIX deploy inputs
+  ansible.builtin.assert:
+    that:
+      - apisix_release_image | length > 0
+      - apisix_release_domains | length > 0
+    fail_msg: "APISIX deploy requires service image ref plus public or release domains."
+
+- name: Ensure APISIX release directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ apisix_release_root }}"
+    - "{{ apisix_release_conf_dir }}"
+
+- name: Copy APISIX standalone config
+  ansible.builtin.copy:
+    src: "{{ apisix_example_root }}/conf/config.yaml"
+    dest: "{{ apisix_release_conf_dir }}/config.yaml"
+    mode: "0644"
+
+- name: Copy APISIX routes file
+  ansible.builtin.copy:
+    src: "{{ apisix_example_root }}/conf/apisix.yaml"
+    dest: "{{ apisix_release_conf_dir }}/apisix.yaml"
+    mode: "0644"
+
+- name: Render APISIX env file
+  ansible.builtin.template:
+    src: env.j2
+    dest: "{{ apisix_release_env_file }}"
+    mode: "0600"
+  no_log: true
+
+- name: Render APISIX docker compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ apisix_release_compose_file }}"
+    mode: "0644"
+
+- name: Discover legacy APISIX Caddy files
+  ansible.builtin.find:
+    paths: "{{ apisix_release_caddy_conf_dir }}"
+    patterns: "api-*.caddy"
+    file_type: file
+  register: apisix_release_existing_caddy_files
+
+- name: Render APISIX Caddy site file
+  ansible.builtin.template:
+    src: site.caddy.j2
+    dest: "{{ apisix_release_caddy_conf_dir }}/api-{{ service_release_version_dns_label | default(service_release_version | default('manual')) }}.caddy"
+    mode: "0644"
+
+- name: Remove superseded APISIX Caddy site files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ apisix_release_existing_caddy_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - item.path != apisix_release_caddy_conf_dir ~ '/api-' ~ (service_release_version_dns_label | default(service_release_version | default('manual'))) ~ '.caddy'
+
+- name: Validate Caddy configuration for APISIX
+  ansible.builtin.command: caddy validate --config /etc/caddy/Caddyfile
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Pull and start APISIX release
+  ansible.builtin.shell: |
+    set -euo pipefail
+    docker compose -f "{{ apisix_release_compose_file }}" pull
+    docker compose -f "{{ apisix_release_compose_file }}" up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Wait for APISIX loopback port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ apisix_release_http_port }}"
+    timeout: 60
+  when: not ansible_check_mode
+
+- name: Reload Caddy after APISIX update
+  ansible.builtin.command: systemctl reload caddy
+  changed_when: true
+  when: not ansible_check_mode

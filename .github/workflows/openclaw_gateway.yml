@@ -1,100 +1,71 @@
-name: OpenClaw Gateway
+name: Service Release OpenClaw Gateway Deploy
 
 on:
+  workflow_call:
+    inputs:
+      track:
+        description: "Release track"
+        required: true
+        type: string
+      service_ref:
+        description: "Control repository ref (branch/tag/sha)"
+        required: true
+        type: string
+      run_apply:
+        description: "Run the final ansible apply stage"
+        required: false
+        default: false
+        type: boolean
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
   workflow_dispatch:
     inputs:
-      action:
-        description: "Action to run"
+      track:
+        description: "Release track"
         required: true
-        default: deploy
+        default: "prod"
         type: choice
         options:
-          - deploy
-          - migrate
-      target_host_ip:
-        description: "Target host IP"
+          - prod
+      service_ref:
+        description: "Control repository ref (branch/tag/sha)"
         required: true
-        default: "46.250.251.132"
+        default: "main"
         type: string
+      run_apply:
+        description: "Run the final ansible apply stage"
+        required: true
+        default: false
+        type: boolean
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: openclaw-gateway-release-${{ inputs.track }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
-
-concurrency:
-  group: openclaw-gateway-${{ inputs.target_host_ip }}-${{ inputs.action }}
-  cancel-in-progress: false
+  packages: write
 
 jobs:
-  openclaw-gateway:
-    name: "${{ inputs.action }} -> ${{ inputs.target_host_ip }}"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout control repo
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+  deploy-openclaw-gateway-service:
+    name: "Deploy openclaw-gateway"
+    uses: ./.github/workflows/service_release_apiserver-deploy.yml
+    with:
+      service: openclaw-gateway
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Ansible runtime
-        shell: bash
-        run: bash scripts/github-actions/install-python-tools.sh ansible
-
-      - name: Prepare runner SSH key
-        env:
-          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
-
-      - name: Run OpenClaw gateway playbook
-        shell: bash
-        env:
-          ANSIBLE_CONFIG: ${{ github.workspace }}/ansible/ansible.cfg
-        run: |
-          set -euo pipefail
-          extra_vars=(
-            -e "openclaw_source_host=openclaw.svc.plus"
-            -e "openclaw_domain=openclaw.svc.plus"
-            -e "openclaw_manage_caddy=true"
-            -e "openclaw_manage_dns=true"
-            -e "openclaw_cloudflare_zone_name=svc.plus"
-            -e "openclaw_cloudflare_api_token=${{ secrets.CLOUDFLARE_DNS_API_TOKEN || secrets.CLOUDFLARE_API_TOKEN }}"
-            -e "openclaw_cloudflare_record_content=${{ inputs.target_host_ip }}"
-            -e "target_host_ip=${{ inputs.target_host_ip }}"
-          )
-
-          case "${{ inputs.action }}" in
-            deploy)
-              extra_vars+=(
-                -e "openclaw_manage_migration=false"
-                -e "openclaw_migrate_data_dir=false"
-                -e "openclaw_data_backend=local"
-                -e "openclaw_runtime_mode=systemd"
-              )
-              ;;
-            migrate)
-              extra_vars+=(
-                -e "openclaw_manage_migration=true"
-                -e "openclaw_migrate_data_dir=true"
-                -e "openclaw_data_backend=local"
-                -e "openclaw_runtime_mode=systemd"
-              )
-              ;;
-            *)
-              echo "Unsupported action: ${{ inputs.action }}" >&2
-              exit 1
-              ;;
-          esac
-
-          ansible-playbook \
-            -i ansible/inventory.ini \
-            -D \
-            ansible/playbooks/openclaw_gateway.yml \
-            "${extra_vars[@]}"

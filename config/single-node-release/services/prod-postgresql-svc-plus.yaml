@@ -1,0 +1,6 @@
+service: postgresql-svc-plus
+track: prod
+enabled: true
+stable_domain: postgresql-contabo.svc.plus
+release_prefix: postgresql
+

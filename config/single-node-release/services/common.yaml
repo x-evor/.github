@@ -1,20 +1,164 @@
-version: 1
+version: 2
 domain: svc.plus
 default_registry: ghcr.io
 default_repo_owner: cloud-neutral-toolkit
-release_domain_format: "prod release/* => <release-prefix>-<deploy-hostname>-<release-name>-<git-short-commit>.<domain>; otherwise => <release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>"
+release_domain_format: "<release-prefix>-<release-version>-<release-vhost-name>.<domain> where external services use software version and internal services use git short commit"
+domain_map:
+  caddy:
+    role: tls_terminator
+    public_domain: null
+    release_domain: null
+  console:
+    public_domain: console.svc.plus
+    release_domain: console-contabo.svc.plus
+    release_dns_prefix: console
+    release_vhost_name: contabo
+  docs:
+    public_domain: docs.svc.plus
+    release_domain: docs-contabo.svc.plus
+    release_dns_prefix: docs
+    release_vhost_name: contabo
+  vault:
+    public_domain: vault.svc.plus
+    release_domain: vault-contabo.svc.plus
+    release_dns_prefix: vault
+    release_vhost_name: contabo
+  apisix:
+    public_domain: api.svc.plus
+    release_domain: api-contabo.svc.plus
+    release_dns_prefix: api
+    release_vhost_name: contabo
+  openclaw-gateway:
+    public_domain: openclaw-gateway.svc.plus
+    release_domain: gateway-contabo.svc.plus
+    release_dns_prefix: gateway
+    release_vhost_name: contabo
+  accounts:
+    public_domain: accounts.svc.plus
+    release_domain: accounts-contabo.svc.plus
+    release_dns_prefix: accounts
+    release_vhost_name: contabo
+  rag-server:
+    public_domain: rag-server.svc.plus
+    release_domain: rag-server-contabo.svc.plus
+    release_dns_prefix: rag-server
+    release_vhost_name: contabo
+  postgresql-svc-plus:
+    public_domain: postgresql-contabo.svc.plus
+    release_domain: postgresql-contabo.svc.plus
+    release_dns_prefix: postgresql
+    release_vhost_name: contabo
+  agent-svc-plus:
+    public_domain: jp-xhttp-contabo.svc.plus
+    release_domain: jp-xhttp-contabo.svc.plus
+    release_dns_prefix: agent
+    release_vhost_name: jp-xhttp-contabo
+  stunnel-server:
+    role: internal
+    public_domain: null
+    release_domain: null
+    release_dns_prefix: stunnel-server
+    release_vhost_name: contabo
+  stunnel-client:
+    role: internal
+    public_domain: null
+    release_domain: null
+    release_dns_prefix: stunnel-client
+    release_vhost_name: contabo
 track_policy:
   prod:
     trigger: push to release/*
   preview:
     trigger: pull_request targeting main
 services:
+  console:
+    repo_name: console.svc.plus
+    repo_category: frontend
+    repo_url: https://github.com/cloud-neutral-toolkit/console.svc.plus.git
+    playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_console_compose.yml
+    public_vars_path: ../cloud-neutral-toolkit/ansible/vars/console.release.public.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: shared-compose
+    stable_smoke_enabled: true
+    healthcheck_path: /
+    docker:
+      mode: build
+      dockerfile_path: Dockerfile
+      build_context: .
+      image_name: console
+      container_port: 3000
+      build_prepare_script: scripts/github-actions/prepare-frontend-build-context.sh
+      build_args_script: scripts/github-actions/render-frontend-build-args.sh
+  docs:
+    repo_name: docs.svc.plus
+    repo_category: api
+    repo_url: https://github.com/x-evor/docs.svc.plus.git
+    playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_docs_compose.yml
+    public_vars_path: ../cloud-neutral-toolkit/ansible/vars/docs.release.public.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: shared-compose
+    stable_smoke_enabled: true
+    secret_env_map:
+      INTERNAL_SERVICE_TOKEN: INTERNAL_SERVICE_TOKEN
+    docker:
+      mode: build
+      dockerfile_path: Dockerfile
+      build_context: .
+      image_name: docs
+      container_port: 8084
+    healthcheck_path: /healthz
+  vault:
+    repo_name: github-org-cloud-neutral-toolkit
+    repo_category: security
+    repo_url: https://github.com/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit.git
+    playbook_path: ansible/playbooks/deploy_vault_release.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: ansible-only
+    stable_smoke_enabled: true
+    release_version:
+      strategy: fixed
+      value: v1.21.3
+    docker:
+      mode: prebuilt
+      image_ref: hashicorp/vault:1.21.3
+      container_port: 8200
+    healthcheck_path: /v1/sys/health?standbyok=true&sealedcode=503&uninitcode=503
+  apisix:
+    repo_name: github-org-cloud-neutral-toolkit
+    repo_category: gateway
+    repo_url: https://github.com/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit.git
+    playbook_path: ansible/playbooks/deploy_apisix_release.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: ansible-only
+    stable_smoke_enabled: true
+    release_version:
+      strategy: fixed
+      value: "3.8"
+    docker:
+      mode: prebuilt
+      image_ref: apache/apisix:3.8.0-debian
+      container_port: 9080
+    healthcheck_path: /healthz
+  openclaw-gateway:
+    repo_name: github-org-cloud-neutral-toolkit
+    repo_category: gateway
+    repo_url: https://github.com/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit.git
+    playbook_path: ansible/playbooks/deploy_openclaw_gateway_release.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: ansible-only
+    stable_smoke_enabled: false
+    docker:
+      mode: none
+    healthcheck_path: /
   accounts:
     repo_name: accounts.svc.plus
     repo_category: api
     repo_url: https://github.com/cloud-neutral-toolkit/accounts.svc.plus.git
     playbook_path: ansible/playbooks/deploy_accounts_compose.yml
     public_vars_path: ansible/vars/accounts.release.public.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: shared-compose
+    stable_smoke_enabled: true
     shared_stunnel:
       enabled: true
       container_name: cn-toolkit-stunnel-client
@@ -27,6 +171,7 @@ services:
       DB_PASSWORD: ACCOUNTS_DB_PASSWORD
       SMTP_PASSWORD: ACCOUNTS_SMTP_PASSWORD
     docker:
+      mode: build
       dockerfile_path: Dockerfile
       build_context: .
       image_name: accounts
@@ -38,34 +183,85 @@ services:
     repo_url: https://github.com/cloud-neutral-toolkit/rag-server.svc.plus.git
     ansible_vars_secret_name: RAG_SERVER_ANSIBLE_VARS_YAML
     playbook_path: ansible/playbooks/deploy_rag_server_compose.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: shared-compose
+    stable_smoke_enabled: true
     docker:
+      mode: build
       dockerfile_path: Dockerfile
       build_context: .
       image_name: rag-server
       container_port: 8080
     healthcheck_path: /healthz
-  docs:
-    repo_name: docs.svc.plus
-    repo_category: api
-    repo_url: https://github.com/x-evor/docs.svc.plus.git
-    playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_docs_compose.yml
-    public_vars_path: ../cloud-neutral-toolkit/ansible/vars/docs.release.public.yml
-    deploy_server_alias: us-xhttp.svc.plus
-    secret_env_map:
-      INTERNAL_SERVICE_TOKEN: INTERNAL_SERVICE_TOKEN
+  postgresql-svc-plus:
+    repo_name: postgresql.svc.plus
+    repo_category: db-runtime
+    repo_url: https://github.com/cloud-neutral-toolkit/postgresql.svc.plus.git
+    playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_postgresql_svc_plus.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: ansible-only
+    stable_smoke_enabled: false
     docker:
-      dockerfile_path: Dockerfile
+      mode: build
+      dockerfile_path: deploy/base-images/postgres-runtime-wth-extensions.Dockerfile
       build_context: .
-      image_name: docs
-      container_port: 8084
-    healthcheck_path: /healthz
+      image_name: postgresql-svc-plus
+      container_port: 5432
+    healthcheck_path: ""
+  agent-svc-plus:
+    repo_name: agent.svc.plus
+    repo_category: api
+    repo_url: https://github.com/cloud-neutral-toolkit/agent.svc.plus.git
+    playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_agent_svc_plus_release.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: ansible-only
+    stable_smoke_enabled: false
+    docker:
+      mode: none
+    healthcheck_path: ""
+  stunnel-server:
+    repo_name: postgresql.svc.plus
+    repo_category: db-runtime
+    repo_url: https://github.com/cloud-neutral-toolkit/postgresql.svc.plus.git
+    playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_stunnel_server.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: ansible-only
+    release_dns_enabled: false
+    stable_smoke_enabled: false
+    docker:
+      mode: build
+      dockerfile_path: deploy/base-images/stunnel.Dockerfile
+      build_context: .
+      image_name: stunnel-server
+      container_port: 5433
+    healthcheck_path: ""
+  stunnel-client:
+    repo_name: postgresql.svc.plus
+    repo_category: db-runtime
+    repo_url: https://github.com/cloud-neutral-toolkit/postgresql.svc.plus.git
+    playbook_path: ../cloud-neutral-toolkit/ansible/playbooks/deploy_stunnel_client.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: ansible-only
+    release_dns_enabled: false
+    stable_smoke_enabled: false
+    docker:
+      mode: build
+      dockerfile_path: deploy/base-images/stunnel.Dockerfile
+      build_context: .
+      image_name: stunnel-client
+      container_port: 15432
+    healthcheck_path: ""
   x-cloud-flow:
     repo_name: x-cloud-flow.svc.plus
     repo_category: api
     repo_url: https://github.com/cloud-neutral-toolkit/x-cloud-flow.svc.plus.git
     ansible_vars_secret_name: X_CLOUD_FLOW_ANSIBLE_VARS_YAML
     playbook_path: ansible/playbooks/deploy_x_cloud_flow_compose.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: shared-compose
+    release_dns_vhost_name: contabo
     docker:
+      mode: build
       dockerfile_path: Dockerfile
       build_context: .
       image_name: x-cloud-flow
@@ -77,7 +273,11 @@ services:
     repo_url: https://github.com/cloud-neutral-toolkit/x-ops-agent.svc.plus.git
     ansible_vars_secret_name: X_OPS_AGENT_ANSIBLE_VARS_YAML
     playbook_path: ansible/playbooks/deploy_x_ops_agent_compose.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: shared-compose
+    release_dns_vhost_name: contabo
     docker:
+      mode: build
       dockerfile_path: Dockerfile
       build_context: .
       image_name: x-ops-agent
@@ -89,7 +289,11 @@ services:
     repo_url: https://github.com/cloud-neutral-toolkit/x-scope-hub.svc.plus.git
     ansible_vars_secret_name: X_SCOPE_HUB_ANSIBLE_VARS_YAML
     playbook_path: ansible/playbooks/deploy_x_scope_hub_compose.yml
+    deploy_server_alias: jp-xhttp-contabo.svc.plus
+    runtime_profile: shared-compose
+    release_dns_vhost_name: contabo
     docker:
+      mode: build
       dockerfile_path: mcp-server/Dockerfile
       build_context: .
       image_name: x-scope-hub

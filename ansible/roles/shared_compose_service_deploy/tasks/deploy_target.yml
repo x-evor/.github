@@ -1,9 +1,10 @@
 - name: Compute release metadata for {{ deploy_target.name | default(deploy_target.deploy_subdomain_prefix) }}
   ansible.builtin.set_fact:
-    service_compose_release_name: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-{{ service_compose_git_short_commit }}"
-    service_compose_release_dir: "{{ service_compose_project_root }}/{{ service_compose_service_slug }}/{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-{{ service_compose_git_short_commit }}"
-    service_compose_release_fqdn: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-{{ service_compose_git_short_commit }}.{{ service_compose_zone }}"
-    service_compose_release_domains: "{{ ((deploy_target.stable_domains | default([])) + [deploy_target.deploy_subdomain_prefix ~ '-' ~ service_compose_deploy_hostname ~ '-' ~ service_compose_git_short_commit ~ '.' ~ service_compose_zone]) | unique }}"
+    service_compose_release_service_name: "{{ deploy_target.release_dns_service_name | default(deploy_target.deploy_subdomain_prefix) }}"
+    service_compose_release_name: "{{ (deploy_target.release_dns_service_name | default(deploy_target.deploy_subdomain_prefix)) ~ '-' ~ service_compose_release_version ~ '-' ~ service_compose_release_vhost_name }}"
+    service_compose_release_dir: "{{ service_compose_project_root }}/{{ service_compose_service_slug }}/{{ (deploy_target.release_dns_service_name | default(deploy_target.deploy_subdomain_prefix)) ~ '-' ~ service_compose_release_version ~ '-' ~ service_compose_release_vhost_name }}"
+    service_compose_release_fqdn: "{{ (deploy_target.release_dns_service_name | default(deploy_target.deploy_subdomain_prefix)) ~ '-' ~ service_compose_release_version ~ '-' ~ service_compose_release_vhost_name ~ '.' ~ service_compose_zone }}"
+    service_compose_release_domains: "{{ ((deploy_target.stable_domains | default([])) + [((deploy_target.release_dns_service_name | default(deploy_target.deploy_subdomain_prefix)) ~ '-' ~ service_compose_release_version ~ '-' ~ service_compose_release_vhost_name ~ '.' ~ service_compose_zone)]) | unique }}"
     service_compose_release_image: "{{ deploy_target.image | default(service_compose_image) }}"
     service_compose_release_image_archive: "{{ deploy_target.image_archive | default(service_compose_image_archive) }}"
     service_compose_release_pull_images: "{{ (deploy_target.pull_images | default(service_compose_pull_images)) | bool }}"
@@ -92,7 +93,7 @@
 - name: Discover legacy release directories for {{ deploy_target.deploy_subdomain_prefix }}
   ansible.builtin.find:
     paths: "{{ service_compose_project_root }}/{{ service_compose_service_slug }}"
-    patterns: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-*"
+    patterns: "{{ service_compose_release_service_name }}-*"
     file_type: directory
     recurse: false
   register: service_compose_existing_release_dirs
@@ -140,7 +141,7 @@
 - name: Discover legacy Caddy site files for {{ deploy_target.deploy_subdomain_prefix }}
   ansible.builtin.find:
     paths: "{{ service_compose_caddy_conf_dir }}"
-    patterns: "{{ deploy_target.deploy_subdomain_prefix }}-{{ service_compose_deploy_hostname }}-*.caddy"
+    patterns: "{{ service_compose_release_service_name }}-*.caddy"
     file_type: file
   register: service_compose_existing_caddy_files
 

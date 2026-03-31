@@ -1,0 +1,36 @@
+- name: Deploy OpenClaw gateway release
+  hosts: server
+  become: true
+  gather_facts: true
+  vars:
+    openclaw_release_caddyfile_path: "/etc/caddy/conf.d/openclaw-gateway-{{ service_release_version_dns_label | default(service_release_version | default('manual')) }}.caddy"
+  pre_tasks:
+    - name: Discover legacy OpenClaw gateway Caddy files
+      ansible.builtin.find:
+        paths: /etc/caddy/conf.d
+        patterns: "openclaw-gateway-*.caddy"
+        file_type: file
+      register: openclaw_release_existing_caddy_files
+
+    - name: Remove superseded OpenClaw gateway Caddy files
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: absent
+      loop: "{{ openclaw_release_existing_caddy_files.files }}"
+      loop_control:
+        label: "{{ item.path }}"
+      when: item.path != openclaw_release_caddyfile_path
+  roles:
+    - role: openclaw_gateway
+      vars:
+        openclaw_source_host: openclaw.svc.plus
+        openclaw_domain: "{{ service_release_domains | default([service_public_domain, service_release_domain]) | reject('equalto', '') | join(', ') }}"
+        openclaw_service_port: 18789
+        openclaw_workspace: /opt/data
+        openclaw_data_backend: local
+        openclaw_runtime_mode: systemd
+        openclaw_manage_caddy: true
+        openclaw_manage_dns: false
+        openclaw_manage_migration: false
+        openclaw_migrate_data_dir: false
+        openclaw_caddyfile_path: "{{ openclaw_release_caddyfile_path }}"

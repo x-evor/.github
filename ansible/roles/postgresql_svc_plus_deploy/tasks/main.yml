@@ -1,0 +1,95 @@
+---
+- name: Check docker CLI is present on the target node
+  ansible.builtin.command: docker --version
+  changed_when: false
+
+- name: Check docker compose plugin is present on the target node
+  ansible.builtin.command: docker compose version
+  changed_when: false
+
+- name: Validate postgresql deploy inputs
+  ansible.builtin.assert:
+    that:
+      - postgresql_release_image | length > 0
+      - postgresql_release_password | length > 0
+    fail_msg: "postgresql-svc-plus deploy requires image_ref and POSTGRESQL_SUPERUSER_PASSWORD."
+
+- name: Ensure postgresql release directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ postgresql_release_root }}"
+    - "{{ postgresql_release_data_dir }}"
+    - "{{ postgresql_release_conf_dir }}"
+
+- name: Render postgresql.conf
+  ansible.builtin.template:
+    src: postgresql.conf.j2
+    dest: "{{ postgresql_release_conf_dir }}/postgresql.conf"
+    mode: "0644"
+
+- name: Render postgresql docker compose file
+  ansible.builtin.template:
+    src: docker-compose.yml.j2
+    dest: "{{ postgresql_release_compose_file }}"
+    mode: "0644"
+
+- name: Discover legacy postgresql caddy files
+  ansible.builtin.find:
+    paths: "{{ postgresql_release_caddy_conf_dir }}"
+    patterns: "postgresql-*.caddy"
+    file_type: file
+  register: postgresql_release_existing_caddy_files
+  when: postgresql_release_domains | length > 0
+
+- name: Render postgresql Caddy site file
+  ansible.builtin.template:
+    src: site.caddy.j2
+    dest: "{{ postgresql_release_caddy_conf_dir }}/postgresql-{{ service_release_version_dns_label | default(service_release_version | default('manual')) }}.caddy"
+    mode: "0644"
+  when: postgresql_release_domains | length > 0
+
+- name: Remove superseded postgresql Caddy site files
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: absent
+  loop: "{{ postgresql_release_existing_caddy_files.files }}"
+  loop_control:
+    label: "{{ item.path }}"
+  when:
+    - postgresql_release_domains | length > 0
+    - item.path != postgresql_release_caddy_conf_dir ~ '/postgresql-' ~ (service_release_version_dns_label | default(service_release_version | default('manual'))) ~ '.caddy'
+
+- name: Validate Caddy configuration for postgresql placeholder domains
+  ansible.builtin.command: caddy validate --config /etc/caddy/Caddyfile
+  changed_when: false
+  when:
+    - postgresql_release_domains | length > 0
+    - not ansible_check_mode
+
+- name: Pull and start postgresql release
+  ansible.builtin.shell: |
+    set -euo pipefail
+    docker compose -f "{{ postgresql_release_compose_file }}" pull
+    docker compose -f "{{ postgresql_release_compose_file }}" up -d --remove-orphans
+  args:
+    executable: /bin/bash
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Wait for postgresql loopback port
+  ansible.builtin.wait_for:
+    host: 127.0.0.1
+    port: "{{ postgresql_release_local_port }}"
+    timeout: 90
+  when: not ansible_check_mode
+
+- name: Reload Caddy after postgresql placeholder update
+  ansible.builtin.command: systemctl reload caddy
+  changed_when: true
+  when:
+    - postgresql_release_domains | length > 0
+    - not ansible_check_mode
+

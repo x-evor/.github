@@ -1,0 +1,18 @@
+services:
+  stunnel-client:
+    image: {{ stunnel_client_image | to_json }}
+    container_name: {{ stunnel_client_container_name | to_json }}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:{{ stunnel_client_accept_port }}:{{ stunnel_client_accept_port }}"
+    volumes:
+      - {{ (stunnel_client_conf_dir ~ '/stunnel.conf') | to_json }}:/etc/stunnel/stunnel.conf:ro
+    networks:
+      shared:
+        aliases:
+          - stunnel-client
+
+networks:
+  shared:
+    name: {{ stunnel_client_shared_network_name | to_json }}
+

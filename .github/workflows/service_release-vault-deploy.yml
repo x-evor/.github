@@ -1,0 +1,71 @@
+name: Service Release Vault Deploy
+
+on:
+  workflow_call:
+    inputs:
+      track:
+        description: "Release track"
+        required: true
+        type: string
+      service_ref:
+        description: "Control repository ref (branch/tag/sha)"
+        required: true
+        type: string
+      run_apply:
+        description: "Run the final ansible apply stage"
+        required: false
+        default: false
+        type: boolean
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Release track"
+        required: true
+        default: "prod"
+        type: choice
+        options:
+          - prod
+      service_ref:
+        description: "Control repository ref (branch/tag/sha)"
+        required: true
+        default: "main"
+        type: string
+      run_apply:
+        description: "Run the final ansible apply stage"
+        required: true
+        default: false
+        type: boolean
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
+
+concurrency:
+  group: vault-release-${{ inputs.track }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy-vault-service:
+    name: "Deploy vault"
+    uses: ./.github/workflows/service_release_apiserver-deploy.yml
+    with:
+      service: vault
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
+

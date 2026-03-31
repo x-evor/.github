@@ -1,0 +1,15 @@
+stunnel_server_release_root: /opt/cloud-neutral/stunnel-server
+stunnel_server_conf_dir: "{{ stunnel_server_release_root }}/conf"
+stunnel_server_certs_dir: "{{ stunnel_server_release_root }}/certs"
+stunnel_server_compose_file: "{{ stunnel_server_release_root }}/docker-compose.yml"
+stunnel_server_image: "{{ service_image_ref }}"
+stunnel_server_container_name: cn-toolkit-stunnel-server
+stunnel_server_host_port: 5443
+stunnel_server_upstream_host: host.docker.internal
+stunnel_server_upstream_port: 15432
+stunnel_server_cert_domain: "{{ lookup('ansible.builtin.env', 'POSTGRES_STUNNEL_CERT_DOMAIN') | default('postgresql-contabo.svc.plus', true) }}"
+stunnel_server_caddy_storage_root: /var/lib/caddy/.local/share/caddy
+stunnel_server_caddy_cert_dir: "{{ stunnel_server_caddy_storage_root }}/certificates/acme-v02.api.letsencrypt.org-directory/{{ stunnel_server_cert_domain }}"
+stunnel_server_cert_file: "{{ stunnel_server_certs_dir }}/server-cert.pem"
+stunnel_server_key_file: "{{ stunnel_server_certs_dir }}/server-key.pem"
+

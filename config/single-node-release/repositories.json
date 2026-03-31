@@ -41,6 +41,7 @@
       "category": "control-plane",
       "repo_url": "https://github.com/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit.git",
       "workspace_path": ".",
+      "source_kind": "control-repo",
       "release_enabled": true
     },
     "console.svc.plus": {
@@ -85,13 +86,13 @@
       "category": "db-runtime",
       "repo_url": "https://github.com/cloud-neutral-toolkit/postgresql.svc.plus.git",
       "workspace_path": "../postgresql.svc.plus",
-      "release_enabled": false
+      "release_enabled": true
     },
     "agent.svc.plus": {
       "category": "api",
       "repo_url": "https://github.com/cloud-neutral-toolkit/agent.svc.plus.git",
       "workspace_path": "../agent.svc.plus",
-      "release_enabled": false
+      "release_enabled": true
     },
     "observability.svc.plus": {
       "category": "db-runtime",
@@ -127,7 +128,7 @@
       "category": "api",
       "repo_url": "https://github.com/cloud-neutral-toolkit/openclaw.svc.plus.git",
       "workspace_path": "../openclaw.svc.plus",
-      "release_enabled": false
+      "release_enabled": true
     },
     "xstream.svc.plus": {
       "category": "runtime-client",

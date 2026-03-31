@@ -40,6 +40,11 @@ on:
         required: false
         default: ""
         type: string
+      deploy_server_alias:
+        description: "Optional deploy host alias override"
+        required: false
+        default: ""
+        type: string
   workflow_dispatch:
     inputs:
       service:
@@ -85,6 +90,11 @@ on:
         required: false
         default: ""
         type: string
+      deploy_server_alias:
+        description: "Optional deploy host alias override"
+        required: false
+        default: ""
+        type: string
 
 permissions:
   contents: read
@@ -100,9 +110,12 @@ env:
   SINGLE_NODE_VPS_SSH_USER: ${{ inputs.ssh_user != '' && inputs.ssh_user || 'root' }}
   SINGLE_NODE_VPS_SSH_PORT: ${{ inputs.ssh_port != '' && inputs.ssh_port || '22' }}
   SINGLE_NODE_VPS_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
+  DEPLOY_SERVER_ALIAS_OVERRIDE: ${{ inputs.deploy_server_alias }}
   INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
   ACCOUNTS_DB_PASSWORD: ${{ secrets.ACCOUNTS_DB_PASSWORD }}
   ACCOUNTS_SMTP_PASSWORD: ${{ secrets.ACCOUNTS_SMTP_PASSWORD }}
+  POSTGRESQL_SUPERUSER_PASSWORD: ${{ secrets.POSTGRESQL_SUPERUSER_PASSWORD }}
+  AGENT_XRAY_UUID: ${{ secrets.AGENT_XRAY_UUID }}
   RAG_SERVER_ANSIBLE_VARS_YAML: ${{ secrets.RAG_SERVER_ANSIBLE_VARS_YAML }}
   X_CLOUD_FLOW_ANSIBLE_VARS_YAML: ${{ secrets.X_CLOUD_FLOW_ANSIBLE_VARS_YAML }}
   X_OPS_AGENT_ANSIBLE_VARS_YAML: ${{ secrets.X_OPS_AGENT_ANSIBLE_VARS_YAML }}
@@ -113,13 +126,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  stage-1-build-image:
-    name: "1. Build And Push Image"
+  stage-1-prep:
+    name: "1. Prep"
     runs-on: ubuntu-latest
     outputs:
       service_name: ${{ steps.meta.outputs.service_name }}
       track: ${{ steps.meta.outputs.track }}
       service_source_kind: ${{ steps.meta.outputs.service_source_kind }}
+      runtime_profile: ${{ steps.meta.outputs.runtime_profile }}
+      artifact_mode: ${{ steps.meta.outputs.artifact_mode }}
       repo_name: ${{ steps.meta.outputs.repo_name }}
       repo_category: ${{ steps.meta.outputs.repo_category }}
       repo_url: ${{ steps.meta.outputs.repo_url }}
@@ -127,25 +142,37 @@ jobs:
       service_workspace_path: ${{ steps.meta.outputs.service_workspace_path }}
       service_checkout_path: ${{ steps.meta.outputs.service_checkout_path }}
       playbook_path: ${{ steps.meta.outputs.playbook_path }}
+      prebuilt_image_ref: ${{ steps.meta.outputs.prebuilt_image_ref }}
       dockerfile_path: ${{ steps.meta.outputs.dockerfile_path }}
       build_context: ${{ steps.meta.outputs.build_context }}
       image_name: ${{ steps.meta.outputs.image_name }}
+      build_prepare_script: ${{ steps.meta.outputs.build_prepare_script }}
+      build_args_script: ${{ steps.meta.outputs.build_args_script }}
       ansible_vars_secret_name: ${{ steps.meta.outputs.ansible_vars_secret_name }}
       secret_env_map_json: ${{ steps.meta.outputs.secret_env_map_json }}
       shared_stunnel_json: ${{ steps.meta.outputs.shared_stunnel_json }}
       track_env_json: ${{ steps.meta.outputs.track_env_json }}
       service_public_vars_path: ${{ steps.meta.outputs.service_public_vars_path }}
       deploy_subdomain_prefix: ${{ steps.meta.outputs.deploy_subdomain_prefix }}
+      release_dns_enabled: ${{ steps.meta.outputs.release_dns_enabled }}
+      release_dns_prefix: ${{ steps.meta.outputs.release_dns_prefix }}
+      release_vhost_name: ${{ steps.meta.outputs.release_vhost_name }}
+      release_version_strategy: ${{ steps.meta.outputs.release_version_strategy }}
+      release_version_value: ${{ steps.meta.outputs.release_version_value }}
       stable_domain: ${{ steps.meta.outputs.stable_domain }}
+      public_domain: ${{ steps.meta.outputs.public_domain }}
       host_port: ${{ steps.meta.outputs.host_port }}
       container_port: ${{ steps.meta.outputs.container_port }}
       healthcheck_path: ${{ steps.meta.outputs.healthcheck_path }}
+      stable_smoke_enabled: ${{ steps.meta.outputs.stable_smoke_enabled }}
       deploy_server_alias: ${{ steps.meta.outputs.deploy_server_alias }}
-      deploy_hostname: ${{ steps.meta.outputs.deploy_hostname }}
       domain: ${{ steps.meta.outputs.domain }}
-      git_short_commit: ${{ steps.image.outputs.git_short_commit }}
-      image_ref: ${{ steps.image.outputs.image_ref }}
-      release_domain: ${{ steps.image.outputs.release_domain }}
+      git_short_commit: ${{ steps.artifact.outputs.git_short_commit }}
+      release_version: ${{ steps.artifact.outputs.release_version }}
+      release_version_dns_label: ${{ steps.artifact.outputs.release_version_dns_label }}
+      image_ref: ${{ steps.artifact.outputs.image_ref }}
+      release_domain: ${{ steps.artifact.outputs.release_domain }}
+      release_dns_name: ${{ steps.artifact.outputs.release_dns_name }}
     steps:
       - name: Checkout Control Repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -178,7 +205,7 @@ jobs:
           "${{ env.CONTROL_REPO_DIR }}/config/single-node-release/repositories.json"
 
       - name: Checkout Service Repo
-        if: ${{ steps.meta.outputs.service_source_kind != 'git-submodule' }}
+        if: ${{ steps.meta.outputs.service_source_kind == 'remote-checkout' }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           repository: ${{ steps.meta.outputs.service_repository }}
@@ -196,20 +223,44 @@ jobs:
           username: ${{ env.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Build And Push Image
-        id: image
+      - name: Resolve release artifact
+        id: artifact
         shell: bash
+        env:
+          PRIMARY_DOMAIN: ${{ steps.meta.outputs.public_domain || steps.meta.outputs.stable_domain }}
+          NEXT_PUBLIC_APP_BASE_URL: ${{ vars.NEXT_PUBLIC_APP_BASE_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_LOGIN_URL: ${{ vars.NEXT_PUBLIC_LOGIN_URL }}
+          NEXT_PUBLIC_DOCS_BASE_URL: ${{ vars.NEXT_PUBLIC_DOCS_BASE_URL }}
+          NEXT_PUBLIC_RUNTIME_ENVIRONMENT: ${{ vars.NEXT_PUBLIC_RUNTIME_ENVIRONMENT }}
+          NEXT_PUBLIC_RUNTIME_REGION: ${{ vars.NEXT_PUBLIC_RUNTIME_REGION }}
+          NEXT_PUBLIC_GISCUS_REPO: ${{ vars.NEXT_PUBLIC_GISCUS_REPO }}
+          NEXT_PUBLIC_GISCUS_REPO_ID: ${{ vars.NEXT_PUBLIC_GISCUS_REPO_ID }}
+          NEXT_PUBLIC_GISCUS_CATEGORY: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY }}
+          NEXT_PUBLIC_GISCUS_CATEGORY_ID: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY_ID }}
+          NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${{ vars.NEXT_PUBLIC_PAYPAL_CLIENT_ID }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION }}
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/build-and-push-image.sh"
+          "${{ steps.meta.outputs.artifact_mode }}"
           "${{ steps.meta.outputs.service_checkout_path }}"
           "${{ steps.meta.outputs.dockerfile_path }}"
           "${{ steps.meta.outputs.build_context }}"
           "${{ steps.meta.outputs.image_name }}"
-          "${{ steps.meta.outputs.deploy_subdomain_prefix }}"
-          "${{ steps.meta.outputs.deploy_hostname }}"
+          "${{ steps.meta.outputs.prebuilt_image_ref }}"
+          "${{ steps.meta.outputs.release_version_strategy }}"
+          "${{ steps.meta.outputs.release_version_value }}"
+          "${{ steps.meta.outputs.release_dns_enabled }}"
+          "${{ steps.meta.outputs.release_dns_prefix }}"
+          "${{ steps.meta.outputs.release_vhost_name }}"
           "${{ steps.meta.outputs.domain }}"
-          "${{ inputs.track }}"
-          "${{ inputs.service_ref }}"
+          "${{ steps.meta.outputs.build_prepare_script }}"
+          "${{ steps.meta.outputs.build_args_script }}"
 
       - name: Summarize Stage 1
         shell: bash
@@ -219,14 +270,16 @@ jobs:
           "${{ inputs.service }}"
           "${{ inputs.track }}"
           "${{ steps.meta.outputs.service_repository }}"
-          "${{ steps.image.outputs.image_ref }}"
-          "${{ steps.image.outputs.release_domain }}"
-          "${{ steps.meta.outputs.stable_domain }}"
+          "${{ steps.meta.outputs.artifact_mode }}"
+          "${{ steps.artifact.outputs.release_version }}"
+          "${{ steps.artifact.outputs.image_ref }}"
+          "${{ steps.artifact.outputs.release_domain }}"
+          "${{ steps.meta.outputs.public_domain || steps.meta.outputs.stable_domain }}"
 
-  stage-2-update-release-dns:
-    name: "2. Update Release DNS"
+  stage-2-release-dns:
+    name: "2. Release DNS"
     runs-on: ubuntu-latest
-    needs: stage-1-build-image
+    needs: stage-1-prep
     env:
       CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
     steps:
@@ -245,27 +298,31 @@ jobs:
         run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/install-python-tools.sh" ansible
 
       - name: Update DNS For Release Domain
+        if: ${{ needs.stage-1-prep.outputs.release_dns_enabled == 'true' }}
         shell: bash
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/update-release-dns.sh"
           "${{ env.CONTROL_REPO_PATH }}"
-          "${{ needs.stage-1-build-image.outputs.release_domain }}"
-          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
-          "${{ needs.stage-1-build-image.outputs.stable_domain }}"
+          "${{ needs.stage-1-prep.outputs.release_domain }}"
+          "${{ needs.stage-1-prep.outputs.deploy_server_alias }}"
+          "${{ needs.stage-1-prep.outputs.public_domain || needs.stage-1-prep.outputs.stable_domain }}"
 
       - name: Summarize Stage 2
         shell: bash
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/summarize-service-release-stage.sh"
           stage2
-          "${{ needs.stage-1-build-image.outputs.track }}"
-          "${{ needs.stage-1-build-image.outputs.release_domain }}"
-          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
+          "${{ needs.stage-1-prep.outputs.track }}"
+          "${{ needs.stage-1-prep.outputs.release_domain || 'n/a' }}"
+          "${{ needs.stage-1-prep.outputs.deploy_server_alias }}"
+          "${{ needs.stage-1-prep.outputs.release_dns_enabled == 'true' && 'updated' || 'skipped' }}"
 
-  stage-3-ansible-dry-run:
-    name: "3. Ansible Dry Run"
+  stage-3-deploy-or-migrate:
+    name: "3. Deploy Or Migrate"
     runs-on: ubuntu-latest
-    needs: stage-1-build-image
+    needs:
+      - stage-1-prep
+      - stage-2-release-dns
     env:
       GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
       SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
@@ -278,13 +335,13 @@ jobs:
           submodules: recursive
 
       - name: Checkout Service Repo
-        if: ${{ needs.stage-1-build-image.outputs.service_source_kind != 'git-submodule' }}
+        if: ${{ needs.stage-1-prep.outputs.service_source_kind == 'remote-checkout' }}
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          repository: ${{ needs.stage-1-build-image.outputs.service_repository }}
+          repository: ${{ needs.stage-1-prep.outputs.service_repository }}
           ref: ${{ inputs.service_ref }}
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
-          path: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+          path: ${{ needs.stage-1-prep.outputs.service_checkout_path }}
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -301,61 +358,127 @@ jobs:
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/prepare-ansible-runtime.sh"
           "${{ env.CONTROL_REPO_PATH }}/ansible/inventory.ini.tmpl"
-          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
+          "${{ needs.stage-1-prep.outputs.deploy_server_alias }}"
 
       - name: Materialize vars files
         id: vars
         shell: bash
         env:
-          SERVICE_ANSIBLE_VARS_SECRET_NAME: ${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}
-          SERVICE_SECRET_ENV_MAP_JSON: ${{ needs.stage-1-build-image.outputs.secret_env_map_json }}
-          SERVICE_SHARED_STUNNEL_JSON: ${{ needs.stage-1-build-image.outputs.shared_stunnel_json }}
-          SERVICE_TRACK_ENV_JSON: ${{ needs.stage-1-build-image.outputs.track_env_json }}
-          SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
-          SERVICE_DEPLOY_PREFIX: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
-          SERVICE_STABLE_DOMAIN: ${{ needs.stage-1-build-image.outputs.stable_domain }}
-          SERVICE_HOST_PORT: ${{ needs.stage-1-build-image.outputs.host_port }}
-          SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
-          SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
-          SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
+          SERVICE_NAME: ${{ needs.stage-1-prep.outputs.service_name }}
+          SERVICE_RUNTIME_PROFILE: ${{ needs.stage-1-prep.outputs.runtime_profile }}
+          SERVICE_ANSIBLE_VARS_SECRET_NAME: ${{ needs.stage-1-prep.outputs.ansible_vars_secret_name }}
+          SERVICE_SECRET_ENV_MAP_JSON: ${{ needs.stage-1-prep.outputs.secret_env_map_json }}
+          SERVICE_SHARED_STUNNEL_JSON: ${{ needs.stage-1-prep.outputs.shared_stunnel_json }}
+          SERVICE_TRACK_ENV_JSON: ${{ needs.stage-1-prep.outputs.track_env_json }}
+          SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-prep.outputs.image_ref }}
+          SERVICE_RELEASE_VERSION: ${{ needs.stage-1-prep.outputs.release_version }}
+          SERVICE_RELEASE_VERSION_DNS_LABEL: ${{ needs.stage-1-prep.outputs.release_version_dns_label }}
+          SERVICE_RELEASE_DOMAIN: ${{ needs.stage-1-prep.outputs.release_domain }}
+          SERVICE_PUBLIC_DOMAIN: ${{ needs.stage-1-prep.outputs.public_domain }}
+          SERVICE_RELEASE_DNS_ENABLED: ${{ needs.stage-1-prep.outputs.release_dns_enabled }}
+          SERVICE_RELEASE_DNS_SERVICE_NAME: ${{ needs.stage-1-prep.outputs.release_dns_prefix }}
+          SERVICE_RELEASE_VHOST_NAME: ${{ needs.stage-1-prep.outputs.release_vhost_name }}
+          SERVICE_DEPLOY_PREFIX: ${{ needs.stage-1-prep.outputs.deploy_subdomain_prefix }}
+          SERVICE_STABLE_DOMAIN: ${{ needs.stage-1-prep.outputs.stable_domain }}
+          SERVICE_HOST_PORT: ${{ needs.stage-1-prep.outputs.host_port }}
+          SERVICE_CONTAINER_PORT: ${{ needs.stage-1-prep.outputs.container_port }}
+          SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-prep.outputs.healthcheck_path }}
+          SERVICE_LOGICAL_NAME: ${{ needs.stage-1-prep.outputs.deploy_subdomain_prefix }}
         run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/materialize-ansible-vars.sh"
 
-      - name: Run ansible dry run with diff
+      - name: Run ansible deploy or migrate
         shell: bash
-        working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
+        working-directory: ${{ needs.stage-1-prep.outputs.service_checkout_path }}
         env:
-          GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
+          GIT_SHORT_COMMIT: ${{ needs.stage-1-prep.outputs.release_version_dns_label || needs.stage-1-prep.outputs.git_short_commit }}
+          SERVICE_RELEASE_VERSION: ${{ needs.stage-1-prep.outputs.release_version }}
+          SERVICE_RELEASE_VERSION_DNS_LABEL: ${{ needs.stage-1-prep.outputs.release_version_dns_label }}
+          SERVICE_RELEASE_DOMAIN: ${{ needs.stage-1-prep.outputs.release_domain }}
+          SERVICE_PUBLIC_DOMAIN: ${{ needs.stage-1-prep.outputs.public_domain }}
           DOCS_KNOWLEDGE_REPO_PATH_HOST: ${{ vars.DOCS_KNOWLEDGE_REPO_PATH_HOST }}
           DOCS_RELOAD_INTERVAL: ${{ vars.DOCS_RELOAD_INTERVAL }}
-        run: >
-          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/run-service-ansible.sh"
-          dry-run
-          "${{ steps.ssh.outputs.inventory_file }}"
-          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
-          "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}"
-          "${{ steps.vars.outputs.secret_vars_file }}"
-          "${{ steps.vars.outputs.runtime_vars_file }}"
+          APP_BASE_URL: ${{ vars.APP_BASE_URL }}
+          NEXT_PUBLIC_APP_BASE_URL: ${{ vars.NEXT_PUBLIC_APP_BASE_URL }}
+          NEXT_PUBLIC_SITE_URL: ${{ vars.NEXT_PUBLIC_SITE_URL }}
+          NEXT_PUBLIC_LOGIN_URL: ${{ vars.NEXT_PUBLIC_LOGIN_URL }}
+          NEXT_PUBLIC_DOCS_BASE_URL: ${{ vars.NEXT_PUBLIC_DOCS_BASE_URL }}
+          NEXT_PUBLIC_RUNTIME_ENVIRONMENT: ${{ vars.NEXT_PUBLIC_RUNTIME_ENVIRONMENT }}
+          NEXT_PUBLIC_RUNTIME_REGION: ${{ vars.NEXT_PUBLIC_RUNTIME_REGION }}
+          RUNTIME_HOSTNAME: ${{ vars.RUNTIME_HOSTNAME }}
+          NEXT_RUNTIME_HOSTNAME: ${{ vars.NEXT_RUNTIME_HOSTNAME }}
+          DEPLOYMENT_HOSTNAME: ${{ vars.DEPLOYMENT_HOSTNAME }}
+          ACCOUNT_SERVICE_URL: ${{ vars.ACCOUNT_SERVICE_URL }}
+          NEXT_PUBLIC_ACCOUNT_SERVICE_URL: ${{ vars.NEXT_PUBLIC_ACCOUNT_SERVICE_URL }}
+          SERVER_SERVICE_URL: ${{ vars.SERVER_SERVICE_URL }}
+          NEXT_PUBLIC_SERVER_SERVICE_URL: ${{ vars.NEXT_PUBLIC_SERVER_SERVICE_URL }}
+          SERVER_SERVICE_INTERNAL_URL: ${{ vars.SERVER_SERVICE_INTERNAL_URL }}
+          DOCS_SERVICE_URL: ${{ vars.DOCS_SERVICE_URL }}
+          DOCS_SERVICE_INTERNAL_URL: ${{ vars.DOCS_SERVICE_INTERNAL_URL }}
+          ROOT_EMAIL_WHITELIST: ${{ vars.ROOT_EMAIL_WHITELIST }}
+          OPENCLAW_GATEWAY_REMOTE_URL: ${{ vars.OPENCLAW_GATEWAY_REMOTE_URL }}
+          OPENCLAW_GATEWAY_TOKEN: ${{ secrets.OPENCLAW_GATEWAY_TOKEN }}
+          VAULT_SERVER_URL: ${{ vars.VAULT_SERVER_URL }}
+          VAULT_NAMESPACE: ${{ vars.VAULT_NAMESPACE }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN }}
+          APISIX_AI_GATEWAY_URL: ${{ vars.APISIX_AI_GATEWAY_URL }}
+          AI_GATEWAY_ACCESS_TOKEN: ${{ secrets.AI_GATEWAY_ACCESS_TOKEN }}
+          OLLAMA_API_KEY: ${{ secrets.OLLAMA_API_KEY }}
+          OLLAMA_CHAT_ENDPOINT: ${{ vars.OLLAMA_CHAT_ENDPOINT }}
+          OLLAMA_CHAT_MODEL: ${{ vars.OLLAMA_CHAT_MODEL }}
+          OLLAMA_KIMI_MODEL: ${{ vars.OLLAMA_KIMI_MODEL }}
+          OLLAMA_MINIMAX_MODEL: ${{ vars.OLLAMA_MINIMAX_MODEL }}
+          NVIDIA_API_KEY: ${{ secrets.NVIDIA_API_KEY }}
+          NVIDIA_CHAT_ENDPOINT: ${{ vars.NVIDIA_CHAT_ENDPOINT }}
+          NVIDIA_CHAT_MODEL: ${{ vars.NVIDIA_CHAT_MODEL }}
+          EMBEDDINGS_API_KEY: ${{ secrets.EMBEDDINGS_API_KEY }}
+          EMBEDDINGS_ENDPOINT: ${{ vars.EMBEDDINGS_ENDPOINT }}
+          EMBEDDINGS_MODEL: ${{ vars.EMBEDDINGS_MODEL }}
+          POSTGRESQL_SUPERUSER_PASSWORD: ${{ secrets.POSTGRESQL_SUPERUSER_PASSWORD }}
+          AGENT_XRAY_UUID: ${{ secrets.AGENT_XRAY_UUID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_WEB_ANALYTICS_SITE_TAG: ${{ vars.CLOUDFLARE_WEB_ANALYTICS_SITE_TAG }}
+          CLOUDFLARE_ZONE_TAG: ${{ vars.CLOUDFLARE_ZONE_TAG }}
+          NEXT_PUBLIC_GISCUS_REPO: ${{ vars.NEXT_PUBLIC_GISCUS_REPO }}
+          NEXT_PUBLIC_GISCUS_REPO_ID: ${{ vars.NEXT_PUBLIC_GISCUS_REPO_ID }}
+          NEXT_PUBLIC_GISCUS_CATEGORY: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY }}
+          NEXT_PUBLIC_GISCUS_CATEGORY_ID: ${{ vars.NEXT_PUBLIC_GISCUS_CATEGORY_ID }}
+          NEXT_PUBLIC_PAYPAL_CLIENT_ID: ${{ vars.NEXT_PUBLIC_PAYPAL_CLIENT_ID }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSTREAM_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XSCOPEHUB_SUBSCRIPTION }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_PAYGO }}
+          NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION: ${{ vars.NEXT_PUBLIC_STRIPE_PRICE_XCLOUDFLOW_SUBSCRIPTION }}
+        run: |
+          action="dry-run"
+          if [[ "${{ inputs.run_apply }}" == "true" ]]; then
+            action="apply"
+          fi
+          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/run-service-ansible.sh" \
+            "${action}" \
+            "${{ steps.ssh.outputs.inventory_file }}" \
+            "${{ needs.stage-1-prep.outputs.playbook_path }}" \
+            "${{ needs.stage-1-prep.outputs.service_public_vars_path }}" \
+            "${{ steps.vars.outputs.secret_vars_file }}" \
+            "${{ steps.vars.outputs.runtime_vars_file }}"
 
       - name: Summarize Stage 3
         shell: bash
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/summarize-service-release-stage.sh"
           stage3
-          "${{ needs.stage-1-build-image.outputs.service_name }}"
-          "${{ needs.stage-1-build-image.outputs.track }}"
-          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
+          "${{ needs.stage-1-prep.outputs.service_name }}"
+          "${{ needs.stage-1-prep.outputs.track }}"
+          "${{ needs.stage-1-prep.outputs.playbook_path }}"
+          "${{ inputs.run_apply && 'apply' || 'dry-run' }}"
 
-  stage-4-ansible-apply:
-    name: "4. Ansible Apply"
+  stage-4-validation:
+    name: "4. Validation"
     runs-on: ubuntu-latest
     needs:
-      - stage-1-build-image
-      - stage-2-update-release-dns
-      - stage-3-ansible-dry-run
-    if: ${{ inputs.run_apply }}
-    env:
-      GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
-      SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+      - stage-1-prep
+      - stage-3-deploy-or-migrate
     steps:
       - name: Checkout Control Repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -363,15 +486,6 @@ jobs:
           path: ${{ env.CONTROL_REPO_DIR }}
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           submodules: recursive
-
-      - name: Checkout Service Repo
-        if: ${{ needs.stage-1-build-image.outputs.service_source_kind != 'git-submodule' }}
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          repository: ${{ needs.stage-1-build-image.outputs.service_repository }}
-          ref: ${{ inputs.service_ref }}
-          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
-          path: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
 
       - name: Set up Python
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
@@ -382,67 +496,36 @@ jobs:
         shell: bash
         run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/install-python-tools.sh" ansible
 
-      - name: Prepare runner SSH and inventory
-        id: ssh
+      - name: Run local release gate
         shell: bash
         run: >
-          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/prepare-ansible-runtime.sh"
-          "${{ env.CONTROL_REPO_PATH }}/ansible/inventory.ini.tmpl"
-          "${{ needs.stage-1-build-image.outputs.deploy_server_alias }}"
+          python3 "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/stable-release-gate.py"
+          --mode local
+          --service "${{ needs.stage-1-prep.outputs.service_name }}"
+          --track "${{ needs.stage-1-prep.outputs.track }}"
+          --service-ref "${{ inputs.service_ref }}"
+          --repo-owner "${{ github.repository_owner }}"
 
-      - name: Materialize vars files
-        id: vars
+      - name: Run stable smoke
+        if: ${{ inputs.run_apply && needs.stage-1-prep.outputs.stable_smoke_enabled == 'true' }}
         shell: bash
-        env:
-          SERVICE_ANSIBLE_VARS_SECRET_NAME: ${{ needs.stage-1-build-image.outputs.ansible_vars_secret_name }}
-          SERVICE_SECRET_ENV_MAP_JSON: ${{ needs.stage-1-build-image.outputs.secret_env_map_json }}
-          SERVICE_SHARED_STUNNEL_JSON: ${{ needs.stage-1-build-image.outputs.shared_stunnel_json }}
-          SERVICE_TRACK_ENV_JSON: ${{ needs.stage-1-build-image.outputs.track_env_json }}
-          SERVICE_COMPOSE_IMAGE: ${{ needs.stage-1-build-image.outputs.image_ref }}
-          SERVICE_DEPLOY_PREFIX: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
-          SERVICE_STABLE_DOMAIN: ${{ needs.stage-1-build-image.outputs.stable_domain }}
-          SERVICE_HOST_PORT: ${{ needs.stage-1-build-image.outputs.host_port }}
-          SERVICE_CONTAINER_PORT: ${{ needs.stage-1-build-image.outputs.container_port }}
-          SERVICE_HEALTHCHECK_PATH: ${{ needs.stage-1-build-image.outputs.healthcheck_path }}
-          SERVICE_LOGICAL_NAME: ${{ needs.stage-1-build-image.outputs.deploy_subdomain_prefix }}
-        run: bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/materialize-ansible-vars.sh"
-
-      - name: Run ansible apply with diff
-        shell: bash
-        working-directory: ${{ needs.stage-1-build-image.outputs.service_checkout_path }}
-        env:
-          GIT_SHORT_COMMIT: ${{ needs.stage-1-build-image.outputs.git_short_commit }}
-          DOCS_KNOWLEDGE_REPO_PATH_HOST: ${{ vars.DOCS_KNOWLEDGE_REPO_PATH_HOST }}
-          DOCS_RELOAD_INTERVAL: ${{ vars.DOCS_RELOAD_INTERVAL }}
         run: >
-          bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/run-service-ansible.sh"
-          apply
-          "${{ steps.ssh.outputs.inventory_file }}"
-          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
-          "${{ needs.stage-1-build-image.outputs.service_public_vars_path }}"
-          "${{ steps.vars.outputs.secret_vars_file }}"
-          "${{ steps.vars.outputs.runtime_vars_file }}"
+          python3 "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/stable-release-gate.py"
+          --mode stable
+          --service "${{ needs.stage-1-prep.outputs.service_name }}"
+          --track "${{ needs.stage-1-prep.outputs.track }}"
+          --service-ref "${{ inputs.service_ref }}"
+          --repo-owner "${{ github.repository_owner }}"
 
       - name: Summarize Stage 4
         shell: bash
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/summarize-service-release-stage.sh"
           stage4
-          "${{ needs.stage-1-build-image.outputs.service_name }}"
-          "${{ needs.stage-1-build-image.outputs.track }}"
-          "${{ needs.stage-1-build-image.outputs.playbook_path }}"
-          "${{ needs.stage-1-build-image.outputs.release_domain }}"
-          "${{ needs.stage-1-build-image.outputs.stable_domain }}"
-
-  stage-5-stable-release-gate:
-    name: "5. Stable Release Gate"
-    needs:
-      - stage-4-ansible-apply
-    if: ${{ inputs.run_apply }}
-    uses: ./.github/workflows/stable_release_gate.yml
-    with:
-      mode: stable
-      service: ${{ inputs.service }}
-      track: ${{ inputs.track }}
-      service_ref: ${{ inputs.service_ref }}
-    secrets: inherit
+          "${{ needs.stage-1-prep.outputs.service_name }}"
+          "${{ needs.stage-1-prep.outputs.track }}"
+          "${{ needs.stage-1-prep.outputs.playbook_path }}"
+          "${{ needs.stage-1-prep.outputs.release_domain || 'n/a' }}"
+          "${{ needs.stage-1-prep.outputs.public_domain || needs.stage-1-prep.outputs.stable_domain || 'n/a' }}"
+          "passed"
+          "${{ (inputs.run_apply && needs.stage-1-prep.outputs.stable_smoke_enabled == 'true') && 'passed' || 'skipped' }}"

@@ -39,6 +39,17 @@ def resolve_deploy_server_alias(inventory_path: str, service: dict) -> str:
     return first_server_alias(inventory_path)
 
 
+def require_mapping(parent: dict, key: str, service_name: str) -> dict:
+    value = parent.get(key, {})
+    if not isinstance(value, dict):
+        raise SystemExit(f"service '{service_name}' field '{key}' must be a mapping")
+    return value
+
+
+def to_output_bool(value: object) -> str:
+    return "true" if bool(value) else "false"
+
+
 def main() -> None:
     if len(sys.argv) != 9:
         raise SystemExit(
@@ -97,15 +108,68 @@ def main() -> None:
         service_checkout_path = str(Path(control_repo_dir) / workspace_repo_path)
     elif source_kind == "remote-checkout":
         service_checkout_path = repo_name
+    elif source_kind == "control-repo":
+        service_checkout_path = control_repo_dir
     else:
         raise SystemExit(f"unsupported source_kind '{source_kind}' for repository '{repo_name}'")
 
-    public_vars_path = service.get("public_vars_path", "")
-    resolved_public_vars_path = public_vars_path if public_vars_path else ""
+    docker_conf = require_mapping(service, "docker", service_name)
+    artifact_mode = str(docker_conf.get("mode", "build")).strip() or "build"
+    if artifact_mode not in {"build", "prebuilt", "none"}:
+        raise SystemExit(
+            f"service '{service_name}' has unsupported docker.mode '{artifact_mode}'"
+        )
+    if artifact_mode == "build":
+        if not str(docker_conf.get("dockerfile_path", "")).strip():
+            raise SystemExit(f"service '{service_name}' requires docker.dockerfile_path")
+        if not str(docker_conf.get("build_context", "")).strip():
+            raise SystemExit(f"service '{service_name}' requires docker.build_context")
+        if not str(docker_conf.get("image_name", "")).strip():
+            raise SystemExit(f"service '{service_name}' requires docker.image_name")
+    if artifact_mode == "prebuilt" and not str(docker_conf.get("image_ref", "")).strip():
+        raise SystemExit(f"service '{service_name}' requires docker.image_ref for prebuilt mode")
 
+    release_version_conf = require_mapping(service, "release_version", service_name)
+    release_version_strategy = (
+        str(release_version_conf.get("strategy", "git-short-commit")).strip()
+        or "git-short-commit"
+    )
+    if release_version_strategy not in {"git-short-commit", "fixed"}:
+        raise SystemExit(
+            f"service '{service_name}' has unsupported release_version.strategy "
+            f"'{release_version_strategy}'"
+        )
+    release_version_value = str(release_version_conf.get("value", "")).strip()
+    if release_version_strategy == "fixed" and not release_version_value:
+        raise SystemExit(
+            f"service '{service_name}' requires release_version.value for fixed strategy"
+        )
+
+    domain_map = services_catalog.get("domain_map", {})
+    domain_entry = domain_map.get(service_name, {})
+    release_dns_enabled = bool(
+        service.get("release_dns_enabled", domain_entry.get("role") != "internal")
+    )
+    release_dns_prefix = (
+        str(service.get("release_dns_prefix", "")).strip()
+        or str(domain_entry.get("release_dns_prefix", "")).strip()
+        or str(track_conf.get("release_prefix", "")).strip()
+    )
+    release_vhost_name = (
+        str(service.get("release_dns_vhost_name", "")).strip()
+        or str(domain_entry.get("release_vhost_name", "")).strip()
+    )
+    if release_dns_enabled and (not release_dns_prefix or not release_vhost_name):
+        raise SystemExit(
+            f"service '{service_name}' must define release DNS prefix and vhost name"
+        )
+
+    public_vars_path = str(service.get("public_vars_path", "")).strip()
     server_alias = resolve_deploy_server_alias(inventory_path, service)
-    deploy_hostname = server_alias.split(".", 1)[0]
-    domain = services_catalog["domain"]
+    domain = str(services_catalog["domain"]).strip()
+    stable_domain = str(track_conf.get("stable_domain", "")).strip()
+    public_domain = str(domain_entry.get("public_domain") or stable_domain).strip()
+    runtime_profile = str(service.get("runtime_profile", "ansible-only")).strip() or "ansible-only"
 
     output = {
         "repo_owner": effective_repo_owner,
@@ -119,21 +183,32 @@ def main() -> None:
         "service_workspace_path": workspace_repo_path,
         "service_checkout_path": service_checkout_path,
         "playbook_path": service["playbook_path"],
-        "dockerfile_path": service["docker"]["dockerfile_path"],
-        "build_context": service["docker"]["build_context"],
-        "image_name": service["docker"]["image_name"],
-        "service_public_vars_path": resolved_public_vars_path,
+        "runtime_profile": runtime_profile,
+        "artifact_mode": artifact_mode,
+        "dockerfile_path": str(docker_conf.get("dockerfile_path", "")).strip(),
+        "build_context": str(docker_conf.get("build_context", "")).strip(),
+        "image_name": str(docker_conf.get("image_name", "")).strip(),
+        "prebuilt_image_ref": str(docker_conf.get("image_ref", "")).strip(),
+        "build_prepare_script": str(docker_conf.get("build_prepare_script", "")).strip(),
+        "build_args_script": str(docker_conf.get("build_args_script", "")).strip(),
+        "service_public_vars_path": public_vars_path,
         "ansible_vars_secret_name": service.get("ansible_vars_secret_name", ""),
         "secret_env_map_json": json.dumps(service.get("secret_env_map", {}), separators=(",", ":")),
         "shared_stunnel_json": json.dumps(service.get("shared_stunnel", {}), separators=(",", ":")),
         "track_env_json": json.dumps(track_conf.get("env", {}), separators=(",", ":")),
-        "deploy_subdomain_prefix": track_conf["release_prefix"],
-        "stable_domain": track_conf["stable_domain"],
-        "host_port": str(track_conf["host_port"]),
-        "container_port": str(service["docker"]["container_port"]),
-        "healthcheck_path": service["healthcheck_path"],
+        "deploy_subdomain_prefix": str(track_conf.get("release_prefix", "")).strip(),
+        "release_dns_enabled": to_output_bool(release_dns_enabled),
+        "release_dns_prefix": release_dns_prefix,
+        "release_vhost_name": release_vhost_name,
+        "release_version_strategy": release_version_strategy,
+        "release_version_value": release_version_value,
+        "stable_domain": stable_domain,
+        "public_domain": public_domain,
+        "host_port": str(track_conf.get("host_port", "")).strip(),
+        "container_port": str(docker_conf.get("container_port", "")).strip(),
+        "healthcheck_path": str(service.get("healthcheck_path", "")).strip(),
+        "stable_smoke_enabled": to_output_bool(service.get("stable_smoke_enabled", True)),
         "deploy_server_alias": server_alias,
-        "deploy_hostname": deploy_hostname,
         "domain": domain,
     }
 

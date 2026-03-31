@@ -52,6 +52,12 @@ def build_secret_payload() -> dict:
 
 
 def build_runtime_payload() -> dict:
+    runtime_profile = os.environ.get("SERVICE_RUNTIME_PROFILE", "").strip()
+    release_version = os.environ.get("SERVICE_RELEASE_VERSION", "").strip()
+    release_version_dns_label = os.environ.get("SERVICE_RELEASE_VERSION_DNS_LABEL", "").strip()
+    stable_domain = os.environ.get("SERVICE_STABLE_DOMAIN", "").strip()
+    release_domain = os.environ.get("SERVICE_RELEASE_DOMAIN", "").strip()
+
     track_env_json = os.environ.get("SERVICE_TRACK_ENV_JSON", "")
     track_env = {}
     if track_env_json:
@@ -73,35 +79,56 @@ def build_runtime_payload() -> dict:
             raise SystemExit("SERVICE_SHARED_STUNNEL_JSON must decode to an object")
 
     runtime_payload = {
-        "service_compose_image": require_env("SERVICE_COMPOSE_IMAGE"),
-        "service_compose_registry_server": os.environ.get("GHCR_REGISTRY", "ghcr.io"),
-        "service_compose_registry_username": require_env("GHCR_USERNAME"),
-        "service_compose_registry_password": require_env("GHCR_TOKEN"),
-        "service_compose_container_port": int(require_env("SERVICE_CONTAINER_PORT")),
-        "service_compose_deploy_targets": [
-            {
-                "name": require_env("SERVICE_LOGICAL_NAME"),
-                "deploy_subdomain_prefix": require_env("SERVICE_DEPLOY_PREFIX"),
-                "stable_domains": [require_env("SERVICE_STABLE_DOMAIN")],
-                "host_port": int(require_env("SERVICE_HOST_PORT")),
-                "healthcheck_path": require_env("SERVICE_HEALTHCHECK_PATH"),
-                "env": track_env,
-            }
-        ],
+        "service_name": os.environ.get("SERVICE_NAME", "").strip(),
+        "service_runtime_profile": runtime_profile,
+        "service_image_ref": os.environ.get("SERVICE_COMPOSE_IMAGE", "").strip(),
+        "service_release_version": release_version,
+        "service_release_version_dns_label": release_version_dns_label,
+        "service_release_domain": release_domain,
+        "service_public_domain": os.environ.get("SERVICE_PUBLIC_DOMAIN", "").strip(),
+        "service_stable_domain": stable_domain,
+        "service_healthcheck_path": os.environ.get("SERVICE_HEALTHCHECK_PATH", "").strip(),
+        "service_release_dns_enabled": os.environ.get("SERVICE_RELEASE_DNS_ENABLED", "false").strip().lower() == "true",
+        "service_release_dns_service_name": os.environ.get("SERVICE_RELEASE_DNS_SERVICE_NAME", "").strip(),
+        "service_release_vhost_name": os.environ.get("SERVICE_RELEASE_VHOST_NAME", "").strip(),
+        "service_release_domains": [value for value in [stable_domain, release_domain] if value],
     }
-    runtime_payload.update(
-        {
-            "service_compose_shared_stunnel_enabled": bool(shared_stunnel.get("enabled", False)),
-            "service_compose_shared_stunnel_container_name": str(
-                shared_stunnel.get("container_name", "cn-toolkit-stunnel-client")
-            ),
-            "service_compose_shared_stunnel_network_name": str(
-                shared_stunnel.get("network_name", "cn-toolkit-shared")
-            ),
-            "service_compose_shared_stunnel_image": str(shared_stunnel.get("image", "dweomer/stunnel")),
-            "service_compose_shared_stunnel_accept_port": int(shared_stunnel.get("accept_port", 15432)),
-        }
-    )
+
+    if runtime_profile == "shared-compose":
+        runtime_payload.update(
+            {
+                "service_compose_image": require_env("SERVICE_COMPOSE_IMAGE"),
+                "service_compose_registry_server": os.environ.get("GHCR_REGISTRY", "ghcr.io"),
+                "service_compose_registry_username": require_env("GHCR_USERNAME"),
+                "service_compose_registry_password": require_env("GHCR_TOKEN"),
+                "service_compose_release_version": release_version_dns_label or release_version,
+                "service_compose_release_vhost_name": require_env("SERVICE_RELEASE_VHOST_NAME"),
+                "service_compose_container_port": int(require_env("SERVICE_CONTAINER_PORT")),
+                "service_compose_deploy_targets": [
+                    {
+                        "name": require_env("SERVICE_LOGICAL_NAME"),
+                        "deploy_subdomain_prefix": require_env("SERVICE_DEPLOY_PREFIX"),
+                        "stable_domains": [stable_domain] if stable_domain else [],
+                        "host_port": int(require_env("SERVICE_HOST_PORT")),
+                        "healthcheck_path": require_env("SERVICE_HEALTHCHECK_PATH"),
+                        "env": track_env,
+                    }
+                ],
+                "service_compose_shared_stunnel_enabled": bool(shared_stunnel.get("enabled", False)),
+                "service_compose_shared_stunnel_container_name": str(
+                    shared_stunnel.get("container_name", "cn-toolkit-stunnel-client")
+                ),
+                "service_compose_shared_stunnel_network_name": str(
+                    shared_stunnel.get("network_name", "cn-toolkit-shared")
+                ),
+                "service_compose_shared_stunnel_image": str(
+                    shared_stunnel.get("image", "dweomer/stunnel")
+                ),
+                "service_compose_shared_stunnel_accept_port": int(
+                    shared_stunnel.get("accept_port", 15432)
+                ),
+            }
+        )
     return runtime_payload
 
 

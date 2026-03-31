@@ -2,17 +2,55 @@ cloudflare_dns_records:
   # VPS A records
   - type: A
     name: vps-rag-server.svc.plus
-    content: 167.179.110.129
+    content: 46.250.251.132
     ttl: 1
     proxied: false
   - type: A
     name: vps-accounts.svc.plus
-    content: 167.179.110.129
+    content: 46.250.251.132
     ttl: 1
     proxied: false
   - type: A
     name: vps-preview-accounts.svc.plus
-    content: 167.179.110.129
+    content: 46.250.251.132
+    ttl: 1
+    proxied: false
+
+  - type: A
+    name: docs.svc.plus
+    content: 46.250.251.132
+    ttl: 1
+    proxied: false
+  - type: A
+    name: x-scope-hub.svc.plus
+    content: 46.250.251.132
+    ttl: 1
+    proxied: false
+  - type: A
+    name: x-ops-agent.svc.plus
+    content: 46.250.251.132
+    ttl: 1
+    proxied: false
+  - type: A
+    name: x-cloud-flow.svc.plus
+    content: 46.250.251.132
+    ttl: 1
+    proxied: false
+  - type: A
+    name: accounts-preview.svc.plus
+    content: 46.250.251.132
+    ttl: 1
+    proxied: false
+
+  # Console CNAME chain
+  - type: CNAME
+    name: console-8fa9cd3-contabo.svc.plus
+    content: jp-xhttp-contabo.svc.plus
+    ttl: 1
+    proxied: false
+  - type: CNAME
+    name: console.svc.plus
+    content: console-8fa9cd3-contabo.svc.plus
     ttl: 1
     proxied: false
 

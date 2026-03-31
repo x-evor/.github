@@ -83,7 +83,7 @@
         label: "{{ item.name }}"
       register: cloudflare_dns_record_queries
 
-    - name: Remove conflicting DNS records with same name but different type
+    - name: Remove existing DNS records for target name
       ansible.builtin.uri:
         url: "{{ cloudflare_dns_api_base }}/zones/{{ cloudflare_dns_zone_id }}/dns_records/{{ item.1.id }}"
         method: DELETE
@@ -93,9 +93,8 @@
       loop: "{{ cloudflare_dns_record_queries.results | subelements('json.result', skip_missing=True) }}"
       loop_control:
         label: "{{ item.0.item.name }} delete {{ item.1.type }}"
-      when: item.1.type != item.0.item.type
 
-    - name: Create missing DNS records
+    - name: Create desired DNS records
       ansible.builtin.uri:
         url: "{{ cloudflare_dns_api_base }}/zones/{{ cloudflare_dns_zone_id }}/dns_records"
         method: POST
@@ -116,34 +115,6 @@
       loop: "{{ cloudflare_dns_record_queries.results }}"
       loop_control:
         label: "{{ item.item.name }}"
-      when: (item.json.result | selectattr('type', 'equalto', item.item.type) | list | length) == 0
-
-    - name: Update existing DNS records when content differs
-      ansible.builtin.uri:
-        url: "{{ cloudflare_dns_api_base }}/zones/{{ cloudflare_dns_zone_id }}/dns_records/{{ (item.json.result | selectattr('type', 'equalto', item.item.type) | list | first).id }}"
-        method: PUT
-        headers:
-          Authorization: "Bearer {{ cloudflare_dns_api_token }}"
-          Content-Type: application/json
-        body_format: raw
-        body: >-
-          {{
-            {
-              'type': item.item.type,
-              'name': item.item.name,
-              'content': item.item.content | default(item.item.value),
-              'ttl': (item.item.ttl | default(1) | int),
-              'proxied': (item.item.proxied | default(false) | bool)
-            } | to_json
-          }}
-      loop: "{{ cloudflare_dns_record_queries.results }}"
-      loop_control:
-        label: "{{ item.item.name }}"
-      when:
-        - item.json.result | length > 0
-        - item.json.result[0].content != (item.item.content | default(item.item.value))
-          or item.json.result[0].type != item.item.type
-          or (item.json.result[0].proxied | default(false)) != (item.item.proxied | default(false))
 
     - name: Show managed DNS records
       ansible.builtin.debug:

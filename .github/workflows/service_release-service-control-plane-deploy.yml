@@ -116,10 +116,10 @@ env:
   GHCR_REGISTRY: ghcr.io
   GHCR_USERNAME: svc-design
   SERVICE_REPO_OWNER: ${{ github.repository_owner }}
-  SINGLE_NODE_VPS_SSH_HOST: ${{ inputs.ssh_host != '' && inputs.ssh_host || '5.78.45.49' }}
-  SINGLE_NODE_VPS_SSH_USER: ${{ inputs.ssh_user != '' && inputs.ssh_user || 'root' }}
-  SINGLE_NODE_VPS_SSH_PORT: ${{ inputs.ssh_port != '' && inputs.ssh_port || '22' }}
-  SINGLE_NODE_VPS_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
+  ANSIBLE_OVERRIDE_SSH_HOST: ${{ inputs.ssh_host }}
+  ANSIBLE_OVERRIDE_SSH_USER: ${{ inputs.ssh_user }}
+  ANSIBLE_OVERRIDE_SSH_PORT: ${{ inputs.ssh_port }}
+  ANSIBLE_OVERRIDE_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
   DEPLOY_SERVER_ALIAS_OVERRIDE: ${{ inputs.deploy_server_alias }}
   TARGET_DOMAIN_OVERRIDE: ${{ inputs.target_domain }}
   INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
@@ -373,8 +373,9 @@ jobs:
         shell: bash
         run: >
           bash "${{ env.CONTROL_REPO_PATH }}/scripts/github-actions/prepare-ansible-runtime.sh"
-          "${{ env.CONTROL_REPO_PATH }}/ansible/inventory.ini.tmpl"
+          "${{ env.CONTROL_REPO_PATH }}/ansible/inventory.ini"
           "${{ needs.stage-1-prep.outputs.deploy_server_alias }}"
+          "${{ env.CONTROL_REPO_PATH }}/ansible/inventory.ini.tmpl"
 
       - name: Materialize vars files
         id: vars

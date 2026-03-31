@@ -1,4 +1,4 @@
-name: Service Release API Server Deploy
+name: Service Release Service Control Plane Deploy
 
 on:
   workflow_call:

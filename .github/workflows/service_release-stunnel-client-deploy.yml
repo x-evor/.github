@@ -57,7 +57,7 @@ permissions:
 jobs:
   deploy-stunnel-client-service:
     name: "Deploy stunnel-client"
-    uses: ./.github/workflows/service_release_apiserver-deploy.yml
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
     with:
       service: stunnel-client
       track: ${{ inputs.track }}

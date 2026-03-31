@@ -57,7 +57,7 @@ permissions:
 jobs:
   deploy-console-service:
     name: "Deploy console.svc.plus"
-    uses: ./.github/workflows/service_release_apiserver-deploy.yml
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
     with:
       service: console
       track: ${{ inputs.track }}

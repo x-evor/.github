@@ -141,7 +141,7 @@ The full workflow and examples are documented in:
 
 Workflow file:
 
-- `.github/workflows/service_release_apiserver-deploy.yml`
+- `.github/workflows/service_release-service-control-plane-deploy.yml`
 
 Core release-enabled services:
 
@@ -226,7 +226,7 @@ For `accounts.svc.plus`, update the service repository branch or tag first, then
 Manual run with GitHub CLI:
 
 ```bash
-gh workflow run service_release_apiserver-deploy.yml \
+gh workflow run service_release-service-control-plane-deploy.yml \
   -R cloud-neutral-toolkit/github-org-cloud-neutral-toolkit \
   -f service=accounts \
   -f track=prod \

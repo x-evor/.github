@@ -57,7 +57,7 @@ permissions:
 jobs:
   deploy-postgresql-service:
     name: "Deploy postgresql-svc-plus"
-    uses: ./.github/workflows/service_release_apiserver-deploy.yml
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
     with:
       service: postgresql-svc-plus
       track: ${{ inputs.track }}
@@ -68,4 +68,3 @@ jobs:
       ssh_port: "22"
       ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
     secrets: inherit
-

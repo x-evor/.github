@@ -23,7 +23,7 @@ flowchart TB
   subgraph GHA["GitHub Actions pipelines"]
     ConsoleWF["service_release_frontend-deploy.yml"]
     DocsWF["service_release-docs-deploy.yml"]
-    APIWF["service_release_apiserver-deploy.yml"]
+    APIWF["service_release-service-control-plane-deploy.yml"]
     OpenClawWF["openclaw_gateway.yml"]
     AgentWF["service_release_agent_proxy_node.yml"]
     DesktopWF["cloud-dev-desktop.yml + cloud-dev-desktop-parity-release.yml<br/>merged into one pipeline"]
@@ -137,12 +137,12 @@ flowchart TB
 | Service | Public domain | Release domain | GitHub Actions entrypoint | Ansible playbook | Runtime target | Notes |
 | --- | --- | --- | --- | --- | --- | --- |
 | `console` | `console.svc.plus` | `console-contabo.svc.plus` | `service_release_frontend-deploy.yml` | `ansible/playbooks/deploy_console_frontend.yml` | `vercel.com` + `cn-front.svc.plus` / `47.120.61.35` | Overseas primary frontend on Vercel, mainland frontend on VPS |
-| `docs` | `docs.svc.plus` | `docs-contabo.svc.plus` | `service_release-docs-deploy.yml` -> `service_release_apiserver-deploy.yml` | `ansible/playbooks/deploy_docs_compose.yml` | `jp-xhttp-contabo.svc.plus` / `46.250.251.132` | Compose-based docs service |
+| `docs` | `docs.svc.plus` | `docs-contabo.svc.plus` | `service_release-docs-deploy.yml` -> `service_release-service-control-plane-deploy.yml` | `ansible/playbooks/deploy_docs_compose.yml` | `jp-xhttp-contabo.svc.plus` / `46.250.251.132` | Compose-based docs service |
 | `vault` | `vault.svc.plus` | `vault-contabo.svc.plus` | shared platform release plane | n/a in this repo | distributed across VPS targets through stunnel | Treat as shared infra / secret backend |
 | `apisix` | `api.svc.plus` | `api-contabo.svc.plus` | shared platform release plane | `ansible/playbooks/deploy_docker_compose_lite_migration.yml` | distributed across VPS targets through stunnel | Edge routing layer |
 | `openclaw-gateway` | `openclaw-gateway.svc.plus` | `gateway-contabo.svc.plus` | `openclaw_gateway.yml` | `ansible/playbooks/openclaw_gateway.yml` | distributed across VPS targets through stunnel | Gateway runtime + DNS |
-| `accounts` | `accounts.svc.plus` | `accounts-contabo.svc.plus` | `service_release_apiserver-deploy.yml` | `ansible/playbooks/deploy_accounts_compose.yml` | distributed across VPS targets through stunnel | Shared stunnel-client + DB |
-| `rag-server` | `rag-server.svc.plus` | `rag-server-contabo.svc.plus` | `service_release_apiserver-deploy.yml` | `ansible/playbooks/deploy_rag_server_compose.yml` | distributed across VPS targets through stunnel | Shared stunnel-client + DB |
+| `accounts` | `accounts.svc.plus` | `accounts-contabo.svc.plus` | `service_release-service-control-plane-deploy.yml` | `ansible/playbooks/deploy_accounts_compose.yml` | distributed across VPS targets through stunnel | Shared stunnel-client + DB |
+| `rag-server` | `rag-server.svc.plus` | `rag-server-contabo.svc.plus` | `service_release-service-control-plane-deploy.yml` | `ansible/playbooks/deploy_rag_server_compose.yml` | distributed across VPS targets through stunnel | Shared stunnel-client + DB |
 | `postgresql-svc-plus` | n/a | `postgresql-contabo.svc.plus` | shared platform release plane | `ansible/playbooks/postgresql_migration.yml` | distributed across VPS targets through stunnel | Internal DB runtime |
 | `agent-svc-plus` | `jp-xhttp-contabo.svc.plus` | `jp-xhttp-contabo.svc.plus` | `service_release_agent_proxy_node.yml` | `ansible/playbooks/deploy_jp_xhttp_contabo.yml` | distributed across VPS targets through stunnel | Internal proxy node |
 | `stunnel-server` / `stunnel-client` | internal only | internal only | shared platform release plane | `ansible/playbooks/deploy_docker_compose_lite_migration.yml` | distributed across VPS targets through stunnel | No public domain |

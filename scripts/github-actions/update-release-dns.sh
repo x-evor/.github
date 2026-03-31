@@ -28,4 +28,5 @@ else
 fi
 
 cd "${control_repo_path}"
+export ANSIBLE_ROLES_PATH="${control_repo_path}/ansible/roles${ANSIBLE_ROLES_PATH:+:${ANSIBLE_ROLES_PATH}}"
 ansible-playbook ansible/playbooks/update_cloudflare_dns.yml -e "${dns_payload}"

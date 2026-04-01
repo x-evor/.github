@@ -47,7 +47,7 @@ flowchart TB
     USHost["us-xhttp.svc.plus<br/>5.78.45.49"]
     VPSPool["multiple VPS hosts<br/>service placement varies by target"]
     ComposeLite["shared compose-lite stack<br/>caddy + apisix + accounts + rag-server + stunnel-client"]
-    OpenClawNode["openclaw gateway runtime<br/>systemd / docker + Caddy + DNS"]
+    OpenClawNode["openclaw gateway runtime<br/>systemd / docker + Caddy + DNS<br/>jp-xhttp-contabo.svc.plus"]
     ProxyNode["agent proxy node<br/>setup-proxy + stunnel + DNS"]
     PostgresNode["postgresql-svc-plus<br/>internal DB runtime"]
     SharedPlatform["shared platform layer<br/>vault / APISIX / stunnel-server / stunnel-client"]
@@ -140,7 +140,7 @@ flowchart TB
 | `docs` | `docs.svc.plus` | `docs-contabo.svc.plus` | `service_release-docs-deploy.yml` -> `service_release-service-control-plane-deploy.yml` | `ansible/playbooks/deploy_docs_compose.yml` | `jp-xhttp-contabo.svc.plus` / `46.250.251.132` | Compose-based docs service |
 | `vault` | `vault.svc.plus` | `vault-contabo.svc.plus` | shared platform release plane | n/a in this repo | distributed across VPS targets through stunnel | Treat as shared infra / secret backend |
 | `apisix` | `api.svc.plus` | `api-contabo.svc.plus` | shared platform release plane | `ansible/playbooks/deploy_docker_compose_lite_migration.yml` | distributed across VPS targets through stunnel | Edge routing layer |
-| `openclaw-gateway` | `openclaw-gateway.svc.plus` | `gateway-contabo.svc.plus` | `openclaw_gateway.yml` | `ansible/playbooks/openclaw_gateway.yml` | distributed across VPS targets through stunnel | Gateway runtime + DNS |
+| `openclaw-gateway` | `openclaw-gateway.svc.plus` | `gateway-contabo.svc.plus` | `openclaw_gateway.yml` | `ansible/playbooks/openclaw_gateway.yml` | `jp-xhttp-contabo.svc.plus` / `46.250.251.132` | Gateway runtime + DNS |
 | `accounts` | `accounts.svc.plus` | `accounts-contabo.svc.plus` | `service_release-service-control-plane-deploy.yml` | `ansible/playbooks/deploy_accounts_compose.yml` | distributed across VPS targets through stunnel | Shared stunnel-client + DB |
 | `rag-server` | `rag-server.svc.plus` | `rag-server-contabo.svc.plus` | `service_release-service-control-plane-deploy.yml` | `ansible/playbooks/deploy_rag_server_compose.yml` | distributed across VPS targets through stunnel | Shared stunnel-client + DB |
 | `postgresql-svc-plus` | n/a | `postgresql-contabo.svc.plus` | shared platform release plane | `ansible/playbooks/postgresql_migration.yml` | distributed across VPS targets through stunnel | Internal DB runtime |

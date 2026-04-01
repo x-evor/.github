@@ -22,6 +22,7 @@
   loop:
     - "{{ apisix_release_root }}"
     - "{{ apisix_release_conf_dir }}"
+    - "{{ apisix_release_root }}/scripts"
 
 - name: Copy APISIX standalone config
   ansible.builtin.copy:
@@ -47,6 +48,16 @@
     src: docker-compose.yml.j2
     dest: "{{ apisix_release_compose_file }}"
     mode: "0644"
+
+- name: Copy APISIX helper scripts
+  ansible.builtin.copy:
+    src: "{{ apisix_example_root }}/scripts/{{ item }}"
+    dest: "{{ apisix_release_root }}/scripts/{{ item }}"
+    mode: "0755"
+  loop:
+    - validate.sh
+    - reload.sh
+    - healthcheck.sh
 
 - name: Discover legacy APISIX Caddy files
   ansible.builtin.find:
@@ -96,4 +107,9 @@
 - name: Reload Caddy after APISIX update
   ansible.builtin.command: systemctl reload caddy
   changed_when: true
+  when: not ansible_check_mode
+
+- name: Run APISIX and Caddy health check
+  ansible.builtin.command: "{{ apisix_release_root }}/scripts/healthcheck.sh"
+  changed_when: false
   when: not ansible_check_mode

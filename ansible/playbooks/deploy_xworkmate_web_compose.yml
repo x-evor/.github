@@ -7,4 +7,4 @@
   tasks:
     - name: Deploy xworkmate-web via shared compose role
       ansible.builtin.include_role:
-        name: shared_compose_service_deploy
+        name: shared_compose_release

@@ -9,7 +9,10 @@ services:
       - server
       - -config=/vault/config/vault.hcl
     ports:
-      - "127.0.0.1:{{ vault_release_http_port }}:8200"
+      - "{{ vault_release_http_host_bind_address }}:{{ vault_release_http_port }}:8200"
+{% if vault_release_expose_cluster_port | bool %}
+      - "{{ vault_release_cluster_host_bind_address }}:{{ vault_release_cluster_port }}:8201"
+{% endif %}
     volumes:
       - {{ vault_release_data_dir | to_json }}:/opt/vault/data
       - {{ (vault_release_config_dir ~ '/vault.hcl') | to_json }}:/vault/config/vault.hcl:ro

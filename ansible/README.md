@@ -9,7 +9,7 @@ Workflow usage reference:
 
 ## Shared Pieces
 
-- `roles/shared_compose_service_deploy/`
+- `roles/shared_compose_release/`
   - Renders per-release Docker Compose files and app env files.
   - Writes the matching Caddy site file to `/etc/caddy/conf.d/`.
   - Brings up the new release and retires older releases for the same logical service.

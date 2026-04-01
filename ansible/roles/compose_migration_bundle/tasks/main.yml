@@ -1,0 +1,23 @@
+- name: Validate migration bundle inputs
+  ansible.builtin.assert:
+    that:
+      - compose_migration_accounts_image | length > 0
+      - compose_migration_rag_image | length > 0
+      - compose_migration_db_tls_host | length > 0
+      - compose_migration_dns_provider == 'cloudflare'
+      - compose_migration_dns_records | length > 0
+
+- name: Render migration stack
+  ansible.builtin.include_tasks: render.yml
+
+- name: Validate migration stack
+  ansible.builtin.include_tasks: diff.yml
+
+- name: Preflight migration stack
+  ansible.builtin.include_tasks: preflight.yml
+
+- name: Apply migration stack
+  ansible.builtin.include_tasks: apply.yml
+
+- name: Verify migration stack
+  ansible.builtin.include_tasks: verify.yml

@@ -1,0 +1,15 @@
+---
+migration_runtime: docker # docker|systemd|k3s|k8s
+migration_apply: true
+migration_project_dir: /opt/cloud-neutral/docker-compose-lite
+migration_project_name: cn-toolkit-lite
+migration_accounts_image: ""
+migration_rag_image: ""
+migration_db_tls_host: ""
+migration_db_tls_port: 5443
+migration_dns_provider: cloudflare
+migration_dns_zone: svc.plus
+migration_dns_token: ""
+migration_dns_records: []
+migration_accounts_env: {}
+migration_rag_env: {}

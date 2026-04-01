@@ -1,0 +1,14 @@
+---
+compose_migration_apply: true
+compose_migration_project_dir: /opt/cloud-neutral/docker-compose-lite
+compose_migration_project_name: cn-toolkit-lite
+compose_migration_accounts_image: ""
+compose_migration_rag_image: ""
+compose_migration_db_tls_host: ""
+compose_migration_db_tls_port: 5443
+compose_migration_dns_provider: cloudflare
+compose_migration_dns_zone: svc.plus
+compose_migration_dns_token: ""
+compose_migration_dns_records: []
+compose_migration_accounts_env: {}
+compose_migration_rag_env: {}

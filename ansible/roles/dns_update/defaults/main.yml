@@ -1,0 +1,6 @@
+---
+dns_update_zone_name: ""
+dns_update_zone_id: ""
+dns_update_api_token: ""
+dns_update_records: []
+dns_update_provider: cloudflare

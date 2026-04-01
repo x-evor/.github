@@ -1,5 +1,6 @@
 vault_release_root: /opt/cloud-neutral/vault
 vault_release_http_port: 18200
+vault_release_cluster_port: 18201
 vault_release_container_name: cn-toolkit-vault
 vault_release_caddy_conf_dir: /etc/caddy/conf.d
 vault_release_data_dir: "{{ vault_release_root }}/data"
@@ -8,3 +9,11 @@ vault_release_compose_file: "{{ vault_release_root }}/docker-compose.yml"
 vault_release_image: "{{ service_image_ref }}"
 vault_release_primary_domain: "{{ service_public_domain | default(service_release_domain, true) }}"
 vault_release_domains: "{{ service_release_domains | default([service_public_domain, service_release_domain]) | reject('equalto', '') | list }}"
+vault_release_node_id: vault-1
+vault_release_api_bind_address: 0.0.0.0:8200
+vault_release_cluster_bind_address: 0.0.0.0:8201
+vault_release_cluster_addr: http://127.0.0.1:8201
+vault_release_retry_join: []
+vault_release_expose_cluster_port: false
+vault_release_http_host_bind_address: 127.0.0.1
+vault_release_cluster_host_bind_address: 127.0.0.1

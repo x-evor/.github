@@ -1,0 +1,11 @@
+- name: Validate accounts image is set for apply
+  ansible.builtin.assert:
+    that:
+      - compose_migration_accounts_image | length > 0
+  when: compose_migration_apply | bool
+
+- name: Validate rag image is set for apply
+  ansible.builtin.assert:
+    that:
+      - compose_migration_rag_image | length > 0
+  when: compose_migration_apply | bool

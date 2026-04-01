@@ -155,7 +155,7 @@ curl -fsSL -o /dev/null -w '%{http_code}' https://xworkmate.svc.plus/
 | `.github/workflows/service_release-xworkmate-web-deploy.yml` | GitHub Actions 工作流 |
 | `ansible/playbooks/deploy_xworkmate_web_compose.yml` | Ansible Playbook |
 | `ansible/vars/xworkmate-web.release.public.yml` | Release 公共变量 |
-| `ansible/roles/shared_compose_service_deploy/` | 共享部署角色 (复用) |
+| `ansible/roles/shared_compose_release/` | 共享部署角色 (复用) |
 | `ansible/inventory.ini` | 主机清单 (含 [xworkmate-web] 组) |
 | `../xworkmate.svc.plus/lib/web/Dockerfile` | Flutter Web Docker 镜像 |
 

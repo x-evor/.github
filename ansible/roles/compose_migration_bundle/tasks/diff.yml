@@ -1,0 +1,12 @@
+- name: Check Docker is installed
+  ansible.builtin.command: docker --version
+  changed_when: false
+
+- name: Validate docker compose config
+  ansible.builtin.shell: |
+    set -euo pipefail
+    cd "{{ compose_migration_project_dir }}"
+    docker compose -p "{{ compose_migration_project_name }}" config
+  args:
+    executable: /bin/bash
+  changed_when: false

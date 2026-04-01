@@ -18,6 +18,7 @@ Shared by default:
 - `docs/api.md`
 - `docs/models.md`
 - `docs/providers.md`
+- `scripts/healthcheck.sh`
 - `scripts/reload.sh`
 - `scripts/validate.sh`
 

@@ -1,0 +1,4 @@
+{{ caddy_site_domains | join(", ") }} {
+  encode zstd gzip
+  reverse_proxy {{ caddy_site_upstream }}
+}

@@ -4,6 +4,10 @@
 **负责人**: `@shenlan`
 **目标环境**: 单机 VPS (`2 vCPU / 2 GiB RAM / 20+ GiB SSD`)
 
+> Live cutover record for the current `jp-xhttp-contabo.svc.plus` migration is maintained in
+> [`../operations-governance/single-node-migration-validation-2026-03-16.md`](../operations-governance/single-node-migration-validation-2026-03-16.md).
+> Use that file as the active execution log for the PORD, PRE, and DB tunnel batches.
+
 ## 问题描述
 
 如果只迁移最核心的 API 链路，而不需要 Kubernetes 的编排能力，那么在单机 VPS 上使用 `Docker + Docker Compose` 会比 `K3s` 更轻：
@@ -235,6 +239,9 @@ bash /opt/cloud-neutral/docker-compose-lite/verify_stack.sh
 # 或使用 Ansible
 ansible -i ansible/inventory.ini all -a "cd /opt/cloud-neutral/docker-compose-lite && docker compose -p cn-toolkit-lite ps"
 ```
+
+> For the latest Contabo cutover, see the batch log in
+> [`../operations-governance/single-node-migration-validation-2026-03-16.md`](../operations-governance/single-node-migration-validation-2026-03-16.md).
 
 ## 验证检查点
 

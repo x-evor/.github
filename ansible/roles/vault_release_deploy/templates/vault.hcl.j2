@@ -2,15 +2,23 @@ ui = true
 disable_mlock = true
 
 api_addr = "https://{{ vault_release_primary_domain }}"
-cluster_addr = "http://127.0.0.1:8201"
+cluster_addr = "{{ vault_release_cluster_addr }}"
 
 storage "raft" {
-  path    = "/opt/vault/data"
-  node_id = "vault-1"
+  path    = "{{ vault_release_data_dir }}"
+  node_id = "{{ vault_release_node_id }}"
+{% for join in vault_release_retry_join %}
+  retry_join {
+    leader_api_addr = "{{ join.leader_api_addr }}"
+{% if join.leader_ca_cert_file is defined %}
+    leader_ca_cert_file = "{{ join.leader_ca_cert_file }}"
+{% endif %}
+  }
+{% endfor %}
 }
 
 listener "tcp" {
-  address         = "0.0.0.0:8200"
-  cluster_address = "127.0.0.1:8201"
+  address         = "{{ vault_release_api_bind_address }}"
+  cluster_address = "{{ vault_release_cluster_bind_address }}"
   tls_disable     = true
 }

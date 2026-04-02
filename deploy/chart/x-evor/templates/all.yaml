@@ -105,6 +105,7 @@ data:
       reverse_proxy 127.0.0.1:18085
     }
 ---
+{{- if .Values.stunnelServer.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -773,6 +774,8 @@ spec:
       port: 5433
       targetPort: 5433
 ---
+{{- end }}
+{{- if .Values.stunnelClient.enabled }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -818,6 +821,7 @@ spec:
       port: 15432
       targetPort: 15432
 ---
+{{- end }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

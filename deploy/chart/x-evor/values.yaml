@@ -33,6 +33,10 @@ images:
   stunnelServer: ghcr.io/x-evor/stunnel-server:2330d36
   stunnelClient: dweomer/stunnel:latest
   postgresql: postgres-extensions:17
+stunnelServer:
+  enabled: true
+stunnelClient:
+  enabled: true
 resources:
   caddy:
     replicas: 1

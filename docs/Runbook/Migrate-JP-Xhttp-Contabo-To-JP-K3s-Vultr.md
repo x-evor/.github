@@ -13,7 +13,8 @@
 - Source host: `root@jp-xhttp-contabo.svc.plus`
 - Target host: `root@jp-k3s-vultr.svc.plus`
 - Target deployment mode: `k3s_platform`
-- Target platform bootstrap: `playbooks/init_k3s_single_node_gitops.yml`
+- Target platform bootstrap playbook: `playbooks/init_k3s_single_node_gitops.yml`
+- Target platform bootstrap vars: `playbooks/vars/platform_k3s_bootstrap.yml`
 - Target GitOps base: `gitops/infra/clusters/prod`
 - Services in scope:
   - `k3s_platform_bootstrap`
@@ -133,7 +134,11 @@ Logical line split during migration:
 ## Phase 1: Bootstrap the Target Platform
 
 Run the target bootstrap with the new host label.
-The new host uses the `k3s_platform` deployment mode, not the legacy one-off bootstrap label.
+The bootstrap now follows three explicit stages:
+
+1. install and configure `k3s`
+2. integrate external Vault bootstrap inputs with `VAULT_URL`, `VAULT_TOKEN`, and optional `VAULT_NAMESPACE`
+3. install and configure FluxCD bootstrap with `GITOPS_REPO` and `GITOPS_AUTH_MODE`
 
 Recommended command shape:
 
@@ -143,13 +148,23 @@ ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D \
-  -e @vars/k3s_platform_svc_plus.yml
+  -e @vars/platform_k3s_bootstrap.yml
 ```
 
 For Vault mode selection:
 
 - fresh target: `K3S_PLATFORM_VAULT_BOOTSTRAP_MODE=init`
 - reuse / takeover flow: `K3S_PLATFORM_VAULT_BOOTSTRAP_MODE=migrate`
+
+For Flux bootstrap:
+
+- Git repository URL: `GITOPS_REPO`
+- Git auth mode: `GITOPS_AUTH_MODE`
+- Optional auth materials:
+  - `GITOPS_FLUX_HTTP_USERNAME`
+  - `GITOPS_FLUX_HTTP_PASSWORD` or `GITOPS_FLUX_TOKEN`
+  - `GITOPS_FLUX_BEARER_TOKEN`
+  - `GITOPS_FLUX_DEPLOY_KEY` and `GITOPS_FLUX_DEPLOY_KEY_PUB`
 
 ## Phase 2: Vault Bootstrap or Migration
 

@@ -19,7 +19,7 @@ on:
       vars_file:
         description: "Path inside the playbooks repo"
         required: true
-        default: "vars/k3s_platform_svc_plus.yml"
+        default: "vars/platform_k3s_bootstrap.yml"
         type: string
 
 permissions:
@@ -66,16 +66,26 @@ jobs:
 
       - name: Bootstrap k3s platform
         env:
+          # Stage 1: install and configure k3s.
           ANSIBLE_OVERRIDE_SSH_HOST: ${{ vars.SINGLE_NODE_VPS_SSH_HOST || '' }}
           ANSIBLE_OVERRIDE_SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER || 'root' }}
           ANSIBLE_OVERRIDE_SSH_PORT: ${{ vars.SINGLE_NODE_VPS_SSH_PORT || '22' }}
           ANSIBLE_OVERRIDE_SSH_KNOWN_HOSTS: ${{ vars.SINGLE_NODE_VPS_SSH_KNOWN_HOSTS }}
           SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
-          GITOPS_FLUX_DEPLOY_KEY: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY }}
-          GITOPS_FLUX_DEPLOY_KEY_PUB: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY_PUB }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
           VAULT_ROOT_TOKEN: ${{ secrets.VAULT_ROOT_TOKEN }}
+
+          # Stage 2: integrate external Vault bootstrap inputs.
+          VAULT_URL: ${{ vars.VAULT_URL || '' }}
+          VAULT_NAMESPACE: ${{ vars.VAULT_NAMESPACE || '' }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN || '' }}
+
+          # Stage 3: install and configure FluxCD bootstrap.
+          GITOPS_REPO: ${{ vars.GITOPS_REPO || 'https://github.com/x-evor/gitops.git' }}
+          GITOPS_AUTH_MODE: ${{ secrets.GITOPS_AUTH_MODE || vars.GITOPS_AUTH_MODE || 'public' }}
+          GITOPS_FLUX_DEPLOY_KEY: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY }}
+          GITOPS_FLUX_DEPLOY_KEY_PUB: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY_PUB }}
         shell: bash
         run: |
           bash scripts/github-actions/run-platform-ansible.sh \

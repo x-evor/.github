@@ -20,16 +20,27 @@
 ## Command Entry Points
 
 - `playbooks/init_k3s_single_node_gitops.yml`
-- `playbooks/vars/k3s_platform_svc_plus.yml`
+- `playbooks/vars/platform_k3s_bootstrap.yml`
 - `docs/Runbook/Migrate-JP-Xhttp-Contabo-To-JP-K3s-Vultr.md`
 
-**Flux auth inputs**
+**Bootstrap stage inputs**
 
-- `K3S_PLATFORM_GIT_AUTH_MODE`
+- Stage 1: SSH access and host targeting
+- `SINGLE_NODE_VPS_SSH_PRIVATE_KEY`
+- `SINGLE_NODE_VPS_SSH_HOST`
+- `SINGLE_NODE_VPS_SSH_USER`
+- `SINGLE_NODE_VPS_SSH_PORT`
+- Stage 2: external Vault bootstrap
+- `VAULT_URL`
+- `VAULT_TOKEN`
+- `VAULT_NAMESPACE` (optional)
+- Stage 3: FluxCD bootstrap
+- `GITOPS_REPO`
+- `GITOPS_AUTH_MODE`
 - `GITOPS_FLUX_HTTP_USERNAME`
 - `GITOPS_FLUX_HTTP_PASSWORD` or `GITOPS_FLUX_TOKEN`
 - `GITOPS_FLUX_BEARER_TOKEN`
-- `GITOPS_FLUX_DEPLOY_KEY` and `GITOPS_FLUX_DEPLOY_KEY_PUB` for SSH fallback
+- `GITOPS_FLUX_DEPLOY_KEY` and `GITOPS_FLUX_DEPLOY_KEY_PUB` for SSH mode
 
 ## Batch 0: Preflight
 
@@ -85,7 +96,7 @@ ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D \
-  -e @vars/k3s_platform_svc_plus.yml
+  -e @vars/platform_k3s_bootstrap.yml
 ```
 
 ```bash
@@ -131,7 +142,7 @@ ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D \
-  -e @vars/k3s_platform_svc_plus.yml
+  -e @vars/platform_k3s_bootstrap.yml
 ```
 
 For `migrate`:
@@ -145,7 +156,7 @@ ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D \
-  -e @vars/k3s_platform_svc_plus.yml
+  -e @vars/platform_k3s_bootstrap.yml
 ```
 
 ```bash

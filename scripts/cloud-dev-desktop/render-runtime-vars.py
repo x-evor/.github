@@ -55,6 +55,7 @@ def main():
 
     runtime_dir = Path(args.runtime_vars_out).resolve().parent
     runtime_dir.mkdir(parents=True, exist_ok=True)
+    repo_root = Path(__file__).resolve().parents[2]
 
     merged.setdefault("toolchains", {})
     merged.setdefault("desktop_access", {})
@@ -77,17 +78,23 @@ def main():
             f"ansible_user={state.get('admin_username', merged.get('admin_username', 'devadmin'))}",
         ]
         if os_family == "windows":
-            win_password = os.environ.get("CLOUD_DEV_DESKTOP_WINDOWS_PASSWORD", "")
+            ssh_public_key_path = os.path.expanduser(
+                merged.get(
+                    "ssh_public_key_path",
+                    str(repo_root / ".ansible/cloud-dev-desktop/keys/azure-win11-flutter-android-to-gcp.pub"),
+                )
+            )
+            ssh_private_key_path = ssh_public_key_path.replace(".pub", "")
             hostvars.extend(
                 [
-                    "ansible_connection=winrm",
-                    "ansible_port=5985",
-                    "ansible_winrm_transport=basic",
-                    "ansible_winrm_server_cert_validation=ignore",
+                    "ansible_connection=ssh",
+                    "ansible_shell_type=powershell",
+                    "ansible_port=22",
+                    "ansible_ssh_transfer_method=piped",
+                    f"ansible_ssh_private_key_file={ssh_private_key_path}",
                 ]
             )
-            if win_password:
-                hostvars.append(f"ansible_password={win_password}")
+            hostvars[1] = f"ansible_user={merged['admin_username']}"
         else:
             ssh_key = os.path.expanduser(merged.get("ssh_public_key_path", "~/.ssh/id_rsa.pub")).replace(".pub", "")
             hostvars.extend(

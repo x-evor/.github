@@ -36,6 +36,10 @@ python3 "${repo_root}/scripts/cloud-dev-desktop/render-runtime-vars.py" \
   --inventory-out "${inventory_file}" \
   --state-file "${state_file}"
 
+export OBJC_DISABLE_INITIALIZE_FORK_SAFETY="${OBJC_DISABLE_INITIALIZE_FORK_SAFETY:-YES}"
+export no_proxy="${no_proxy:-*}"
+export NO_PROXY="${NO_PROXY:-*}"
+
 args=(ansible-playbook -i "${inventory_file}" -D "${repo_root}/ansible/playbooks/verify_cloud_dev_desktop.yml" -e "@${runtime_vars}")
 if [[ "${mode}" == "dry-run" ]]; then
   args=(ansible-playbook -i "${inventory_file}" -D -C "${repo_root}/ansible/playbooks/verify_cloud_dev_desktop.yml" -e "@${runtime_vars}")

@@ -9,6 +9,13 @@
     azure_public_ip_name: "{{ azure_public_ip_name | default('pip-' ~ cloud_vm_profile_slug) }}"
     azure_nic_name: "{{ azure_nic_name | default('nic-' ~ cloud_vm_profile_slug) }}"
     azure_vm_name: "{{ azure_vm_name | default('vm-' ~ cloud_vm_profile_slug) }}"
+    azure_computer_name: >-
+      {{
+        azure_computer_name
+        | default(
+            ('vm' ~ (cloud_vm_profile_slug | regex_replace('[^A-Za-z0-9]', '')))[:15]
+          )
+      }}
 
 - name: Assert Azure subscription is available when requested
   ansible.builtin.assert:

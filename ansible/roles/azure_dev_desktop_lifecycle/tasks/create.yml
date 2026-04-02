@@ -3,6 +3,7 @@
     msg:
       - "azure_resource_group={{ azure_resource_group }}"
       - "azure_vm_name={{ azure_vm_name }}"
+      - "azure_computer_name={{ azure_computer_name }}"
       - "azure_location={{ azure_location }}"
       - "allowed_cidrs={{ allowed_cidrs | join(',') }}"
       - "allowed_tcp_ports={{ allowed_tcp_ports | join(',') }}"
@@ -114,6 +115,7 @@
       --subscription {{ azure_subscription_id | quote }}
       --resource-group {{ azure_resource_group | quote }}
       --name {{ azure_vm_name | quote }}
+      --computer-name {{ azure_computer_name | quote }}
       --image {{ (azure_image_publisher ~ ':' ~ azure_image_offer ~ ':' ~ azure_image_sku ~ ':' ~ azure_image_version) | quote }}
       --size {{ vm_size | quote }}
       --admin-username {{ admin_username | quote }}
@@ -191,6 +193,12 @@
       - --scripts
       - |
         $ProgressPreference = 'SilentlyContinue'
+        $profiles = Get-NetConnectionProfile
+        foreach ($profile in $profiles) {
+          if ($profile.NetworkCategory -ne 'Private') {
+            Set-NetConnectionProfile -InterfaceIndex $profile.InterfaceIndex -NetworkCategory Private
+          }
+        }
         winrm quickconfig -quiet
         Enable-PSRemoting -Force
         Set-Service -Name WinRM -StartupType Automatic

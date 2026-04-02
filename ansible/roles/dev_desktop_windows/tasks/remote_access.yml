@@ -17,6 +17,12 @@
     }
     Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name 'fDenyTSConnections' -Value 0
     Enable-NetFirewallRule -DisplayGroup 'Remote Desktop'
+    $profiles = Get-NetConnectionProfile
+    foreach ($profile in $profiles) {
+      if ($profile.NetworkCategory -ne 'Private') {
+        Set-NetConnectionProfile -InterfaceIndex $profile.InterfaceIndex -NetworkCategory Private
+      }
+    }
     winrm quickconfig -q
     Set-Item -Path WSMan:\localhost\Service\Auth\Basic -Value $true
     Set-Item -Path WSMan:\localhost\Service\AllowUnencrypted -Value $true

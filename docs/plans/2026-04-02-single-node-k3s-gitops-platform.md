@@ -12,6 +12,7 @@ Build a single-node `k3s` platform that hosts `prod` and `pre` environments in t
 - `ExternalDNS` for Cloudflare DNS automation
 - `Vault -> ESO -> Secret -> Reloader` as the secret chain
 - `PostgreSQL` single instance with `core_prod` and `core_pre` schema isolation
+- `app-service` as the shared chart contract for `console`, `accounts`, `rag-server`, `docs`, `x-cloud-flow`, `x-ops-agent`, and `x-scope-hub`
 
 ## Repo Ownership
 
@@ -31,15 +32,35 @@ flowchart TB
   PL["ns platform<br/>平台能力 / DNS / secrets / Vault / 外部扩展服务"]
   Ingress["platform / ingress"]
   APISIX["platform / APISIX"]
-  CORE["ns core<br/>业务应用<br/>(当前实现可按环境拆分为 core-prod / core-pre)"]
-  AppSvc["core / xx services"]
-  DB["ns database<br/>数据"]
+  CORE["ns core-prod / core-pre<br/>业务应用"]
+  EXTSVC["ns extsvc<br/>控制平面扩展服务"]
+  OpenClaw["external OpenClaw gateway"]
+  Console["console.svc.plus"]
+  Accounts["accounts.svc.plus"]
+  Rag["rag-server.svc.plus"]
+  XCF["x-cloud-flow.svc.plus"]
+  OPS["x-ops-agent.svc.plus"]
+  SCOPE["x-scope-hub.svc.plus"]
+  AppSvc["shared app-service chart<br/>console / accounts / rag / docs / x-cloud-flow / x-ops-agent / x-scope-hub"]
+  STC["shared stunnel-client"]
+  DB["ns database<br/>PostgreSQL + stunnel-server"]
   OBS["ns observability<br/>监控"]
 
   ExternalUser --> Ingress
   Ingress --> APISIX
   APISIX --> AppSvc
-  AppSvc --> DB
+  APISIX --> EXTSVC
+  OpenClaw --> Console
+  XCF --> OpenClaw
+  OPS --> OpenClaw
+  SCOPE --> OpenClaw
+  Console --> Accounts
+  Console --> Rag
+  Accounts --> STC
+  Rag --> STC
+  AppSvc --> STC
+  STC --> DB
+  EXTSVC --> DB
 
   OpsUser --> FS
   OpsUser --> OBS
@@ -55,6 +76,7 @@ flowchart TB
   FS --> Ingress
   FS --> APISIX
   FS --> CORE
+  FS --> EXTSVC
   FS --> DB
   FS --> OBS
 ```
@@ -81,11 +103,24 @@ flowchart TB
 - `infra/clusters/pre` only creates child `Kustomization` objects for:
   - `infra/apps/core/console/pre`
   - `infra/apps/core/accounts/pre`
+- `app-service` is the reusable chart for the core and extsvc workloads, but `rag-server` and `docs` need chart hooks for mounted config/repo paths.
+- `console`, `x-cloud-flow`, `x-ops-agent`, and `x-scope-hub` keep the external OpenClaw gateway as a separate integration boundary; do not fold that dependency into the shared chart contract.
+- `console` frontend routes for `docs` and `xworkmate` should stay explicit as first-class dependencies, separate from the `accounts` / `rag-server` backend chain.
+- `console` build args stay in CI image publishing; Helm should manage runtime env, ingress, and a probe path of `/` rather than own build-time `NEXT_PUBLIC_*` values.
+- `stunnel-client` remains a separate chart and can be consumed by app pods as the shared DB TLS endpoint; `postgresql` keeps `stunnel-server` inline.
+- `core-prod` / `core-pre` and `extsvc` are the intended namespace split for the app workloads.
 - `prod` uses `replicas: 2`; `pre` uses `replicas: 1`.
 - `Vault` and `PostgreSQL` are single-instance stateful services with PVC-backed storage.
 - `ansible/inventory.ini` may hold secret references such as `k3s_platform_git_private_key_path`, but not plaintext secret material.
 
 ## Rollout Order
+
+The bootstrap interface is now intentionally split into four stages:
+
+1. `k3s` install and host preparation
+2. Vault bootstrap integration with `VAULT_URL`, `VAULT_TOKEN`, and optional `VAULT_NAMESPACE`
+3. FluxCD bootstrap with `GITOPS_REPO` and `GITOPS_AUTH_MODE`
+4. `k3s` cluster and GitOps state validation
 
 1. Host precheck and bootstrap `k3s` with `playbooks/init_k3s_single_node_gitops.yml`.
 2. Install `helm` and `flux` CLI.
@@ -93,14 +128,14 @@ flowchart TB
 4. Bootstrap the in-cluster `Vault` server before GitOps source registration.
 5. Prepare Flux GitOps auth material and create the git auth secret.
 6. Apply the root `GitRepository` + `Kustomization` and reconcile `platform-root`.
-7. Let Flux create the platform namespaces and reconcile `platform`, `infrastructure`, `core-prod`, and `core-pre`.
-8. Validate ingress, DNS, secret sync, and rollout health.
+7. Let Flux create the platform namespaces and reconcile `platform`, `infrastructure`, `core-prod`, `core-pre`, `extsvc`, and `database`.
+8. Validate ingress, DNS, secret sync, rollout health, and cluster/GitOps state.
 
 ## Validation Baseline
 
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml --syntax-check`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -C -e @vars/k3s_platform_svc_plus.yml`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -e @vars/k3s_platform_svc_plus.yml`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -C -e @vars/platform_k3s_bootstrap.yml`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -e @vars/platform_k3s_bootstrap.yml`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build infra/clusters/prod`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build infra/clusters/pre`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template console-prod ./apps/app-service -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/infra/apps/core/console/base/values.yaml -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/infra/apps/core/console/prod/values.yaml`

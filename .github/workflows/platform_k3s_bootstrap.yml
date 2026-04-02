@@ -16,6 +16,26 @@ on:
         required: true
         default: "cn-k3s-vultr.svc.plus"
         type: string
+      ssh_host:
+        description: "Real SSH host or IP"
+        required: true
+        default: "5.78.45.49"
+        type: string
+      ssh_user:
+        description: "SSH username"
+        required: true
+        default: "root"
+        type: string
+      ssh_port:
+        description: "SSH port"
+        required: true
+        default: "22"
+        type: string
+      ssh_known_hosts:
+        description: "Known hosts content"
+        required: false
+        default: ""
+        type: string
       vars_file:
         description: "Path inside the playbooks repo"
         required: true
@@ -142,10 +162,10 @@ jobs:
       - name: Bootstrap k3s platform
         env:
           # Stage 1: install and configure k3s.
-          ANSIBLE_OVERRIDE_SSH_HOST: ${{ inputs.target_host || secrets.SINGLE_NODE_VPS_SSH_HOST || vars.SINGLE_NODE_VPS_SSH_HOST }}
-          ANSIBLE_OVERRIDE_SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER || 'root' }}
-          ANSIBLE_OVERRIDE_SSH_PORT: ${{ vars.SINGLE_NODE_VPS_SSH_PORT || '22' }}
-          ANSIBLE_OVERRIDE_SSH_KNOWN_HOSTS: ${{ vars.SINGLE_NODE_VPS_SSH_KNOWN_HOSTS }}
+          ANSIBLE_OVERRIDE_SSH_HOST: ${{ inputs.ssh_host }}
+          ANSIBLE_OVERRIDE_SSH_USER: ${{ inputs.ssh_user }}
+          ANSIBLE_OVERRIDE_SSH_PORT: ${{ inputs.ssh_port }}
+          ANSIBLE_OVERRIDE_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
           SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CLOUDFLARE_DNS_API_TOKEN }}
           CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
@@ -174,9 +194,9 @@ jobs:
       - name: Validate k3s and gitops state
         if: inputs.mode == 'apply'
         env:
-          SSH_HOST: ${{ inputs.target_host || secrets.SINGLE_NODE_VPS_SSH_HOST || vars.SINGLE_NODE_VPS_SSH_HOST }}
-          SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER || 'root' }}
-          SSH_PORT: ${{ vars.SINGLE_NODE_VPS_SSH_PORT || '22' }}
+          SSH_HOST: ${{ inputs.ssh_host }}
+          SSH_USER: ${{ inputs.ssh_user }}
+          SSH_PORT: ${{ inputs.ssh_port }}
         run: |
           ssh -i ~/.ssh/id_rsa \
             -p "${SSH_PORT}" \

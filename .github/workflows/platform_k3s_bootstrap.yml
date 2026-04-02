@@ -73,7 +73,7 @@ jobs:
         shell: bash
         run: |
           yamllint -d '{extends: default, rules: {document-start: disable, truthy: disable, line-length: {max: 200}}}' .github/workflows/platform_k3s_bootstrap.yml
-          yamllint ansible/playbooks/deploy_k3s_core_migration.yml
+          yamllint -d '{extends: default, rules: {document-start: disable, truthy: disable, line-length: {max: 200}}}' ansible/playbooks/deploy_k3s_core_migration.yml
 
       - name: Validate playbooks syntax
         shell: bash

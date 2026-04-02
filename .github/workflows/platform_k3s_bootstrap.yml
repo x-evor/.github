@@ -60,6 +60,13 @@ jobs:
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           path: gitops
 
+      - name: Checkout charts repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: ${{ github.repository_owner }}/artifacts
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: artifacts
+
       - name: Install lint tools
         shell: bash
         run: |
@@ -87,11 +94,14 @@ jobs:
       - name: Validate gitops renders
         shell: bash
         run: |
-          cd gitops
-          kustomize build infra/clusters/prod >/tmp/prod.yaml
-          kustomize build infra/clusters/pre >/tmp/pre.yaml
-          helm template console-prod helm/app-service -f infra/apps/core/console/base/values.yaml -f infra/apps/core/console/prod/values.yaml >/tmp/console.yaml
-          helm template accounts-pre helm/app-service -f infra/apps/core/accounts/base/values.yaml -f infra/apps/core/accounts/pre/values.yaml >/tmp/accounts.yaml
+          gitops_root="${GITHUB_WORKSPACE}/gitops"
+          charts_root="${GITHUB_WORKSPACE}/artifacts/oci/charts"
+          cd "${charts_root}"
+          helm template console-prod ./apps/app-service -f "${gitops_root}/infra/apps/core/console/base/values.yaml" -f "${gitops_root}/infra/apps/core/console/prod/values.yaml" >/tmp/console.yaml
+          helm template accounts-pre ./apps/app-service -f "${gitops_root}/infra/apps/core/accounts/base/values.yaml" -f "${gitops_root}/infra/apps/core/accounts/pre/values.yaml" >/tmp/accounts.yaml
+          helm template k3s-platform ./infra/platform/k3s -f "${gitops_root}/infra/platform/k3s-platform/values.yaml" >/tmp/k3s-platform.yaml
+          helm template postgresql ./postgresql -f "${gitops_root}/infra/infrastructure/postgresql/values.yaml" >/tmp/postgresql.yaml
+          helm template observability ./observability -f "${gitops_root}/infra/observability/observability-stack/values.yaml" >/tmp/observability.yaml
 
   bootstrap:
     needs: validate

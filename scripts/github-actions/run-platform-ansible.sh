@@ -19,10 +19,11 @@ control_repo_path="$(dirname "$(dirname "${script_dir}")")"
 prepare_output="$(mktemp)"
 trap 'rm -f "${prepare_output}"' EXIT
 
-bash "${script_dir}/prepare-ansible-runtime.sh" \
-  "${inventory_file}" \
-  "${target_host}" \
-  "${inventory_template}" > "${prepare_output}"
+GITHUB_OUTPUT="${prepare_output}" \
+  bash "${script_dir}/prepare-ansible-runtime.sh" \
+    "${inventory_file}" \
+    "${target_host}" \
+    "${inventory_template}"
 
 runtime_inventory="$(awk -F= '/^inventory_file=/{print $2}' "${prepare_output}")"
 if [[ -z "${runtime_inventory}" ]]; then

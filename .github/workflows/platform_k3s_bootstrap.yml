@@ -142,7 +142,7 @@ jobs:
       - name: Bootstrap k3s platform
         env:
           # Stage 1: install and configure k3s.
-          ANSIBLE_OVERRIDE_SSH_HOST: ${{ vars.SINGLE_NODE_VPS_SSH_HOST || '' }}
+          ANSIBLE_OVERRIDE_SSH_HOST: ${{ vars.SINGLE_NODE_VPS_SSH_HOST || inputs.target_host }}
           ANSIBLE_OVERRIDE_SSH_USER: ${{ vars.SINGLE_NODE_VPS_SSH_USER || 'root' }}
           ANSIBLE_OVERRIDE_SSH_PORT: ${{ vars.SINGLE_NODE_VPS_SSH_PORT || '22' }}
           ANSIBLE_OVERRIDE_SSH_KNOWN_HOSTS: ${{ vars.SINGLE_NODE_VPS_SSH_KNOWN_HOSTS }}

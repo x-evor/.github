@@ -19,7 +19,7 @@ control_repo_path="$(dirname "$(dirname "${script_dir}")")"
 prepare_output="$(mktemp)"
 trap 'rm -f "${prepare_output}"' EXIT
 
-"${script_dir}/prepare-ansible-runtime.sh" \
+bash "${script_dir}/prepare-ansible-runtime.sh" \
   "${inventory_file}" \
   "${target_host}" \
   "${inventory_template}" > "${prepare_output}"
@@ -53,4 +53,3 @@ esac
 ANSIBLE_CONFIG="${control_repo_path}/ansible/ansible.cfg" \
 ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no' \
 "${args[@]}"
-

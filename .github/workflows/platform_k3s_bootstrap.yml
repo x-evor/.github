@@ -1,4 +1,3 @@
-# yamllint disable rule:line-length,truthy,document-start
 name: Platform k3s Bootstrap
 
 on:
@@ -73,7 +72,7 @@ jobs:
       - name: Validate workflow and ansible yaml
         shell: bash
         run: |
-          yamllint .github/workflows/platform_k3s_bootstrap.yml
+          yamllint -d '{extends: default, rules: {document-start: disable, truthy: disable, line-length: {max: 200}}}' .github/workflows/platform_k3s_bootstrap.yml
           yamllint ansible/playbooks/deploy_k3s_core_migration.yml
 
       - name: Validate playbooks syntax

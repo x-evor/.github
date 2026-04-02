@@ -38,6 +38,7 @@ Workflow usage reference:
 - Do not commit real tokens or passwords to Git.
 - Keep the real variable file outside the repository, or use `ansible-vault`.
 - Passing secrets from executor environment variables is also valid.
+- Inventory may carry a reference to a secret materialization path, but plaintext private keys, passwords, and tokens must stay outside Git.
 - If a vault sidecar/agent is available, resolve secrets before invoking `ansible-playbook`.
 
 ## GitHub Actions Secrets

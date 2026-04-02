@@ -3,6 +3,12 @@
   ansible.builtin.set_fact:
     local_ssh_public_key: "{{ lookup('ansible.builtin.file', local_public_key_path) | trim }}"
 
+- name: Assert local SSH public key exists
+  ansible.builtin.assert:
+    that:
+      - local_ssh_public_key | length > 0
+    fail_msg: "local_public_key_path must point to a readable SSH public key."
+
 - name: Ensure root SSH directory exists
   ansible.builtin.file:
     path: /root/.ssh
@@ -51,7 +57,12 @@
 
 - name: Select SSH service name
   ansible.builtin.set_fact:
-    ssh_service_name: "{{ 'ssh' if 'ssh.service' in ansible_facts.services else 'sshd' }}"
+    ssh_service_name: >-
+      {{
+        ssh_service_name_override
+        if ssh_service_name_override | length > 0
+        else ('ssh' if 'ssh.service' in ansible_facts.services else 'sshd')
+      }}
 
 - name: Reload SSH service
   ansible.builtin.service:
@@ -60,7 +71,7 @@
 
 - name: Read root authorized_keys
   ansible.builtin.slurp:
-    src: /root/.ssh/authorized_keys
+    src: "{{ root_authorized_keys_path }}"
   register: root_authorized_keys
   changed_when: false
 

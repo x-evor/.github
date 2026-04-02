@@ -16,7 +16,7 @@
 - [ ] Cloud desktop changes document Azure/GCP auth requirements and keep VM state files out of Git
 - [ ] Cloud desktop changes require non-empty `allowed_cidrs` and cleanup targeting only toolkit-tagged resources
 - [ ] Control-plane release metadata is updated when repo/domain/port/catalog entries change
-- [ ] Required GitHub Actions secrets exist and any workflow SSH overrides are set correctly for the single-node release workflow
+- [ ] Required GitHub Actions secrets exist and any workflow SSH or HTTPS bootstrap overrides are set correctly for the single-node release workflow
 - [ ] Service-specific secrets are split correctly: public defaults checked in, secret-only fields in GitHub Secrets
 - [ ] For release-enabled services, the target service repository ref is updated and pushed before dispatching the release workflow
 - [ ] Stable domains already point to the single deploy host before promoting a new revision
@@ -30,6 +30,11 @@
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos
 - [ ] API contracts are validated (path, payload, auth headers)
+- [ ] Single-node k3s platform changes keep `Traefik` disabled and reserve `servicelb` for the ingress entrypoint
+- [ ] Flux root sync target and child `Kustomization` paths match the `gitops/infra/` tree
+- [ ] New GitOps platform secrets are sourced from runtime secret stores or workflow secrets only; no real values are committed, including SSH keys, HTTPS usernames/passwords, and bearer tokens
+- [ ] Inventory entries may reference secret file paths or runtime materialization inputs, but must not contain plaintext private keys, passwords, or tokens
+- [ ] Vault, ESO, and Reloader rollout order is documented for the release
 
 ## C. Ordered Release Sequence
 

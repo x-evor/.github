@@ -10,7 +10,7 @@
 | Source host | `root@jp-xhttp-contabo.svc.plus` |
 | Target host | `root@jp-k3s-vultr.svc.plus` |
 | Deployment mode | `k3s_platform` |
-| Flux auth mode | `https-basic` (default), `https-bearer`, or `ssh` |
+| Flux auth mode | `public` / blank, `https-basic`, `https-bearer`, or `ssh` |
 | Vault mode | `init` / `migrate` |
 | Goal | minimal downtime, not zero downtime |
 | Source host rule | do not mutate source before DNS cutover |

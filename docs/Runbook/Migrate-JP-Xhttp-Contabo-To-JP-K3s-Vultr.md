@@ -57,10 +57,54 @@ Recommended rule:
 
 ## Service Topology
 
+```mermaid
+flowchart TB
+  ExternalUser["外部访问"]
+  OpsUser["ops 维护口"]
+
+  KS["ns kube-system<br/>k3s runtime"]
+  FS["ns flux-system<br/>控制面 / GitOps"]
+  PL["ns platform<br/>平台能力 / DNS / secrets / Vault / 外部扩展服务"]
+  Ingress["platform / ingress"]
+  APISIX["platform / APISIX"]
+  CORE["ns core<br/>业务应用<br/>(当前实现可按环境拆分为 core-prod / core-pre)"]
+  AppSvc["core / xx services"]
+  DB["ns database<br/>数据"]
+  OBS["ns observability<br/>监控"]
+
+  ExternalUser --> Ingress
+  Ingress --> APISIX
+  APISIX --> AppSvc
+  AppSvc --> DB
+
+  OpsUser --> FS
+  OpsUser --> OBS
+  OpsUser -.-> KS
+  OpsUser -.-> PL
+  OpsUser -.-> Ingress
+  OpsUser -.-> APISIX
+  OpsUser -.-> CORE
+  OpsUser -.-> DB
+
+  KS --> FS
+  FS --> PL
+  FS --> Ingress
+  FS --> APISIX
+  FS --> CORE
+  FS --> DB
+  FS --> OBS
+```
+
+Logical line split during migration:
+
+- 外部访问线：公网入口按 `外部访问 -> ingress -> APISIX -> xx` 进入，再由业务服务访问 `database`。
+- ops 维护口：运维通过 `SSH / kubectl / flux / Grafana` 进入，优先连接 `flux-system` 与 `observability`，必要时再下探到其他 namespace。
+- 当前实现仍可能保留 `extsvc`、`core-prod`、`core-pre` 等物理 namespace；本 runbook 采用的是目标口径与逻辑分层图。
+
 | Layer | Service | Target | Notes |
 | --- | --- | --- | --- |
 | Platform | `k3s_platform_bootstrap` | `jp-k3s-vultr.svc.plus` | Host bootstrap and GitOps seed |
-| Secret layer | `Vault` | `jp-k3s-vultr.svc.plus` | Must be ready before full GitOps sync |
+| Platform service | `Vault` | `jp-k3s-vultr.svc.plus` | Logically folded into `platform`; must be ready before full GitOps sync |
 | DB tunnel | `stunnel-client` | shared pod / namespace | Shared DB endpoint for workloads |
 | DB tunnel | `stunnel-server` | `jp-k3s-vultr.svc.plus` | External DB TLS endpoint |
 | Database | `postgresql-svc-plus` | `jp-k3s-vultr.svc.plus` | Primary DB runtime |

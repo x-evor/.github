@@ -11,6 +11,16 @@ The diagram below groups services by the deploy fabric they use:
   - desktop development and parity-release hosts
   - flexible stunnel-distributed VPS placement
 
+For the current k3s migration target, the logical namespace view is simplified
+into:
+
+- `kube-system`: k3s runtime
+- `flux-system`: GitOps control plane
+- `platform`: ingress / DNS / secrets / Vault / external extension services
+- `core`: business apps, with current implementation split possible as `core-prod` / `core-pre`
+- `database`: data
+- `observability`: monitoring
+
 ```mermaid
 flowchart TB
   classDef gha fill:#1f2937,stroke:#111827,color:#ffffff;
@@ -158,3 +168,43 @@ flowchart TB
   hosts.
 - The desktop pipeline is shown as a single merged pipeline so the development
   machine lifecycle is easier to reason about from one place.
+
+## k3s Logical Access Lines
+
+```mermaid
+flowchart TB
+  ExternalUser["外部访问"]
+  OpsUser["ops 维护口"]
+
+  KS["ns kube-system<br/>k3s runtime"]
+  FS["ns flux-system<br/>控制面 / GitOps"]
+  PL["ns platform<br/>DNS / secrets / Vault / 外部扩展服务"]
+  Ingress["platform / ingress"]
+  APISIX["platform / APISIX"]
+  CORE["ns core<br/>业务应用<br/>(当前实现可按环境拆分为 core-prod / core-pre)"]
+  AppSvc["core / xx services"]
+  DB["ns database<br/>数据"]
+  OBS["ns observability<br/>监控"]
+
+  ExternalUser --> Ingress
+  Ingress --> APISIX
+  APISIX --> AppSvc
+  AppSvc --> DB
+
+  OpsUser --> FS
+  OpsUser --> OBS
+  OpsUser -.-> KS
+  OpsUser -.-> PL
+  OpsUser -.-> Ingress
+  OpsUser -.-> APISIX
+  OpsUser -.-> CORE
+  OpsUser -.-> DB
+
+  KS --> FS
+  FS --> PL
+  FS --> Ingress
+  FS --> APISIX
+  FS --> CORE
+  FS --> DB
+  FS --> OBS
+```

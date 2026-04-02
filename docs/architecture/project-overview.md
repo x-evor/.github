@@ -12,45 +12,67 @@ This repository is the coordination hub for the Cloud-Neutral Toolkit multi-repo
 
 ```mermaid
 flowchart TB
-  User((User))
+  ExternalUser["外部访问<br/>browser / public API / agent caller"]
+  OpsUser["ops 维护口<br/>SSH / kubectl / flux / ansible / Grafana"]
 
-  subgraph Console["console.svc.plus"]
-    ConsoleWeb["Next.js App Router\nPublic site + panel + docs + tools"]
-    ConsoleBFF["Route handlers / BFF\n/api/auth, /api/admin, /api/rag, /api/askai"]
+  subgraph Cluster["Single-node k3s logical topology"]
+    KS["ns kube-system<br/>k3s runtime"]
+    FS["ns flux-system<br/>控制面 / GitOps"]
+    PL["ns platform<br/>平台能力 / DNS / secrets / Vault / 外部扩展服务"]
+    Ingress["platform / ingress<br/>Caddy ingress entry"]
+    APISIX["platform / APISIX<br/>north-south gateway"]
+    CORE["ns core<br/>业务应用<br/>(当前实现可按环境拆分为 core-prod / core-pre)"]
+    DB["ns database<br/>数据"]
+    OBS["ns observability<br/>监控"]
   end
 
-  subgraph Accounts["accounts.svc.plus"]
-    AccountsAPI["Gin auth / account API"]
-    AccountsDB[("PostgreSQL\nusers / identities / sessions / subscriptions\nadmin_settings / rbac_* / agents / nodes")]
-  end
+  ConsoleSvc["core / console"]
+  AccountsSvc["core / accounts"]
+  RagSvc["core / rag-server"]
+  OpsEntry["ops 维护入口<br/>SSH / Flux reconcile / kubectl / dashboard"]
 
-  subgraph Rag["rag-server.svc.plus"]
-    RagAPI["Gin RAG API"]
-    RagDB[("PostgreSQL\ndocuments / cache_kv\nusers / nodes / admin_settings")]
-  end
+  ExternalUser --> Ingress
+  Ingress --> APISIX
+  APISIX --> ConsoleSvc
+  APISIX --> AccountsSvc
+  APISIX --> RagSvc
+  ConsoleSvc --> DB
+  AccountsSvc --> DB
+  RagSvc --> DB
 
-  subgraph Agent["agent.svc.plus"]
-    AgentRuntime["Go runtime agent\nxray sync + heartbeat + TLS"]
-    Edge["Xray + Caddy"]
-  end
+  OpsUser --> OpsEntry
+  OpsEntry --> FS
+  OpsEntry --> OBS
+  OpsEntry -.-> KS
+  OpsEntry -.-> PL
+  OpsEntry -.-> Ingress
+  OpsEntry -.-> APISIX
+  OpsEntry -.-> CORE
+  OpsEntry -.-> DB
 
-  DocsSvc["docs.svc.plus / knowledge content"]
-  Infra["GitOps / IaC / observability"]
-
-  User --> ConsoleWeb
-  ConsoleWeb --> ConsoleBFF
-  ConsoleBFF -->|session / service token| AccountsAPI
-  ConsoleBFF -->|service token| RagAPI
-  ConsoleBFF --> DocsSvc
-  AccountsAPI --> AccountsDB
-  RagAPI --> RagDB
-  AgentRuntime -->|agent token| AccountsAPI
-  AgentRuntime --> Edge
-  Infra --> ConsoleWeb
-  Infra --> AccountsAPI
-  Infra --> RagAPI
-  Infra --> AgentRuntime
+  KS --> FS
+  FS --> PL
+  FS --> Ingress
+  FS --> APISIX
+  FS --> CORE
+  FS --> DB
+  FS --> OBS
+  OBS -.-> KS
+  OBS -.-> FS
+  OBS -.-> PL
+  OBS -.-> Ingress
+  OBS -.-> APISIX
+  OBS -.-> CORE
+  OBS -.-> DB
 ```
+
+## Runtime Topology Notes
+
+- `ns flux-system` 保持独立，承接 GitOps 控制面职责。
+- `ns platform` 是统一的平台能力层，文档口径上同时吸收原 `extsvc` 的职责，包括 `Vault` 与其他外部扩展服务。
+- `ns core` 是逻辑业务层；当前实现为了环境隔离，仍可拆分为 `core-prod` / `core-pre`。
+- `ns database` 与 `ns observability` 保持独立，避免和平台入口层混在一起。
+- “外部访问”与“ops 维护口”是两条独立流向：前者按 `外部访问 -> ingress -> APISIX -> 业务服务` 进入，后者面向 SSH、`kubectl`、`flux`、监控与故障处理。
 
 ## Repository Registry
 

@@ -261,6 +261,40 @@ jobs:
     needs: bootstrap
     if: github.event_name == 'workflow_dispatch' && inputs.mode == 'apply'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        check:
+          - name: "nodes"
+            script: |
+              kubectl get nodes -o wide
+          - name: "namespaces"
+            script: |
+              kubectl get ns
+          - name: "node-ready"
+            script: |
+              kubectl wait --for=condition=Ready node --all --timeout=10m
+          - name: "flux-pods"
+            script: |
+              kubectl -n flux-system wait --for=condition=Ready pod --all --timeout=10m
+          - name: "reconcile-source"
+            script: |
+              flux reconcile source git platform-config -n flux-system --timeout=5m
+          - name: "reconcile-kustomization"
+            script: |
+              flux reconcile kustomization platform-root -n flux-system --with-source --timeout=10m
+          - name: "flux-sources"
+            script: |
+              flux get sources git -A
+          - name: "flux-kustomizations"
+            script: |
+              flux get kustomizations -A
+          - name: "resources"
+            script: |
+              kubectl get gitrepositories,kustomizations,helmreleases -A
+          - name: "pods"
+            script: |
+              kubectl get pods -A
     steps:
       - name: Checkout control repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -292,27 +326,39 @@ jobs:
           chmod 600 ~/.ssh/id_rsa
           ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
 
-      - name: Validate k3s and gitops state
+      - name: Resolve validation host
+        id: resolve_host
         env:
           SSH_HOST: ${{ inputs.ssh_host }}
+        run: |
+          if [[ -n "${SSH_HOST}" ]]; then
+            echo "ssh_host=${SSH_HOST}" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+          ssh_host="$(ANSIBLE_CONFIG=ansible/ansible.cfg ansible-inventory -i ansible/inventory.ini --host "${{ inputs.target_host }}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ansible_host") or "")')"
+          if [[ -z "${ssh_host}" ]]; then
+            echo "Failed to resolve ansible_host for target host" >&2
+            exit 1
+          fi
+          echo "ssh_host=${ssh_host}" >> "${GITHUB_OUTPUT}"
+
+      - name: Validate k3s and gitops state
+        env:
+          SSH_HOST: ${{ steps.resolve_host.outputs.ssh_host }}
           SSH_USER: ${{ inputs.ssh_user }}
           SSH_PORT: ${{ inputs.ssh_port }}
+          CHECK_NAME: ${{ matrix.check.name }}
+          REMOTE_SCRIPT: ${{ matrix.check.script }}
         run: |
-          ssh -i ~/.ssh/id_rsa \
+          printf '[validate:%s] running\n' "${CHECK_NAME}"
+          {
+            printf 'set -euo pipefail\n'
+            printf 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml\n'
+            printf '%s\n' "${REMOTE_SCRIPT}"
+          } | ssh -i ~/.ssh/id_rsa \
             -p "${SSH_PORT}" \
             -o BatchMode=yes \
             -o UserKnownHostsFile="${HOME}/.ssh/known_hosts" \
             -o StrictHostKeyChecking=yes \
             "${SSH_USER}@${SSH_HOST}" \
-            'set -euo pipefail
-             export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
-             kubectl get nodes -o wide
-             kubectl get ns
-             kubectl wait --for=condition=Ready node --all --timeout=10m
-             kubectl -n flux-system wait --for=condition=Ready pod --all --timeout=10m
-             flux reconcile source git platform-config -n flux-system --timeout=5m
-             flux reconcile kustomization platform-root -n flux-system --with-source --timeout=10m
-             flux get sources git -A
-             flux get kustomizations -A
-             kubectl get gitrepositories,kustomizations,helmreleases -A
-             kubectl get pods -A'
+            'bash -s'

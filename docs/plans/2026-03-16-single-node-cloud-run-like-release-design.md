@@ -123,7 +123,7 @@ Every deployment creates one release identity:
 | git short commit | `d5009762` |
 | release prefix | `accounts` |
 | release domain | `accounts-us-xhttp-d5009762.svc.plus` |
-| image ref | `ghcr.io/cloud-neutral-toolkit/accounts:d5009762` |
+| image ref | `ghcr.io/x-evor/accounts:d5009762` |
 | stable domain | `accounts.svc.plus` |
 | host port | `18080` |
 
@@ -168,7 +168,8 @@ Use repository defaults, workflow `env`, GitHub Variables, or checked-in catalog
 | Name | Source | Purpose |
 | --- | --- | --- |
 | `GHCR_REGISTRY=ghcr.io` | workflow env | free image registry target |
-| `SERVICE_REPO_OWNER=cloud-neutral-toolkit` | workflow env | GitHub org owner |
+| `IMAGE_REPO_OWNER=x-evor` | workflow env | GHCR namespace for built service images |
+| `SERVICE_REPO_OWNER=cloud-neutral-toolkit` | workflow env | GitHub checkout repo owner for service metadata and source checkout |
 | `SINGLE_NODE_VPS_SSH_HOST` | GitHub Variable | target host IP |
 | `SINGLE_NODE_VPS_SSH_USER` | GitHub Variable | SSH user |
 | `SINGLE_NODE_VPS_SSH_PORT` | GitHub Variable | SSH port |

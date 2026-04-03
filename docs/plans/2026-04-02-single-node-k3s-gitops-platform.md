@@ -83,7 +83,7 @@ flowchart TB
 
 ## Implementation Notes
 
-- Root Flux sync targets `gitops/infra/clusters/prod`.
+- Root Flux sync targets `gitops/apps/clusters/prod`.
 - `jp-k3s-vultr.svc.plus` uses the `k3s_platform` deployment mode.
 - The logical target namespace model is:
   - `kube-system`
@@ -94,20 +94,21 @@ flowchart TB
   - `observability`
 - Current implementation may still materialize `core` as `core-prod` / `core-pre`.
 - Current implementation may still materialize external service workloads such as `Vault` under `extsvc`, but the target architecture folds that responsibility into `platform`.
-- `infra/clusters/prod` owns shared namespaces plus child `Kustomization` objects for:
-  - `infra/platform`
-  - `infra/infrastructure`
-  - `infra/apps/core/console/prod`
-  - `infra/apps/core/accounts/prod`
-  - `infra/clusters/pre`
-- `infra/clusters/pre` only creates child `Kustomization` objects for:
-  - `infra/apps/core/console/pre`
-  - `infra/apps/core/accounts/pre`
+- `apps/clusters/prod` owns shared namespaces plus child `Kustomization` objects for:
+  - direct Ansible-managed platform bootstrap outputs
+  - `apps/core/console/prod`
+  - `apps/core/accounts/prod`
+  - `apps/core/stunnel-client/prod`
+  - `apps/clusters/pre`
+- `apps/clusters/pre` only creates child `Kustomization` objects for:
+  - `apps/core/console/pre`
+  - `apps/core/accounts/pre`
+  - `apps/core/stunnel-client/pre`
 - `app-service` is the reusable chart for the core and extsvc workloads, but `rag-server` and `docs` need chart hooks for mounted config/repo paths.
 - `console`, `x-cloud-flow`, `x-ops-agent`, and `x-scope-hub` keep the external OpenClaw gateway as a separate integration boundary; do not fold that dependency into the shared chart contract.
 - `console` frontend routes for `docs` and `xworkmate` should stay explicit as first-class dependencies, separate from the `accounts` / `rag-server` backend chain.
 - `console` build args stay in CI image publishing; Helm should manage runtime env, ingress, and a probe path of `/` rather than own build-time `NEXT_PUBLIC_*` values.
-- `stunnel-client` remains a separate chart and can be consumed by app pods as the shared DB TLS endpoint; `postgresql` keeps `stunnel-server` inline.
+- `stunnel-client` remains a separate deploy unit in each business namespace, while `stunnel-server` is a separate deploy unit in `database`.
 - `core-prod` / `core-pre` and `extsvc` are the intended namespace split for the app workloads.
 - `prod` uses `replicas: 2`; `pre` uses `replicas: 1`.
 - `Vault` and `PostgreSQL` are single-instance stateful services with PVC-backed storage.
@@ -134,13 +135,12 @@ The bootstrap interface is now intentionally split into four stages:
 ## Validation Baseline
 
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml --syntax-check`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -C -e @vars/platform_k3s_bootstrap.yml`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -e @vars/platform_k3s_bootstrap.yml`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build infra/clusters/prod`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build infra/clusters/pre`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -C`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build apps/clusters/prod`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build apps/clusters/pre`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template console-prod ./apps/app-service -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/console/base/values.yaml -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/console/prod/values.yaml`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template accounts-pre ./apps/app-service -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/accounts/base/values.yaml -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/accounts/pre/values.yaml`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template k3s-platform ./infra/platform/k3s -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/platform/k3s-platform/values.yaml`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template postgresql ./postgresql -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/databases/postgresql/values.yaml`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template postgresql ./postgresql -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/services/database/postgresql/values.yaml`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template observability ./observability -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/monitor/observability-stack/values.yaml`
 - `kubectl get gitrepositories,kustomizations,helmreleases -A`

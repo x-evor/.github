@@ -63,14 +63,15 @@ image_ref=""
 case "${artifact_mode}" in
   build)
     : "${GHCR_REGISTRY:?GHCR_REGISTRY is required}"
-    : "${SERVICE_REPO_OWNER:?SERVICE_REPO_OWNER is required}"
+    image_owner="${IMAGE_REPO_OWNER:-${SERVICE_REPO_OWNER:-}}"
+    : "${image_owner:?IMAGE_REPO_OWNER or SERVICE_REPO_OWNER is required}"
     : "${git_short_commit:?git short commit is required for build mode}"
 
     if [[ -n "${build_prepare_script}" ]]; then
       bash "${service_checkout_path}/${build_prepare_script}"
     fi
 
-    image_ref="${GHCR_REGISTRY}/${SERVICE_REPO_OWNER}/${image_name}:${git_short_commit}"
+    image_ref="${GHCR_REGISTRY}/${image_owner}/${image_name}:${git_short_commit}"
     build_args=()
     if [[ -n "${build_args_script}" ]]; then
       while IFS= read -r build_arg; do

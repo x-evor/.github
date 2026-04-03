@@ -80,7 +80,7 @@ Control-plane boundary:
 
 ### Local Deploy Commands
 
-Run these commands from the repository root:
+Run these commands from the repository root.
 
 1. Validate the control-plane playbooks:
 
@@ -98,19 +98,13 @@ ansible-playbook ansible/playbooks/update_cloudflare_dns.yml \
   -e '{"cloudflare_dns_records":[{"type":"CNAME","name":"accounts-us-xhttp-abc1234.svc.plus","content":"us-xhttp.svc.plus","proxied":false}]}'
 ```
 
-3. Run the service-repo Ansible dry-run and apply:
+3. Run the single-node k3s GitOps bootstrap from `.env`:
 
 ```bash
-cd /Users/shenlan/workspaces/cloud-neutral-toolkit/<service-repo>
-export GIT_SHORT_COMMIT="$(git rev-parse --short HEAD)"
-
-ansible-playbook -D -C ansible/playbooks/<service-playbook>.yml \
-  -e @/secure/path/<service>.vault.yml \
-  -e @/secure/path/<service>.runtime.yml
-
-ansible-playbook -D ansible/playbooks/<service-playbook>.yml \
-  -e @/secure/path/<service>.vault.yml \
-  -e @/secure/path/<service>.runtime.yml
+cp .env.example .env
+# fill .env with the required values, then:
+./scripts/github-actions/run-platform-k3s-bootstrap.sh jp-xhttp-contabo.svc.plus dry-run
+./scripts/github-actions/run-platform-k3s-bootstrap.sh jp-xhttp-contabo.svc.plus apply
 ```
 
 ### Local OrbStack Build and Tar Deploy

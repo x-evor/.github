@@ -27,8 +27,11 @@ flowchart TB
   end
 
   ConsoleSvc["core / console"]
+  DocsSvc["core / docs"]
+  XWorkmateSvc["external / xworkmate"]
   AccountsSvc["core / accounts"]
   RagSvc["core / rag-server"]
+  OpenClawGW["external / OpenClaw gateway"]
   OpsEntry["ops 维护入口<br/>SSH / Flux reconcile / kubectl / dashboard"]
 
   ExternalUser --> Ingress
@@ -36,6 +39,9 @@ flowchart TB
   APISIX --> ConsoleSvc
   APISIX --> AccountsSvc
   APISIX --> RagSvc
+  ConsoleSvc --> DocsSvc
+  ConsoleSvc --> XWorkmateSvc
+  ConsoleSvc --> OpenClawGW
   ConsoleSvc --> DB
   AccountsSvc --> DB
   RagSvc --> DB
@@ -73,12 +79,13 @@ flowchart TB
 - `ns core` 是逻辑业务层；当前实现为了环境隔离，仍可拆分为 `core-prod` / `core-pre`。
 - `ns database` 与 `ns observability` 保持独立，避免和平台入口层混在一起。
 - “外部访问”与“ops 维护口”是两条独立流向：前者按 `外部访问 -> ingress -> APISIX -> 业务服务` 进入，后者面向 SSH、`kubectl`、`flux`、监控与故障处理。
+- `console` 的前端路由把 `docs.svc.plus` 和 `xworkmate.svc.plus` 作为独立外挂服务来消费，同时保留 `accounts`、`rag-server` 和外部 OpenClaw gateway 这几条主链路。
 
 ## Repository Registry
 
 | Repo | Responsibility | Deploy Address | Local Path | Primary Dependencies |
 | --- | --- | --- | --- | --- |
-| `console.svc.plus` | Main frontend console (Next.js) | `https://console.svc.plus` | `Cloud-Neutral-Toolkit/console.svc.plus` | `accounts.svc.plus`, `rag-server.svc.plus`, `docs.svc.plus` |
+| `console.svc.plus` | Main frontend console (Next.js) | `https://console.svc.plus` | `Cloud-Neutral-Toolkit/console.svc.plus` | `accounts.svc.plus`, `rag-server.svc.plus`, `docs.svc.plus`, `xworkmate.svc.plus`, `openclaw.svc.plus` |
 | `accounts.svc.plus` | Identity and auth core (Go) | `https://accounts.svc.plus` | `Cloud-Neutral-Toolkit/accounts.svc.plus` | `postgresql.svc.plus` |
 | `rag-server.svc.plus` | RAG backend (Go) | internal / service URL | `Cloud-Neutral-Toolkit/rag-server.svc.plus` | `postgresql.svc.plus`, vector provider |
 | `agent.svc.plus` | VM runtime agent and proxy orchestration | `https://agent.svc.plus` | `Cloud-Neutral-Toolkit/agent.svc.plus` | `accounts.svc.plus`, Xray, Caddy |

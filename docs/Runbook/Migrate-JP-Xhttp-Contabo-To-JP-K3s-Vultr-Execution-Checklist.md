@@ -20,7 +20,7 @@
 ## Command Entry Points
 
 - `playbooks/init_k3s_single_node_gitops.yml`
-- `playbooks/vars/platform_k3s_bootstrap.yml`
+- `playbooks/roles/vhosts/k3s_platform_bootstrap/defaults/main.yml`
 - `docs/Runbook/Migrate-JP-Xhttp-Contabo-To-JP-K3s-Vultr.md`
 
 **Bootstrap stage inputs**
@@ -95,8 +95,7 @@ cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
-  -D \
-  -e @vars/platform_k3s_bootstrap.yml
+  -D
 ```
 
 ```bash
@@ -141,8 +140,7 @@ cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
-  -D \
-  -e @vars/platform_k3s_bootstrap.yml
+  -D
 ```
 
 For `migrate`:
@@ -155,8 +153,7 @@ cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
-  -D \
-  -e @vars/platform_k3s_bootstrap.yml
+  -D
 ```
 
 ```bash

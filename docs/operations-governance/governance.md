@@ -58,6 +58,68 @@ Use the default template in `.github/pull_request_template.md`.
 4. Run smoke/integration checks across impacted service chain.
 5. Announce release + known limitations + rollback entrypoint.
 
+## 5.1) Image Tag and Pull Policy Convention
+
+This repository uses branch-based image promotion as the default operational contract.
+
+- `main`
+  - CI publishes the rolling `latest` image tag.
+  - GitOps preview environments consume `latest`.
+  - `imagePullPolicy` must be `Always` for preview workloads that track `latest`.
+- `pre`
+  - Uses `latest` as the default image tag.
+  - Uses `Always` to force new pulls on each reconcile or restart.
+- `release/*`
+  - CI publishes release artifacts using a stable release tag or an explicit version tag.
+  - GitOps production environments consume the release tag, not `latest`.
+- `prd`
+  - Uses the release tag or explicit version tag selected for production.
+  - `imagePullPolicy` must be `IfNotPresent` unless a repo-specific exception is documented.
+
+Precedence rules:
+
+1. Explicit chart-level `image.tag` or `image.pullPolicy`
+2. Environment-level `global.tag` or `global.imagePullPolicy`
+3. Chart defaults
+
+Exceptions must be documented in the affected repo's release notes and reflected in the release checklist.
+
+## 5.2) GitOps Dependency Graph
+
+GitOps resources should follow the platform-first dependency order below:
+
+```mermaid
+graph TD
+  PlatformK3s["platform-k3s"]
+  Obs["observability-stack"]
+
+  Infra["database-stack\n(postgresql)"]
+
+  AccountsProd["accounts-prod"]
+  ConsoleProd["console-prod"]
+
+  AccountsPre["accounts-pre"]
+  ConsolePre["console-pre"]
+
+  PlatformK3s --> Obs
+  PlatformK3s --> Infra
+
+  Infra --> AccountsProd
+  AccountsProd --> ConsoleProd
+
+  Infra --> AccountsPre
+  AccountsPre --> ConsolePre
+```
+
+Why this direction:
+
+- `platform-k3s` is the shared cluster foundation, so it must come up before any other app or stack.
+- `observability-stack` is a platform concern and only needs the cluster foundation.
+- `database-stack` provides shared runtime dependencies such as PostgreSQL, so business services must wait for it.
+- `accounts` is the core auth/service layer for both `pre` and `prod`.
+- `console` sits on top of `accounts`, so it should only reconcile after auth is ready.
+- Keeping the chain explicit reduces surprise failures and avoids coupling business rollout to unrelated infrastructure health checks.
+
 ## 6) Environment Variable and Secret Rule
 
 - Local development must use `.env` (gitignored).

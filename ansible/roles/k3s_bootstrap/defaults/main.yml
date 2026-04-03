@@ -14,7 +14,7 @@ k3s_platform_deployment_mode: k3s_platform
 k3s_platform_git_branch: main
 k3s_platform_flux_namespace: flux-system
 k3s_platform_flux_source_name: platform-config
-k3s_platform_flux_root_path: ./infra/clusters/prod
+k3s_platform_flux_root_path: ./apps/clusters/prod
 k3s_platform_git_url: "https://github.com/x-evor/gitops.git"
 k3s_platform_git_auth_mode: public
 

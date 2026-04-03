@@ -126,7 +126,7 @@ The caller repo should pass:
 - resolve repo/service metadata from workspace + catalogs
 - checkout the target service repo from the sibling repository workspace
 - build the service image
-- push to `ghcr.io`
+- push to `ghcr.io/<image-owner>` (`IMAGE_REPO_OWNER` is the GHCR namespace and may differ from the checkout repo owner)
 - compute the immutable release domain
   - prod + `release/*`: `<release-prefix>-<deploy-hostname>-<release-name>-<git-short-commit>.<domain>`
   - preview or non-`release/*`: `<release-prefix>-<deploy-hostname>-<git-short-commit>.<domain>`

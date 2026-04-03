@@ -29,6 +29,7 @@
 - [ ] `python3 scripts/github-actions/stable-release-gate.py --mode stable --service <service> --track <track> --service-ref <ref>` passes against the live stable domain before release sign-off
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos
+- [ ] Image tag policy matches branch contract: `main -> latest` for `pre`, `release/* -> release tag` for `prd`, with `imagePullPolicy` set to `Always` for `pre` and `IfNotPresent` for `prd`
 - [ ] API contracts are validated (path, payload, auth headers)
 - [ ] Single-node k3s platform changes keep `Traefik` disabled and reserve `servicelb` for the ingress entrypoint
 - [ ] Flux root sync target and child `Kustomization` paths match the `gitops/infra/` tree

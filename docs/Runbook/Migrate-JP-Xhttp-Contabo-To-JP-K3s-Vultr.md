@@ -14,8 +14,8 @@
 - Target host: `root@jp-k3s-vultr.svc.plus`
 - Target deployment mode: `k3s_platform`
 - Target platform bootstrap playbook: `playbooks/init_k3s_single_node_gitops.yml`
-- Target platform bootstrap vars: `playbooks/vars/platform_k3s_bootstrap.yml`
-- Target GitOps base: `gitops/infra/clusters/prod`
+- Target platform bootstrap inputs: role defaults + environment variables
+- Target GitOps base: `gitops/apps/clusters/prod`
 - Services in scope:
   - `k3s_platform_bootstrap`
   - `Vault`
@@ -148,8 +148,10 @@ ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D \
-  -e @vars/platform_k3s_bootstrap.yml
 ```
+
+The bootstrap variables now live in `playbooks/roles/vhosts/k3s_platform_bootstrap/defaults/main.yml`.
+Operator-specific values should be provided through `.env` or exported environment variables before running the playbook.
 
 For Vault mode selection:
 

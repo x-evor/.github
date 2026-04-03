@@ -4,7 +4,9 @@ A cloud-neutral ecosystem for connectivity, AI interaction, and service orchestr
 
 From local acceleration to intelligent workflows, and finally to cloud-side delivery, X-Evor connects every layer into one unified system.
 
-**Flow:** Xstream -> Xworkmate -> console.svc.plus
+**Experience chain:** Xstream -> Xworkmate -> console.svc.plus
+
+> Note: this is a user experience sequence, not an internal dependency graph.
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/cloud-neutral-toolkit/rag-server.svc.plus)](https://goreportcard.com/report/github.com/cloud-neutral-toolkit/rag-server.svc.plus)

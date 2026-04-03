@@ -36,11 +36,6 @@ on:
         required: false
         default: ""
         type: string
-      vars_file:
-        description: "Path inside the playbooks repo"
-        required: true
-        default: "vars/platform_k3s_bootstrap.yml"
-        type: string
   push:
     paths:
       - "docs/plans/2026-04-02-single-node-k3s-gitops-platform.md"
@@ -114,13 +109,8 @@ jobs:
         shell: bash
         run: |
           gitops_root="${GITHUB_WORKSPACE}/gitops"
-          charts_root="${GITHUB_WORKSPACE}/artifacts/oci/charts"
-          cd "${charts_root}"
-          helm template console-prod ./apps/app-service -f "${gitops_root}/apps/core/console/base/values.yaml" -f "${gitops_root}/apps/core/console/prod/values.yaml" >/tmp/console.yaml
-          helm template accounts-pre ./apps/app-service -f "${gitops_root}/apps/core/accounts/base/values.yaml" -f "${gitops_root}/apps/core/accounts/pre/values.yaml" >/tmp/accounts.yaml
-          helm template k3s-platform ./infra/platform/k3s -f "${gitops_root}/apps/platform/k3s-platform/values.yaml" >/tmp/k3s-platform.yaml
-          helm template postgresql ./postgresql -f "${gitops_root}/databases/postgresql/values.yaml" >/tmp/postgresql.yaml
-          helm template observability ./observability -f "${gitops_root}/apps/monitor/observability-stack/values.yaml" >/tmp/observability.yaml
+          kubectl kustomize "${gitops_root}/environments/clusters/prod" >/tmp/gitops-prod.yaml
+          kubectl kustomize "${gitops_root}/environments/clusters/pre" >/tmp/gitops-pre.yaml
 
   bootstrap:
     needs: preflight
@@ -180,6 +170,7 @@ jobs:
           GITOPS_AUTH_MODE: ${{ secrets.GITOPS_AUTH_MODE || vars.GITOPS_AUTH_MODE || 'public' }}
           GITOPS_FLUX_DEPLOY_KEY: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY }}
           GITOPS_FLUX_DEPLOY_KEY_PUB: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY_PUB }}
+          K3S_PLATFORM_FLUX_ROOT_PATH: ./environments/clusters/prod
           BOOTSTRAP_MODE: ${{ inputs.mode }}
         shell: bash
         run: |
@@ -199,7 +190,6 @@ jobs:
           fi
           ansible_args+=(
             "${{ github.workspace }}/playbooks/init_k3s_single_node_gitops.yml"
-            -e "@${{ github.workspace }}/playbooks/${{ inputs.vars_file }}"
           )
           "${ansible_args[@]}"
 

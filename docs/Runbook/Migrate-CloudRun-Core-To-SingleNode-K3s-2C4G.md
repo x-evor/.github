@@ -10,7 +10,9 @@
 
 1. 常驻控制面服务会被 Cloud Run 的无状态与冷启动模型拖慢。
 2. 多服务间依赖越来越像常驻集群，而不是纯按请求拉起的函数。
-3. `accounts -> rag -> x-scope-hub -> x-cloud-flow -> x-ops-agent` 这条链路迁移到单机 K3s 后，运维控制面会更统一。
+3. `console` 的前端路由还要外挂 `docs.svc.plus` 和 `xworkmate.svc.plus`，这条前端路由链和后台服务链要分开看。
+4. `accounts -> stunnel-client -> stunnel-server -> postgresql` 与 `rag -> stunnel-client -> stunnel-server -> postgresql` 是共享 DB 访问链。
+5. `x-cloud-flow` / `x-ops-agent` / `x-scope-hub` 依赖外部 `openclaw gateway`，不应被误画成 DB 访问链的一部分。
 
 本方案采用“极简 Cloud Run 个人版”思路：
 

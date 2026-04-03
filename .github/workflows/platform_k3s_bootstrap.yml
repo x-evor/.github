@@ -180,6 +180,7 @@ jobs:
             ansible-playbook
             -i "${{ github.workspace }}/ansible/inventory.ini"
             -D
+            -l "${{ inputs.target_host }}"
             -e "ansible_host=${{ inputs.ssh_host }}"
             -e "ansible_user=${{ inputs.ssh_user }}"
             -e "ansible_port=${{ inputs.ssh_port }}"

@@ -17,7 +17,7 @@ on:
         default: "jp-k3s-vultr.svc.plus"
         type: string
       ssh_host:
-        description: "Real SSH host or IP"
+        description: "Optional override SSH host or IP; leave blank to use inventory ansible_host"
         required: false
         default: ""
         type: string

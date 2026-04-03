@@ -14,7 +14,7 @@ on:
       target_host:
         description: "Inventory host alias"
         required: true
-        default: "jp-k3s-vultr.svc.plus"
+        default: "jp-xhttp-contabo.svc.plus"
         type: string
       ssh_host:
         description: "Optional override SSH host or IP; leave blank to use inventory ansible_host"

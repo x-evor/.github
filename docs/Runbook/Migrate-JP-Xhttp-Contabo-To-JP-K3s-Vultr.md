@@ -13,7 +13,7 @@
 - Source host: `root@jp-xhttp-contabo.svc.plus`
 - Target host: `root@jp-k3s-vultr.svc.plus`
 - Target deployment mode: `k3s_platform`
-- Target platform bootstrap playbook: `playbooks/init_k3s_single_node_gitops.yml`
+- Target platform bootstrap playbook: `playbooks/k3s_platform_bootstrap_with_gitops.yml`
 - Target platform bootstrap inputs: role defaults + environment variables
 - Target GitOps base: `gitops/apps/clusters/prod`
 - Services in scope:
@@ -145,7 +145,7 @@ Recommended command shape:
 ```bash
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
-ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
+ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D \
 ```

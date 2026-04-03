@@ -123,7 +123,7 @@ The bootstrap interface is now intentionally split into four stages:
 3. FluxCD bootstrap with `GITOPS_REPO` and `GITOPS_AUTH_MODE`
 4. `k3s` cluster and GitOps state validation
 
-1. Host precheck and bootstrap `k3s` with `playbooks/init_k3s_single_node_gitops.yml`.
+1. Host precheck and bootstrap `k3s` with `playbooks/k3s_platform_bootstrap_with_gitops.yml`.
 2. Install `helm` and `flux` CLI.
 3. Create `flux-system` and install Flux controllers.
 4. Bootstrap the in-cluster `Vault` server before GitOps source registration.
@@ -134,9 +134,9 @@ The bootstrap interface is now intentionally split into four stages:
 
 ## Validation Baseline
 
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml --syntax-check`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D -C`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml -l jp-k3s-vultr.svc.plus -D`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml --syntax-check`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml -l jp-k3s-vultr.svc.plus -D -C`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml -l jp-k3s-vultr.svc.plus -D`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build apps/clusters/prod`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build apps/clusters/pre`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template console-prod ./apps/app-service -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/console/base/values.yaml -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/console/prod/values.yaml`

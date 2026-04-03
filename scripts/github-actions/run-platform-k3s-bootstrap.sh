@@ -78,7 +78,7 @@ if [[ "${mode}" == "dry-run" ]]; then
 fi
 
 ansible_args+=(
-  "${playbooks_repo_path}/init_k3s_single_node_gitops.yml"
+  "${playbooks_repo_path}/k3s_platform_bootstrap_with_gitops.yml"
 )
 
 "${ansible_args[@]}"

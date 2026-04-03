@@ -204,7 +204,56 @@ jobs:
             ansible_args+=(-C)
           fi
           ansible_args+=(
-            "${{ github.workspace }}/playbooks/init_k3s_single_node_gitops.yml"
+            "${{ github.workspace }}/playbooks/k3s_platform_bootstrap_with_gitops.yml"
+          )
+          "${ansible_args[@]}"
+
+      - name: Run k3s platform addon
+        env:
+          ANSIBLE_OVERRIDE_SSH_HOST: ${{ inputs.ssh_host }}
+          ANSIBLE_OVERRIDE_SSH_USER: ${{ inputs.ssh_user }}
+          ANSIBLE_OVERRIDE_SSH_PORT: ${{ inputs.ssh_port }}
+          ANSIBLE_OVERRIDE_SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN || secrets.CLOUDFLARE_DNS_API_TOKEN }}
+          CLOUDFLARE_ZONE_ID: ${{ secrets.CLOUDFLARE_ZONE_ID }}
+          VAULT_ROOT_TOKEN: ${{ secrets.VAULT_ROOT_TOKEN }}
+          VAULT_URL: ${{ vars.VAULT_URL || '' }}
+          VAULT_NAMESPACE: ${{ vars.VAULT_NAMESPACE || '' }}
+          VAULT_TOKEN: ${{ secrets.VAULT_TOKEN || '' }}
+          GITOPS_REPO: ${{ vars.GITOPS_REPO || 'https://github.com/x-evor/gitops.git' }}
+          GITOPS_AUTH_MODE: ${{ secrets.GITOPS_AUTH_MODE || vars.GITOPS_AUTH_MODE || 'public' }}
+          GITOPS_FLUX_DEPLOY_KEY: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY }}
+          GITOPS_FLUX_DEPLOY_KEY_PUB: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY_PUB }}
+          K3S_PLATFORM_FLUX_ROOT_PATH: ./environments/clusters/prod
+          BOOTSTRAP_MODE: ${{ inputs.mode }}
+        shell: bash
+        run: |
+          export ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg"
+          export ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no'
+
+          target_host="${{ inputs.target_host }}"
+          ssh_host_arg=()
+          if [[ -n "${{ inputs.ssh_host }}" ]]; then
+            ssh_host_arg=(-e "ansible_host=${{ inputs.ssh_host }}")
+          fi
+
+          ansible_args=(
+            ansible-playbook
+            -i "${{ github.workspace }}/ansible/inventory.ini"
+            -D
+            -l "${target_host}"
+            -e "ansible_user=${{ inputs.ssh_user }}"
+            -e "ansible_port=${{ inputs.ssh_port }}"
+          )
+          if [[ ${#ssh_host_arg[@]} -gt 0 ]]; then
+            ansible_args+=("${ssh_host_arg[@]}")
+          fi
+          if [[ "${BOOTSTRAP_MODE}" == "dry-run" ]]; then
+            ansible_args+=(-C)
+          fi
+          ansible_args+=(
+            "${{ github.workspace }}/playbooks/k3s_platform_addon.yml"
           )
           "${ansible_args[@]}"
 

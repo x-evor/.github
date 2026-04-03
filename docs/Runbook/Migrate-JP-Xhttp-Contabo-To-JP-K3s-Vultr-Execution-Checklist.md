@@ -19,7 +19,7 @@
 
 ## Command Entry Points
 
-- `playbooks/init_k3s_single_node_gitops.yml`
+- `playbooks/k3s_platform_bootstrap_with_gitops.yml`
 - `playbooks/roles/vhosts/k3s_platform_bootstrap/defaults/main.yml`
 - `docs/Runbook/Migrate-JP-Xhttp-Contabo-To-JP-K3s-Vultr.md`
 
@@ -93,7 +93,7 @@ dig +short console.svc.plus
 ```bash
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
-ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
+ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D
 ```
@@ -138,7 +138,7 @@ For `init`:
 export K3S_PLATFORM_VAULT_BOOTSTRAP_MODE=init
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
-ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
+ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D
 ```
@@ -151,7 +151,7 @@ export VAULT_ROOT_TOKEN='...'
 export VAULT_INIT_JSON='...'
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
-ansible-playbook -i inventory.ini init_k3s_single_node_gitops.yml \
+ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
   -l jp-k3s-vultr.svc.plus \
   -D
 ```

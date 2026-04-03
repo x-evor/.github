@@ -346,6 +346,22 @@ jobs:
           fi
           echo "ssh_host=${ssh_host}" >> "${GITHUB_OUTPUT}"
 
+      - name: Prepare validation known hosts
+        env:
+          SSH_HOST: ${{ steps.resolve_host.outputs.ssh_host }}
+          SSH_PORT: ${{ inputs.ssh_port }}
+          SSH_KNOWN_HOSTS: ${{ inputs.ssh_known_hosts }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          : > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          if [[ -n "${SSH_KNOWN_HOSTS}" ]]; then
+            printf '%s\n' "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
+            exit 0
+          fi
+          ssh-keyscan -p "${SSH_PORT}" -H "${SSH_HOST}" >> ~/.ssh/known_hosts
+
       - name: Validate k3s and gitops state
         env:
           SSH_HOST: ${{ steps.resolve_host.outputs.ssh_host }}

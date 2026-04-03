@@ -18,7 +18,7 @@ on:
         type: string
       ssh_host:
         description: "Real SSH host or IP"
-        required: true
+        required: false
         default: ""
         type: string
       ssh_user:
@@ -176,15 +176,23 @@ jobs:
           export ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg"
           export ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no'
 
+          target_host="${{ inputs.target_host }}"
+          ssh_host_arg=()
+          if [[ -n "${{ inputs.ssh_host }}" ]]; then
+            ssh_host_arg=(-e "ansible_host=${{ inputs.ssh_host }}")
+          fi
+
           ansible_args=(
             ansible-playbook
             -i "${{ github.workspace }}/ansible/inventory.ini"
             -D
-            -l "${{ inputs.target_host }}"
-            -e "ansible_host=${{ inputs.ssh_host }}"
+            -l "${target_host}"
             -e "ansible_user=${{ inputs.ssh_user }}"
             -e "ansible_port=${{ inputs.ssh_port }}"
           )
+          if [[ ${#ssh_host_arg[@]} -gt 0 ]]; then
+            ansible_args+=("${ssh_host_arg[@]}")
+          fi
           if [[ "${BOOTSTRAP_MODE}" == "dry-run" ]]; then
             ansible_args+=(-C)
           fi

@@ -74,6 +74,13 @@ jobs:
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           path: gitops
 
+      - name: Checkout playbooks repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: x-evor/playbooks
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: playbooks
+
       - name: Checkout charts repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -130,7 +137,7 @@ jobs:
       - name: Checkout playbooks repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          repository: ${{ github.repository_owner }}/playbooks
+          repository: x-evor/playbooks
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           path: playbooks
 
@@ -219,7 +226,7 @@ jobs:
       - name: Checkout playbooks repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          repository: ${{ github.repository_owner }}/playbooks
+          repository: x-evor/playbooks
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           path: playbooks
 

@@ -14,12 +14,12 @@ on:
       target_host:
         description: "Inventory host alias"
         required: true
-        default: "cn-k3s-vultr.svc.plus"
+        default: "jp-k3s-vultr.svc.plus"
         type: string
       ssh_host:
         description: "Real SSH host or IP"
         required: true
-        default: "5.78.45.49"
+        default: ""
         type: string
       ssh_user:
         description: "SSH username"

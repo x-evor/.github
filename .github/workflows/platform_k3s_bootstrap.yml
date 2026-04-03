@@ -70,7 +70,7 @@ jobs:
       - name: Checkout gitops repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          repository: ${{ github.repository_owner }}/gitops
+          repository: x-evor/gitops
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           path: gitops
 
@@ -84,7 +84,7 @@ jobs:
       - name: Checkout charts repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          repository: ${{ github.repository_owner }}/artifacts
+          repository: x-evor/artifacts
           token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
           path: artifacts
 

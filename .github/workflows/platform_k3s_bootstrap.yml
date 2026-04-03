@@ -135,8 +135,7 @@ jobs:
           path: playbooks
 
       - name: Install Ansible runtime
-        shell: bash
-        run: bash scripts/github-actions/install-python-tools.sh ansible
+        uses: ./.github/actions/install-ansible-runtime
 
       - name: Prepare runner SSH key
         env:
@@ -216,8 +215,7 @@ jobs:
           path: playbooks
 
       - name: Install Ansible runtime
-        shell: bash
-        run: bash scripts/github-actions/install-python-tools.sh ansible
+        uses: ./.github/actions/install-ansible-runtime
 
       - name: Prepare runner SSH key
         env:

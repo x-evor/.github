@@ -46,7 +46,6 @@ on:
       - "docs/plans/2026-04-02-single-node-k3s-gitops-platform.md"
       - "docs/operations-governance/release-checklist.md"
       - ".github/workflows/platform_k3s_bootstrap.yml"
-      - "scripts/github-actions/run-platform-ansible.sh"
       - "ansible/inventory.ini"
       - "ansible/playbooks/harden_ssh_root_key_only.yml"
       - "ansible/roles/harden_ssh_root_key_only/**"
@@ -109,7 +108,7 @@ jobs:
 
       - name: Verify helper syntax
         shell: bash
-        run: bash -n scripts/github-actions/run-platform-ansible.sh
+        run: python3 -m py_compile scripts/github-actions/private-key-payload.py
 
       - name: Validate gitops renders
         shell: bash
@@ -181,15 +180,40 @@ jobs:
           GITOPS_AUTH_MODE: ${{ secrets.GITOPS_AUTH_MODE || vars.GITOPS_AUTH_MODE || 'public' }}
           GITOPS_FLUX_DEPLOY_KEY: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY }}
           GITOPS_FLUX_DEPLOY_KEY_PUB: ${{ secrets.GITOPS_FLUX_DEPLOY_KEY_PUB }}
+          BOOTSTRAP_MODE: ${{ inputs.mode }}
         shell: bash
         run: |
-          bash scripts/github-actions/run-platform-ansible.sh \
-            "${{ inputs.mode }}" \
-            "${{ github.workspace }}/ansible/inventory.ini" \
-            "${{ github.workspace }}/playbooks/init_k3s_single_node_gitops.yml" \
-            "${{ github.workspace }}/playbooks/${{ inputs.vars_file }}" \
-            "${{ inputs.target_host }}" \
-            "${{ github.workspace }}/ansible/inventory.ini.tmpl"
+          prepare_output="$(mktemp)"
+          trap 'rm -f "${prepare_output}"' EXIT
+
+          GITHUB_OUTPUT="${prepare_output}" \
+            bash scripts/github-actions/prepare-ansible-runtime.sh \
+              "${{ github.workspace }}/ansible/inventory.ini" \
+              "${{ inputs.target_host }}" \
+              "${{ github.workspace }}/ansible/inventory.ini.tmpl"
+
+          runtime_inventory="$(awk -F= '/^inventory_file=/{print $2}' "${prepare_output}")"
+          if [[ -z "${runtime_inventory}" ]]; then
+            echo "prepare-ansible-runtime did not emit inventory_file" >&2
+            exit 1
+          fi
+
+          export ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg"
+          export ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no'
+
+          ansible_args=(
+            ansible-playbook
+            -i "${runtime_inventory}"
+            -D
+          )
+          if [[ "${BOOTSTRAP_MODE}" == "dry-run" ]]; then
+            ansible_args+=(-C)
+          fi
+          ansible_args+=(
+            "${{ github.workspace }}/playbooks/init_k3s_single_node_gitops.yml"
+            -e "@${{ github.workspace }}/playbooks/${{ inputs.vars_file }}"
+          )
+          "${ansible_args[@]}"
 
   validate:
     needs: bootstrap

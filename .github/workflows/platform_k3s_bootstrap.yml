@@ -335,7 +335,11 @@ jobs:
             echo "ssh_host=${SSH_HOST}" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
-          ssh_host="$(ANSIBLE_CONFIG=ansible/ansible.cfg ansible-inventory -i ansible/inventory.ini --host "${{ inputs.target_host }}" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ansible_host") or "")')"
+          ssh_host="$(
+            ANSIBLE_CONFIG=ansible/ansible.cfg \
+              ansible-inventory -i ansible/inventory.ini --host "${{ inputs.target_host }}" \
+              | python3 -c 'import json,sys; print(json.load(sys.stdin).get("ansible_host") or "")'
+          )"
           if [[ -z "${ssh_host}" ]]; then
             echo "Failed to resolve ansible_host for target host" >&2
             exit 1

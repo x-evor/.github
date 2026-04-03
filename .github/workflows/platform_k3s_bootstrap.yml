@@ -38,12 +38,10 @@ on:
         type: string
   push:
     paths:
-      - "docs/plans/2026-04-02-single-node-k3s-gitops-platform.md"
-      - "docs/operations-governance/release-checklist.md"
       - ".github/workflows/platform_k3s_bootstrap.yml"
       - "ansible/inventory.ini"
-      - "ansible/playbooks/harden_ssh_root_key_only.yml"
       - "ansible/roles/harden_ssh_root_key_only/**"
+      - "ansible/playbooks/harden_ssh_root_key_only.yml"
 
 permissions:
   contents: read
@@ -116,8 +114,8 @@ jobs:
         shell: bash
         run: |
           gitops_root="${GITHUB_WORKSPACE}/gitops"
-          kubectl kustomize "${gitops_root}/environments/clusters/prod" >/tmp/gitops-prod.yaml
           kubectl kustomize "${gitops_root}/environments/clusters/pre" >/tmp/gitops-pre.yaml
+          kubectl kustomize "${gitops_root}/environments/clusters/prod" >/tmp/gitops-prod.yaml
 
   k3s_platform_bootstrap:
     name: k3s_platform_bootstrap

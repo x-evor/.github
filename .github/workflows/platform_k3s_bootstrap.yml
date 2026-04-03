@@ -183,28 +183,16 @@ jobs:
           BOOTSTRAP_MODE: ${{ inputs.mode }}
         shell: bash
         run: |
-          prepare_output="$(mktemp)"
-          trap 'rm -f "${prepare_output}"' EXIT
-
-          GITHUB_OUTPUT="${prepare_output}" \
-            bash scripts/github-actions/prepare-ansible-runtime.sh \
-              "${{ github.workspace }}/ansible/inventory.ini" \
-              "${{ inputs.target_host }}" \
-              "${{ github.workspace }}/ansible/inventory.ini.tmpl"
-
-          runtime_inventory="$(awk -F= '/^inventory_file=/{print $2}' "${prepare_output}")"
-          if [[ -z "${runtime_inventory}" ]]; then
-            echo "prepare-ansible-runtime did not emit inventory_file" >&2
-            exit 1
-          fi
-
           export ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg"
           export ANSIBLE_SSH_ARGS='-o ControlMaster=no -o ControlPersist=no'
 
           ansible_args=(
             ansible-playbook
-            -i "${runtime_inventory}"
+            -i "${{ github.workspace }}/ansible/inventory.ini"
             -D
+            -e "ansible_host=${{ inputs.ssh_host }}"
+            -e "ansible_user=${{ inputs.ssh_user }}"
+            -e "ansible_port=${{ inputs.ssh_port }}"
           )
           if [[ "${BOOTSTRAP_MODE}" == "dry-run" ]]; then
             ansible_args+=(-C)

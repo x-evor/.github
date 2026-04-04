@@ -41,6 +41,16 @@ cloudflare_dns_records:
     content: 46.250.251.132
     ttl: 1
     proxied: false
+  - type: A
+    name: acp-server-codex.svc.plus
+    content: 167.179.110.129
+    ttl: 1
+    proxied: false
+  - type: A
+    name: acp-server-opencode.svc.plus
+    content: 167.179.110.129
+    ttl: 1
+    proxied: false
 
   # Console CNAME chain
   - type: CNAME

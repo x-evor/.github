@@ -2,7 +2,7 @@
 
 **Last updated**: 2026-04-02  
 **Owner**: `@shenlan`  
-**Goal**: move the active single-node source host `root@jp-xhttp-contabo.svc.plus` to the new target host `root@jp-k3s-vultr.svc.plus` with minimal downtime, while keeping the source host untouched until the final DNS cutover.
+**Goal**: move the active single-node source host `root@jp-xhttp-contabo.svc.plus` to the new target host `root@jp-xhttp-contabo.svc.plus` with minimal downtime, while keeping the source host untouched until the final DNS cutover.
 **Target deployment mode**: `k3s_platform`
 
 > This runbook is a low-downtime migration plan, not a destructive rebuild plan.
@@ -11,7 +11,7 @@
 ## Scope
 
 - Source host: `root@jp-xhttp-contabo.svc.plus`
-- Target host: `root@jp-k3s-vultr.svc.plus`
+- Target host: `root@jp-xhttp-contabo.svc.plus`
 - Target deployment mode: `k3s_platform`
 - Target platform bootstrap playbook: `playbooks/k3s_platform_bootstrap_with_gitops.yml`
 - Target platform bootstrap inputs: role defaults + environment variables
@@ -104,11 +104,11 @@ Logical line split during migration:
 
 | Layer | Service | Target | Notes |
 | --- | --- | --- | --- |
-| Platform | `k3s_platform_bootstrap` | `jp-k3s-vultr.svc.plus` | Host bootstrap and GitOps seed |
-| Platform service | `Vault` | `jp-k3s-vultr.svc.plus` | Logically folded into `platform`; must be ready before full GitOps sync |
+| Platform | `k3s_platform_bootstrap` | `jp-xhttp-contabo.svc.plus` | Host bootstrap and GitOps seed |
+| Platform service | `Vault` | `jp-xhttp-contabo.svc.plus` | Logically folded into `platform`; must be ready before full GitOps sync |
 | DB tunnel | `stunnel-client` | shared pod / namespace | Shared DB endpoint for workloads |
-| DB tunnel | `stunnel-server` | `jp-k3s-vultr.svc.plus` | External DB TLS endpoint |
-| Database | `postgresql-svc-plus` | `jp-k3s-vultr.svc.plus` | Primary DB runtime |
+| DB tunnel | `stunnel-server` | `jp-xhttp-contabo.svc.plus` | External DB TLS endpoint |
+| Database | `postgresql-svc-plus` | `jp-xhttp-contabo.svc.plus` | Primary DB runtime |
 | Traffic | DNS | Cloudflare / public DNS | Switched only after validation |
 
 ## Preconditions
@@ -146,7 +146,7 @@ Recommended command shape:
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
-  -l jp-k3s-vultr.svc.plus \
+  -l jp-xhttp-contabo.svc.plus \
   -D \
 ```
 
@@ -280,7 +280,7 @@ Use this table during the actual migration window:
 | --- | --- |
 | Window | `TBD` |
 | Source | `root@jp-xhttp-contabo.svc.plus` |
-| Target | `root@jp-k3s-vultr.svc.plus` |
+| Target | `root@jp-xhttp-contabo.svc.plus` |
 | Vault mode | `init` / `migrate` |
 | DB mode | `initial sync + final freeze + cutover` |
 | DNS TTL | `TBD` |

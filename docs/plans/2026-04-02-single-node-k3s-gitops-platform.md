@@ -84,7 +84,7 @@ flowchart TB
 ## Implementation Notes
 
 - Root Flux sync targets `gitops/apps/clusters/prod`.
-- `jp-k3s-vultr.svc.plus` uses the `k3s_platform` deployment mode.
+- `jp-xhttp-contabo.svc.plus` uses the `k3s_platform` deployment mode.
 - The logical target namespace model is:
   - `kube-system`
   - `flux-system`
@@ -135,8 +135,8 @@ The bootstrap interface is now intentionally split into four stages:
 ## Validation Baseline
 
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml --syntax-check`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml -l jp-k3s-vultr.svc.plus -D -C`
-- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml -l jp-k3s-vultr.svc.plus -D`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml -l jp-xhttp-contabo.svc.plus -D -C`
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks && ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml -l jp-xhttp-contabo.svc.plus -D`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build apps/clusters/prod`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops && kustomize build apps/clusters/pre`
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/artifacts/oci/charts && helm template console-prod ./apps/app-service -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/console/base/values.yaml -f /Users/shenlan/workspaces/cloud-neutral-toolkit/gitops/apps/core/console/prod/values.yaml`

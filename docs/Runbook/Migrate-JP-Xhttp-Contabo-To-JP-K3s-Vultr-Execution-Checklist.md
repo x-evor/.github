@@ -1,6 +1,6 @@
 # Execution Checklist: JP-XHTTP Contabo -> JP-K3S Vultr
 
-**Purpose**: field execution checklist for the migration from `root@jp-xhttp-contabo.svc.plus` to `root@jp-k3s-vultr.svc.plus`  
+**Purpose**: field execution checklist for the migration from `root@jp-xhttp-contabo.svc.plus` to `root@jp-xhttp-contabo.svc.plus`  
 **Reference runbook**: [Migrate-JP-Xhttp-Contabo-To-JP-K3s-Vultr.md](/Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/docs/Runbook/Migrate-JP-Xhttp-Contabo-To-JP-K3s-Vultr.md)
 
 ## Header
@@ -8,7 +8,7 @@
 | Field | Value |
 | --- | --- |
 | Source host | `root@jp-xhttp-contabo.svc.plus` |
-| Target host | `root@jp-k3s-vultr.svc.plus` |
+| Target host | `root@jp-xhttp-contabo.svc.plus` |
 | Deployment mode | `k3s_platform` |
 | Flux auth mode | `public` / blank, `https-basic`, `https-bearer`, or `ssh` |
 | Vault mode | `init` / `migrate` |
@@ -55,7 +55,7 @@
 ```bash
 ssh root@jp-xhttp-contabo.svc.plus 'hostname && docker ps -a && ss -ltnp'
 ssh root@jp-xhttp-contabo.svc.plus 'docker exec postgresql-svc-plus psql -U postgres -d postgres -Atc "select datname from pg_database where datistemplate=false order by datname;"'
-ssh root@jp-k3s-vultr.svc.plus 'hostname && df -h && free -h && ss -ltnp'
+ssh root@jp-xhttp-contabo.svc.plus 'hostname && df -h && free -h && ss -ltnp'
 dig +short vault.svc.plus
 dig +short console.svc.plus
 ```
@@ -85,7 +85,7 @@ dig +short console.svc.plus
 
 **Goal**
 
-- bootstrap `jp-k3s-vultr.svc.plus` in `k3s_platform` mode
+- bootstrap `jp-xhttp-contabo.svc.plus` in `k3s_platform` mode
 - verify `k3s`, `helm`, and `flux-system`
 
 **Commands / entrypoints**
@@ -94,13 +94,13 @@ dig +short console.svc.plus
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
-  -l jp-k3s-vultr.svc.plus \
+  -l jp-xhttp-contabo.svc.plus \
   -D
 ```
 
 ```bash
-ssh root@jp-k3s-vultr.svc.plus 'systemctl status k3s --no-pager'
-ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl get ns && kubectl -n flux-system get pods'
+ssh root@jp-xhttp-contabo.svc.plus 'systemctl status k3s --no-pager'
+ssh root@jp-xhttp-contabo.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl get ns && kubectl -n flux-system get pods'
 ```
 
 **Pass conditions**
@@ -139,7 +139,7 @@ export K3S_PLATFORM_VAULT_BOOTSTRAP_MODE=init
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
-  -l jp-k3s-vultr.svc.plus \
+  -l jp-xhttp-contabo.svc.plus \
   -D
 ```
 
@@ -152,13 +152,13 @@ export VAULT_INIT_JSON='...'
 cd /Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks
 ANSIBLE_CONFIG=../github-org-cloud-neutral-toolkit/ansible/ansible.cfg \
 ansible-playbook -i inventory.ini k3s_platform_bootstrap_with_gitops.yml \
-  -l jp-k3s-vultr.svc.plus \
+  -l jp-xhttp-contabo.svc.plus \
   -D
 ```
 
 ```bash
-ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n extsvc get pods,svc'
-ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n extsvc exec statefulset/vault -- /bin/vault status'
+ssh root@jp-xhttp-contabo.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n extsvc get pods,svc'
+ssh root@jp-xhttp-contabo.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl -n extsvc exec statefulset/vault -- /bin/vault status'
 ```
 
 **Pass conditions**
@@ -193,10 +193,10 @@ ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && k
 **Commands / entrypoints**
 
 ```bash
-ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && flux reconcile source git platform-config -n flux-system --timeout=5m'
-ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && flux reconcile kustomization platform-root -n flux-system --with-source --timeout=10m'
-ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl get gitrepositories,kustomizations,helmreleases -A'
-ssh root@jp-k3s-vultr.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl get pods -A'
+ssh root@jp-xhttp-contabo.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && flux reconcile source git platform-config -n flux-system --timeout=5m'
+ssh root@jp-xhttp-contabo.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && flux reconcile kustomization platform-root -n flux-system --with-source --timeout=10m'
+ssh root@jp-xhttp-contabo.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl get gitrepositories,kustomizations,helmreleases -A'
+ssh root@jp-xhttp-contabo.svc.plus 'export KUBECONFIG=/etc/rancher/k3s/k3s.yaml && kubectl get pods -A'
 ```
 
 **Pass conditions**
@@ -248,18 +248,18 @@ ssh root@jp-xhttp-contabo.svc.plus 'docker exec postgresql-svc-plus pg_dump -U p
 ssh root@jp-xhttp-contabo.svc.plus 'docker exec postgresql-svc-plus pg_dump -U postgres -d knowledge_db -Fc > /root/knowledge_db.dump'
 scp root@jp-xhttp-contabo.svc.plus:/root/account.dump /tmp/account.dump
 scp root@jp-xhttp-contabo.svc.plus:/root/knowledge_db.dump /tmp/knowledge_db.dump
-scp /tmp/account.dump root@jp-k3s-vultr.svc.plus:/root/account.dump
-scp /tmp/knowledge_db.dump root@jp-k3s-vultr.svc.plus:/root/knowledge_db.dump
-ssh root@jp-k3s-vultr.svc.plus 'docker exec -i postgresql-svc-plus pg_restore -U postgres -d account /root/account.dump'
-ssh root@jp-k3s-vultr.svc.plus 'docker exec -i postgresql-svc-plus pg_restore -U postgres -d knowledge_db /root/knowledge_db.dump'
+scp /tmp/account.dump root@jp-xhttp-contabo.svc.plus:/root/account.dump
+scp /tmp/knowledge_db.dump root@jp-xhttp-contabo.svc.plus:/root/knowledge_db.dump
+ssh root@jp-xhttp-contabo.svc.plus 'docker exec -i postgresql-svc-plus pg_restore -U postgres -d account /root/account.dump'
+ssh root@jp-xhttp-contabo.svc.plus 'docker exec -i postgresql-svc-plus pg_restore -U postgres -d knowledge_db /root/knowledge_db.dump'
 ```
 
 Target-side validation:
 
 ```bash
-ssh root@jp-k3s-vultr.svc.plus 'docker exec postgresql-svc-plus psql -U postgres -d postgres -Atc "select datname, pg_database_size(datname) from pg_database where datistemplate=false order by datname;"'
-ssh root@jp-k3s-vultr.svc.plus 'docker exec postgresql-svc-plus psql -U postgres -d account -Atc "select count(*) from users;"'
-ssh root@jp-k3s-vultr.svc.plus 'docker exec postgresql-svc-plus psql -U postgres -d knowledge_db -Atc "select count(*) from documents;"'
+ssh root@jp-xhttp-contabo.svc.plus 'docker exec postgresql-svc-plus psql -U postgres -d postgres -Atc "select datname, pg_database_size(datname) from pg_database where datistemplate=false order by datname;"'
+ssh root@jp-xhttp-contabo.svc.plus 'docker exec postgresql-svc-plus psql -U postgres -d account -Atc "select count(*) from users;"'
+ssh root@jp-xhttp-contabo.svc.plus 'docker exec postgresql-svc-plus psql -U postgres -d knowledge_db -Atc "select count(*) from documents;"'
 ```
 
 Final short freeze and final sync:

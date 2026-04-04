@@ -85,7 +85,7 @@ Runtime intent:
 ### 3.1 PROD cluster kustomizations
 
 - `apps/clusters/prod/postgresql-prod-kustomization.yaml`
-  - path: `./services/database/postgresql-core`
+  - path: `./services/database/postgresql`
 - `apps/clusters/prod/stunnel-server-kustomization.yaml`
   - path: `./services/database/stunnel-server`
   - dependsOn: `postgresql-prod`
@@ -99,8 +99,8 @@ Runtime intent:
 
 ### 3.2 Support paths added under gitops
 
-- `services/database/postgresql-core`
-  - contains only PostgreSQL Helm release resources
+- `services/database/postgresql`
+  - contains the shared PostgreSQL Helm release resources and the `postgresql-auth` ExternalSecret
 - `services/database/stunnel-server`
   - contains only server-side TLS proxy resources in namespace `database`
 - `apps/core/stunnel-client/base`
@@ -149,7 +149,7 @@ Where:
 ## Execution Order
 
 1. Write this design into the control-plane repo
-2. Add new GitOps resource paths for `postgresql-core`, `stunnel-server`, and `stunnel-client`
+2. Add new GitOps resource paths for `postgresql`, `stunnel-server`, and `stunnel-client`
 3. Rewire `apps/clusters/prod` and `apps/clusters/pre` to the new dependsOn chain
 4. Align bootstrap secrets so the runtime path matches the GitOps path
 5. Validate with `kustomize` and `ansible-playbook --syntax-check`

@@ -151,6 +151,7 @@ func (s *Server) handleRun(ctx context.Context, req protocol.Request) protocol.R
 			StartedAt: time.Now().UTC(),
 			StreamURL: "/mcp/stream/" + j.id,
 			StatusURL: "/mcp/status/" + j.id,
+			Artifacts: defaultArtifacts(""),
 		}
 		if params.FeatureName != "" || params.FeatureNotes != "" {
 			result.Generated = evolution.GeneratedTests(params.FeatureName, params.FeatureNotes)
@@ -206,8 +207,11 @@ func (s *Server) execute(ctx context.Context, j *job, params protocol.RunParams)
 	plan := scheduler.BuildPlan(scheduler.Input{
 		GitEvent:     params.GitEvent,
 		GitRef:       params.GitRef,
+		EventSource:  params.EventSource,
 		TestIntent:   params.TestIntent,
 		ChangedAreas: params.ChangedAreas,
+		RepoScope:    params.RepoScope,
+		FeatureName:  params.FeatureName,
 		Env:          params.Env,
 		MCP:          params.MCP,
 		MCPs:         params.MCPs,
@@ -232,17 +236,19 @@ func (s *Server) execute(ctx context.Context, j *job, params protocol.RunParams)
 	results, finalStatus, logs, errs := executePlan(ctx, j, plan.Plan, maxParallel)
 	finished := time.Now().UTC()
 	j.runResult = protocol.RunResult{
-		Status:      finalStatus,
-		Duration:    finished.Sub(started).Milliseconds(),
-		Logs:        logs,
-		Errors:      errs,
-		JobID:       j.id,
-		Plan:        plan.Plan,
-		StartedAt:   started,
-		FinishedAt:  finished,
-		Tasks:       results,
-		Suggestions: evolution.SuggestionsForFailure(results),
-		Generated:   evolution.GeneratedTests(params.FeatureName, params.FeatureNotes),
+		Status:          finalStatus,
+		Duration:        finished.Sub(started).Milliseconds(),
+		Logs:            logs,
+		Errors:          errs,
+		JobID:           j.id,
+		Plan:            plan.Plan,
+		StartedAt:       started,
+		FinishedAt:      finished,
+		Tasks:           results,
+		Suggestions:     evolution.SuggestionsForFailure(results),
+		Recommendations: evolution.RecommendationsForFailure(results),
+		Artifacts:       defaultArtifacts(""),
+		Generated:       evolution.GeneratedTests(params.FeatureName, params.FeatureNotes),
 	}
 	if params.AgentLoop {
 		j.runResult.Logs = append(j.runResult.Logs,
@@ -250,6 +256,9 @@ func (s *Server) execute(ctx context.Context, j *job, params protocol.RunParams)
 			"agent-loop: feature test drafts generated automatically when feature metadata is present",
 			"agent-loop: merge should remain blocked until the plan returns success",
 		)
+		if finalStatus != "success" {
+			j.runResult.MergeBlockedReason = "agent-loop gate failed: one or more required critical-path tasks did not succeed"
+		}
 	}
 	j.notify("job.finished", "job finished", "", finalStatus)
 	close(j.done)
@@ -501,4 +510,25 @@ func (j *job) markCancelled() {
 	j.cancelLock.Lock()
 	defer j.cancelLock.Unlock()
 	j.cancelled = true
+}
+
+func defaultArtifacts(baseDir string) []protocol.Artifact {
+	names := []struct {
+		name string
+		kind string
+	}{
+		{name: "run-result.json", kind: "run-result"},
+		{name: "generated-tests.json", kind: "generated-tests"},
+		{name: "fix-suggestions.json", kind: "fix-suggestions"},
+		{name: "task-timeline.json", kind: "task-timeline"},
+	}
+	out := make([]protocol.Artifact, 0, len(names))
+	for _, item := range names {
+		artifact := protocol.Artifact{Name: item.name, Kind: item.kind}
+		if baseDir != "" {
+			artifact.Path = path.Join(baseDir, item.name)
+		}
+		out = append(out, artifact)
+	}
+	return out
 }

@@ -1,0 +1,79 @@
+name: Feature Test Generation
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  generate-test-drafts:
+    name: agent-loop / test-generation
+    if: ${{ github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.title || '', 'feature/') || contains(github.event.pull_request.body || '', 'feature-spec') }}
+    runs-on: ubuntu-latest
+    env:
+      MCP_ENV: dev
+      MCP_GATEWAY_BASE_URL: http://127.0.0.1:8080
+      INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+      FEATURE_NAME: ${{ github.event.pull_request.title || github.event.repository.name }}
+      FEATURE_NOTES: ${{ github.event.pull_request.body || 'Generate unit/integration/e2e/golden/patrol drafts' }}
+      FEATURE_ID: pr-${{ github.event.pull_request.number || github.run_number }}
+      PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+      REPO_SCOPE: xworkmate.svc.plus,accounts.svc.plus,github-org-cloud-neutral-toolkit
+      EVENT_SOURCE: pr
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Start MCP Gateway
+        shell: bash
+        run: bash scripts/github-actions/start-full-stack-gateway.sh
+
+      - name: Generate test drafts via full plan
+        shell: bash
+        run: bash scripts/github-actions/run-full-stack-test.sh pr-full dev
+
+      - name: Upload generated test draft artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-loop-generated-tests
+          path: |
+            ${{ runner.temp }}/pr-full.json
+            ${{ runner.temp }}/agent-loop/pr-full/generated-tests.json
+            ${{ runner.temp }}/agent-loop/pr-full/fix-suggestions.json
+
+      - name: Draft PR summary comment
+        if: always() && github.event.pull_request.number
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              "Agent loop 已生成测试草案产物。",
+              "",
+              "Artifacts:",
+              "- `agent-loop-generated-tests`",
+              "- `generated-tests.json`",
+              "- `fix-suggestions.json`",
+              "",
+              "本工作流只生成测试草案和修复建议，不会自动写业务代码。"
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });
+
+      - name: Stop MCP Gateway
+        if: always()
+        shell: bash
+        run: bash scripts/github-actions/stop-full-stack-gateway.sh

@@ -38,10 +38,15 @@ func main() {
 		retry       = fs.Int("retry", 0, "override retry max attempts")
 		parallelism = fs.Int("parallelism", 3, "max parallel tasks")
 		jsonOut     = fs.String("json-out", "", "write JSON report to path")
+		artifactDir = fs.String("artifact-dir", "", "write standard JSON artifacts to directory")
 		gateway     = fs.String("gateway", "", "gateway base URL")
 		stream      = fs.Bool("stream", true, "stream job progress")
 		featureName = fs.String("feature-name", "", "feature name for generated test drafts")
+		featureID   = fs.String("feature-id", "", "feature id for generated test drafts")
 		featureNote = fs.String("feature-notes", "", "feature notes for generated test drafts")
+		repoScope   = fs.String("repo-scope", "", "comma-separated repo scope")
+		prNumber    = fs.String("pr-number", "", "pull request number")
+		eventSource = fs.String("event-source", "", "event source: pr|push|dispatch|release")
 		agentLoop   = fs.Bool("agent-loop", true, "enable agent loop behavior")
 	)
 	_ = fs.Parse(os.Args[2:])
@@ -72,7 +77,11 @@ func main() {
 		TimeoutMS:    *timeoutMS,
 		Parallelism:  *parallelism,
 		FeatureName:  *featureName,
+		FeatureID:    *featureID,
 		FeatureNotes: *featureNote,
+		RepoScope:    splitCSV(*repoScope),
+		PRNumber:     *prNumber,
+		EventSource:  *eventSource,
 		AgentLoop:    *agentLoop,
 	}
 	if *retry > 0 {
@@ -88,6 +97,12 @@ func main() {
 	if *jsonOut != "" {
 		if err := writeJSON(*jsonOut, result); err != nil {
 			fmt.Fprintln(os.Stderr, "write report:", err)
+			os.Exit(1)
+		}
+	}
+	if *artifactDir != "" {
+		if err := writeArtifacts(*artifactDir, result); err != nil {
+			fmt.Fprintln(os.Stderr, "write artifacts:", err)
 			os.Exit(1)
 		}
 	}
@@ -202,6 +217,67 @@ func printConsoleReport(result protocol.RunResult) {
 
 func writeJSON(path string, result protocol.RunResult) error {
 	raw, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, raw, 0o644)
+}
+
+func writeArtifacts(dir string, result protocol.RunResult) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	result.Artifacts = []protocol.Artifact{
+		{Name: "run-result.json", Path: dir + "/run-result.json", Kind: "run-result"},
+		{Name: "generated-tests.json", Path: dir + "/generated-tests.json", Kind: "generated-tests"},
+		{Name: "fix-suggestions.json", Path: dir + "/fix-suggestions.json", Kind: "fix-suggestions"},
+		{Name: "task-timeline.json", Path: dir + "/task-timeline.json", Kind: "task-timeline"},
+	}
+	if err := writeJSON(dir+"/run-result.json", result); err != nil {
+		return err
+	}
+	generated := struct {
+		FeatureID   string                 `json:"feature_id,omitempty"`
+		FeatureName string                 `json:"feature_name,omitempty"`
+		Generated   *protocol.GeneratedSet `json:"generated,omitempty"`
+	}{
+		FeatureID:   "",
+		FeatureName: "",
+		Generated:   result.Generated,
+	}
+	if err := writeJSONBytes(dir+"/generated-tests.json", generated); err != nil {
+		return err
+	}
+	fixes := struct {
+		Suggestions        []string                  `json:"suggestions,omitempty"`
+		Recommendations    []protocol.Recommendation `json:"recommendations,omitempty"`
+		MergeBlockedReason string                    `json:"merge_blocked_reason,omitempty"`
+	}{
+		Suggestions:        result.Suggestions,
+		Recommendations:    result.Recommendations,
+		MergeBlockedReason: result.MergeBlockedReason,
+	}
+	if err := writeJSONBytes(dir+"/fix-suggestions.json", fixes); err != nil {
+		return err
+	}
+	timeline := struct {
+		JobID      string                 `json:"job_id,omitempty"`
+		Status     string                 `json:"status"`
+		StartedAt  time.Time              `json:"started_at,omitempty"`
+		FinishedAt time.Time              `json:"finished_at,omitempty"`
+		Tasks      []protocol.TaskSummary `json:"tasks,omitempty"`
+	}{
+		JobID:      result.JobID,
+		Status:     result.Status,
+		StartedAt:  result.StartedAt,
+		FinishedAt: result.FinishedAt,
+		Tasks:      result.Tasks,
+	}
+	return writeJSONBytes(dir+"/task-timeline.json", timeline)
+}
+
+func writeJSONBytes(path string, payload any) error {
+	raw, err := json.MarshalIndent(payload, "", "  ")
 	if err != nil {
 		return err
 	}

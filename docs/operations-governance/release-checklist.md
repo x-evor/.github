@@ -29,6 +29,7 @@
 - [ ] `python3 scripts/github-actions/stable-release-gate.py --mode stable --service <service> --track <track> --service-ref <ref>` passes against the live stable domain before release sign-off
 - [ ] `release/*` protection is applied (ruleset/branch protection) and only release managers can update it
 - [ ] CI status is green for all impacted repos
+- [ ] Protected branch required checks include `agent-loop / quick-stack`, `agent-loop / critical-path`, and `agent-loop / desktop-e2e`
 - [ ] Image tag policy matches branch contract: `main -> latest` for `pre`, `release/* -> release tag` for `prd`, with `imagePullPolicy` set to `Always` for `pre` and `IfNotPresent` for `prd`
 - [ ] API contracts are validated (path, payload, auth headers)
 - [ ] Single-node k3s platform changes keep `Traefik` disabled and reserve `servicelb` for the ingress entrypoint
@@ -63,6 +64,7 @@ Release from lower-level dependencies upward:
 ## E. Final Cross-Repo Validation
 
 - [ ] End-to-end auth chain test passed
+- [ ] Agent-loop artifacts (`run-result.json`, `generated-tests.json`, `fix-suggestions.json`, `task-timeline.json`) are attached to the validating workflow run
 - [ ] Main user journey smoke test passed
 - [ ] `/docs`, `/docs/<collection>/<slug>`, `/blogs`, and `/blogs/<slug>` load through `docs.svc.plus`
 - [ ] Gateway can invoke `docs-agent` read operations successfully

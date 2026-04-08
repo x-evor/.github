@@ -97,22 +97,22 @@ type PlanStep struct {
 }
 
 type RunResult struct {
-	Status      string        `json:"status"`
-	Duration    int64         `json:"duration"`
-	Logs        []string      `json:"logs"`
-	Errors      []string      `json:"errors"`
-	JobID       string        `json:"job_id,omitempty"`
-	Plan        []PlanStep    `json:"plan,omitempty"`
-	StartedAt   time.Time     `json:"started_at,omitempty"`
-	FinishedAt  time.Time     `json:"finished_at,omitempty"`
-	StreamURL   string        `json:"stream_url,omitempty"`
-	StatusURL   string        `json:"status_url,omitempty"`
-	Tasks       []TaskSummary `json:"tasks,omitempty"`
-	Suggestions []string      `json:"suggestions,omitempty"`
-	Artifacts   []Artifact    `json:"artifacts,omitempty"`
-	Recommendations []Recommendation `json:"recommendations,omitempty"`
-	MergeBlockedReason string `json:"merge_blocked_reason,omitempty"`
-	Generated   *GeneratedSet `json:"generated,omitempty"`
+	Status             string           `json:"status"`
+	Duration           int64            `json:"duration"`
+	Logs               []string         `json:"logs"`
+	Errors             []string         `json:"errors"`
+	JobID              string           `json:"job_id,omitempty"`
+	Plan               []PlanStep       `json:"plan,omitempty"`
+	StartedAt          time.Time        `json:"started_at,omitempty"`
+	FinishedAt         time.Time        `json:"finished_at,omitempty"`
+	StreamURL          string           `json:"stream_url,omitempty"`
+	StatusURL          string           `json:"status_url,omitempty"`
+	Tasks              []TaskSummary    `json:"tasks,omitempty"`
+	Suggestions        []string         `json:"suggestions,omitempty"`
+	Artifacts          []Artifact       `json:"artifacts,omitempty"`
+	Recommendations    []Recommendation `json:"recommendations,omitempty"`
+	MergeBlockedReason string           `json:"merge_blocked_reason,omitempty"`
+	Generated          *GeneratedSet    `json:"generated,omitempty"`
 }
 
 type TaskSummary struct {
@@ -143,24 +143,24 @@ type GeneratedSet struct {
 }
 
 type GeneratedTest struct {
-	Repo         string   `json:"repo,omitempty"`
-	Name         string   `json:"name"`
-	Description  string   `json:"description"`
-	Layer        string   `json:"layer,omitempty"`
-	TargetPaths   []string `json:"target_paths,omitempty"`
-	Inputs       []string `json:"inputs,omitempty"`
-	Assertions   []string `json:"assertions,omitempty"`
-	Environment  []string `json:"environment,omitempty"`
+	Repo        string   `json:"repo,omitempty"`
+	Name        string   `json:"name"`
+	Description string   `json:"description"`
+	Layer       string   `json:"layer,omitempty"`
+	TargetPaths []string `json:"target_paths,omitempty"`
+	Inputs      []string `json:"inputs,omitempty"`
+	Assertions  []string `json:"assertions,omitempty"`
+	Environment []string `json:"environment,omitempty"`
 }
 
 type Recommendation struct {
-	Title               string   `json:"title"`
-	SuspectedLayer      string   `json:"suspected_layer,omitempty"`
-	FailingContract     string   `json:"failing_contract,omitempty"`
-	LikelyFiles         []string `json:"likely_files,omitempty"`
-	RecommendedTestFirst string  `json:"recommended_test_first,omitempty"`
-	SafeFixOrder        []string `json:"safe_fix_order,omitempty"`
-	Summary             string   `json:"summary,omitempty"`
+	Title                string   `json:"title"`
+	SuspectedLayer       string   `json:"suspected_layer,omitempty"`
+	FailingContract      string   `json:"failing_contract,omitempty"`
+	LikelyFiles          []string `json:"likely_files,omitempty"`
+	RecommendedTestFirst string   `json:"recommended_test_first,omitempty"`
+	SafeFixOrder         []string `json:"safe_fix_order,omitempty"`
+	Summary              string   `json:"summary,omitempty"`
 }
 
 type Artifact struct {

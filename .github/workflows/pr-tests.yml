@@ -1,0 +1,52 @@
+name: PR Tests
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pr-mcp-matrix:
+    name: PR MCP Matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - frontend-mcp
+          - api-mcp
+          - db-mcp
+    env:
+      MCP_ENV: dev
+      MCP_GATEWAY_BASE_URL: http://127.0.0.1:8080
+      INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Start MCP Gateway
+        shell: bash
+        run: bash scripts/github-actions/start-full-stack-gateway.sh
+
+      - name: Run matrix test via unified CLI
+        shell: bash
+        run: bash scripts/github-actions/run-full-stack-test.sh pr "${{ matrix.target }}" dev
+
+      - name: Upload JSON report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-${{ matrix.target }}-report
+          path: ${{ runner.temp }}/${{ matrix.target }}.json
+
+      - name: Stop MCP Gateway
+        if: always()
+        shell: bash
+        run: bash scripts/github-actions/stop-full-stack-gateway.sh

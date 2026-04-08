@@ -51,6 +51,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 	mux.Handle("/mcp", srv)
+	mux.HandleFunc("/mcp/stream/", srv.StreamHTTP)
 
 	fmt.Println("listening on", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
@@ -58,4 +59,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

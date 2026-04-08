@@ -1,0 +1,93 @@
+name: Release E2E
+
+on:
+  push:
+    branches:
+      - release/**
+  workflow_dispatch:
+    inputs:
+      env:
+        description: Target environment
+        required: true
+        default: pre
+        type: choice
+        options:
+          - pre
+          - prod
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: Release E2E
+    runs-on: ubuntu-latest
+    env:
+      MCP_ENV: ${{ inputs.env || 'pre' }}
+      MCP_GATEWAY_BASE_URL: http://127.0.0.1:8080
+      INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Start MCP Gateway
+        shell: bash
+        run: bash scripts/github-actions/start-full-stack-gateway.sh
+
+      - name: Run e2e via unified CLI
+        shell: bash
+        run: bash scripts/github-actions/run-full-stack-test.sh release e2e-mcp "${{ env.MCP_ENV }}"
+
+      - name: Upload E2E report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-e2e-report
+          path: ${{ runner.temp }}/e2e-mcp.json
+
+      - name: Stop MCP Gateway
+        if: always()
+        shell: bash
+        run: bash scripts/github-actions/stop-full-stack-gateway.sh
+
+  load:
+    name: Release Load
+    runs-on: ubuntu-latest
+    needs: e2e
+    env:
+      MCP_ENV: ${{ inputs.env || 'pre' }}
+      MCP_GATEWAY_BASE_URL: http://127.0.0.1:8080
+      INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Start MCP Gateway
+        shell: bash
+        run: bash scripts/github-actions/start-full-stack-gateway.sh
+
+      - name: Run load via unified CLI
+        shell: bash
+        run: bash scripts/github-actions/run-full-stack-test.sh release load-mcp "${{ env.MCP_ENV }}"
+
+      - name: Upload Load report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-load-report
+          path: ${{ runner.temp }}/load-mcp.json
+
+      - name: Stop MCP Gateway
+        if: always()
+        shell: bash
+        run: bash scripts/github-actions/stop-full-stack-gateway.sh

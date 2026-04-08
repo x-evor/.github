@@ -1,0 +1,7 @@
+server:
+  addr: ":8080"
+gateway:
+  base_url: "http://127.0.0.1:8080"
+execution:
+  max_parallel: 3
+  timeout_ms: 45000

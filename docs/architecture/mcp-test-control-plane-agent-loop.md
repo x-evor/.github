@@ -34,8 +34,18 @@ When a PR is created:
 3. The gateway expands the event into a multi-MCP plan.
 4. The workflow fails on any non-success result.
 
+Current control-plane workflows:
+
+- `.github/workflows/pr-agent-loop.yml`
+- `.github/workflows/feature-test-generation.yml`
+- `.github/workflows/release-agent-e2e.yml`
+
 ## Merge Gate
 
 - PR merge is forbidden while the PR workflow is red.
+- Protected branches should require:
+  - `agent-loop / quick-stack`
+  - `agent-loop / critical-path`
+  - `agent-loop / desktop-e2e`
 - Release load testing is blocked unless release e2e passes first.
 - Critical-path failures stop dependent tasks immediately.

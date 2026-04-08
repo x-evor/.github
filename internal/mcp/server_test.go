@@ -27,8 +27,8 @@ func TestHandleRunSync(t *testing.T) {
 	if result.Status != "success" {
 		t.Fatalf("expected success, got %s", result.Status)
 	}
-	if len(result.Plan) != 3 {
-		t.Fatalf("expected 3 plan steps, got %d", len(result.Plan))
+	if len(result.Plan) < 8 {
+		t.Fatalf("expected expanded PR plan, got %d", len(result.Plan))
 	}
 }
 

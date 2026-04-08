@@ -1,0 +1,150 @@
+name: PR Agent Loop
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  quick-stack:
+    name: agent-loop / quick-stack
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        target:
+          - flutter-widget-mcp
+          - flutter-golden-mcp
+          - go-unit-mcp
+          - api-contract-mcp
+    env:
+      MCP_ENV: dev
+      MCP_GATEWAY_BASE_URL: http://127.0.0.1:8080
+      INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+      FEATURE_NAME: ${{ github.event.pull_request.title || github.event.repository.name }}
+      FEATURE_NOTES: ${{ github.event.pull_request.body || 'PR-triggered agent-loop validation' }}
+      FEATURE_ID: pr-${{ github.event.pull_request.number || github.run_number }}
+      PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+      REPO_SCOPE: xworkmate.svc.plus,accounts.svc.plus,github-org-cloud-neutral-toolkit
+      EVENT_SOURCE: pr
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Start MCP Gateway
+        shell: bash
+        run: bash scripts/github-actions/start-full-stack-gateway.sh
+
+      - name: Run agent loop quick-stack target
+        shell: bash
+        run: bash scripts/github-actions/run-full-stack-test.sh pr "${{ matrix.target }}" dev
+
+      - name: Upload quick-stack JSON reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-loop-quick-stack-${{ matrix.target }}
+          path: |
+            ${{ runner.temp }}/${{ matrix.target }}.json
+            ${{ runner.temp }}/agent-loop/${{ matrix.target }}/
+
+      - name: Stop MCP Gateway
+        if: always()
+        shell: bash
+        run: bash scripts/github-actions/stop-full-stack-gateway.sh
+
+  critical-path:
+    name: agent-loop / critical-path
+    runs-on: ubuntu-latest
+    env:
+      MCP_ENV: dev
+      MCP_GATEWAY_BASE_URL: http://127.0.0.1:8080
+      INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+      FEATURE_NAME: ${{ github.event.pull_request.title || github.event.repository.name }}
+      FEATURE_NOTES: ${{ github.event.pull_request.body || 'PR-triggered agent-loop critical-path validation' }}
+      FEATURE_ID: pr-${{ github.event.pull_request.number || github.run_number }}
+      PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+      REPO_SCOPE: xworkmate.svc.plus,accounts.svc.plus,github-org-cloud-neutral-toolkit
+      EVENT_SOURCE: pr
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Start MCP Gateway
+        shell: bash
+        run: bash scripts/github-actions/start-full-stack-gateway.sh
+
+      - name: Run critical-path plan
+        shell: bash
+        run: bash scripts/github-actions/run-full-stack-test.sh pr-full dev
+
+      - name: Upload critical-path artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-loop-critical-path
+          path: |
+            ${{ runner.temp }}/pr-full.json
+            ${{ runner.temp }}/agent-loop/pr-full/
+
+      - name: Stop MCP Gateway
+        if: always()
+        shell: bash
+        run: bash scripts/github-actions/stop-full-stack-gateway.sh
+
+  desktop-e2e:
+    name: agent-loop / desktop-e2e
+    runs-on: ubuntu-latest
+    env:
+      MCP_ENV: dev
+      MCP_GATEWAY_BASE_URL: http://127.0.0.1:8080
+      INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
+      FEATURE_NAME: ${{ github.event.pull_request.title || github.event.repository.name }}
+      FEATURE_NOTES: ${{ github.event.pull_request.body || 'PR-triggered agent-loop desktop-e2e validation' }}
+      FEATURE_ID: pr-${{ github.event.pull_request.number || github.run_number }}
+      PR_NUMBER: ${{ github.event.pull_request.number || '' }}
+      REPO_SCOPE: xworkmate.svc.plus,accounts.svc.plus,github-org-cloud-neutral-toolkit
+      EVENT_SOURCE: pr
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Start MCP Gateway
+        shell: bash
+        run: bash scripts/github-actions/start-full-stack-gateway.sh
+
+      - name: Run desktop-e2e target
+        shell: bash
+        run: bash scripts/github-actions/run-full-stack-test.sh pr desktop-e2e-mcp dev
+
+      - name: Upload desktop-e2e artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent-loop-desktop-e2e
+          path: |
+            ${{ runner.temp }}/desktop-e2e-mcp.json
+            ${{ runner.temp }}/agent-loop/desktop-e2e-mcp/
+
+      - name: Stop MCP Gateway
+        if: always()
+        shell: bash
+        run: bash scripts/github-actions/stop-full-stack-gateway.sh

@@ -1,6 +1,0 @@
-service: x-ops-agent
-track: prod
-enabled: true
-stable_domain: x-ops-agent.svc.plus
-release_prefix: x-ops-agent
-host_port: 18084

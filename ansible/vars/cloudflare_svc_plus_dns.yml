@@ -42,6 +42,11 @@ cloudflare_dns_records:
     ttl: 1
     proxied: false
   - type: A
+    name: acp-server.svc.plus
+    content: 46.250.251.132
+    ttl: 1
+    proxied: false
+  - type: A
     name: acp-server-codex.svc.plus
     content: 167.179.110.129
     ttl: 1

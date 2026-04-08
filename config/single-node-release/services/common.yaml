@@ -264,22 +264,6 @@ services:
       image_name: x-cloud-flow
       container_port: 8080
     healthcheck_path: /healthz
-  x-ops-agent:
-    repo_name: x-ops-agent.svc.plus
-    repo_category: api
-    repo_url: https://github.com/cloud-neutral-toolkit/x-ops-agent.svc.plus.git
-    ansible_vars_secret_name: X_OPS_AGENT_ANSIBLE_VARS_YAML
-    playbook_path: ansible/playbooks/deploy_x_ops_agent_compose.yml
-    deploy_server_alias: jp-xhttp-contabo.svc.plus
-    runtime_profile: shared-compose
-    release_dns_vhost_name: contabo
-    docker:
-      mode: build
-      dockerfile_path: Dockerfile
-      build_context: .
-      image_name: x-ops-agent
-      container_port: 8080
-    healthcheck_path: /healthz
   x-scope-hub:
     repo_name: x-scope-hub.svc.plus
     repo_category: api

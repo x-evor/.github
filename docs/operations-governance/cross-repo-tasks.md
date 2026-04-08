@@ -12,6 +12,7 @@ Use this board to track multi-repo initiatives.
 | CRT-004 | P0 | Accounts + Console RBAC / 多租户 / Token model convergence | `console`, `accounts`, control repo | `@shenlan` | IN_PROGRESS |
 | CRT-005 | P0 | Externalize docs/blog delivery via `docs.svc.plus` + `docs-agent` | `docs.svc.plus`, `console.svc.plus`, `knowledge`, `openclaw.svc.plus`, control repo | `@shenlan` | IN_PROGRESS |
 | CRT-006 | P1 | Shared `app-service` Helm contract for core / extsvc workloads | `artifacts`, `gitops`, `console.svc.plus`, `accounts.svc.plus`, `rag-server.svc.plus`, `docs.svc.plus`, `x-cloud-flow.svc.plus`, `x-ops-agent.svc.plus`, `x-scope-hub.svc.plus`, `postgresql.svc.plus` | `@shenlan` | PLANNED |
+| CRT-007 | P0 | Cloud Network Billing & Control Plane v1 | `agent.svc.plus`, `accounts.svc.plus`, `console.svc.plus`, `observability.svc.plus`, control repo | `@shenlan` | IN_PROGRESS |
 
 ## 2.1) GitOps Dependency Maps
 
@@ -283,3 +284,52 @@ Codex should answer with:
 **Rollback plan**
 - Roll back GitOps overlays first, then revert the shared chart contract, then restore any service-specific probe or mount overrides.
 - Keep `stunnel-client` and `stunnel-server` rollback steps separate so the database path can be restored independently of app workloads.
+
+## 5.3) CRT-007 Execution Plan (Real Task)
+
+**Objective**
+- Establish the v1 network billing control plane with PostgreSQL as the single source of truth and Grafana/Prometheus as observability only.
+
+**Impacted repos**
+- `agent.svc.plus`
+- `accounts.svc.plus`
+- `console.svc.plus`
+- `observability.svc.plus`
+- `github-org-cloud-neutral-toolkit`
+
+**Execution checklist**
+
+| Phase | Goal | Deliverables | Test commands | Exit criteria |
+| --- | --- | --- | --- | --- |
+| `P0` | Freeze billing and observability contracts before implementation | - `docs/architecture/network-data-control-plane.md` remains the system boundary overview<br>- `docs/architecture/network-billing-contracts.md` defines the minimal `xray-exporter` and `billing-service` interfaces plus PostgreSQL schema draft<br>- `docs/testing/network-billing-control-plane-test-matrix.md` defines the shared verification matrix | - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit && rg -n "uuid|email|node_id|env|inbound_tag|minute_ts|sourceOfTruth|billing-service|xray-exporter" docs/architecture docs/testing` | - Label contract is documented once and referenced consistently<br>- Billing path and observability path are separated in writing<br>- PostgreSQL is documented as the only billing source of truth |
+| `P1` | Keep control responsibilities narrow and orchestration-only in `agent.svc.plus` | - `agent.svc.plus` docs and backlog items describe agent as scheduler / reconciler / future autoscaling executor only<br>- anomaly handling is documented as a separable signal, not a billing dependency<br>- `CRT-007` tracks `xray-exporter` and `billing-service` as separate control-plane components | - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit && rg -n "orchestration|reconciliation|autoscaling|anomaly" docs/architecture/network-data-control-plane.md docs/operations-governance/cross-repo-tasks.md` | - Agent docs do not claim billing truth ownership<br>- No implementation task couples anomaly detection to the core billing loop |
+| `P2` | Lock `accounts.svc.plus` to PostgreSQL-backed usage and billing only | - `accounts.svc.plus` regression tests assert `/api/account/usage/summary`, `/api/account/usage/buckets`, and `/api/account/billing/summary` return `sourceOfTruth = postgresql`<br>- billing summary test fixture covers ledger rows and quota snapshot from the store layer | - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/accounts.svc.plus && go test ./api/...` | - Usage and billing APIs expose PostgreSQL truth metadata<br>- Tests fail if source-of-truth metadata disappears or endpoint shape drifts |
+| `P3` | Lock `console.svc.plus` to `accounts` for usage/billing reads and Grafana for visibility only | - fetch-layer tests keep `/api/account/usage/summary` as the authoritative read path<br>- UI regression test for `SubscriptionPanel` verifies the accounts-only wording and `sourceOfTruth = postgresql` rendering<br>- Grafana remains an embed path, not a billing data fetch path | - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/console.svc.plus && yarn test:unit src/modules/extensions/builtin/user-center/lib/fetchAccountUsage.test.ts src/modules/extensions/builtin/user-center/account/__tests__/SubscriptionPanel.test.tsx` | - Console renders accounts-backed source-of-truth metadata<br>- No new console usage/billing path reads Prometheus directly |
+| `P4` | Make cross-repo validation executable and replay-safe | - the shared test matrix covers contract, integration, replay, restart recovery, multi-node, multi-env, and failure-mode tests<br>- `CRT-007` includes copy-paste commands for repo-local verification and rollout gates | - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit && rg -n "negative delta|duplicate minute|late-arriving|multi-node|multi-env|PostgreSQL unavailable|Xray unavailable" docs/testing/network-billing-control-plane-test-matrix.md docs/operations-governance/cross-repo-tasks.md` | - Teams can validate v1 with a single checklist<br>- Failure-mode coverage is written down before feature expansion |
+
+**Key design defaults**
+- `xray-core` emits raw stats only.
+- `xray-exporter` enriches and emits metrics only.
+- `Prometheus` and `Grafana` are not billing sources.
+- `billing-service` writes idempotent minute rows into PostgreSQL.
+- `agent` may schedule reconciliation and future autoscaling hooks, but does not own billing truth.
+
+**Risk points**
+- Metric label drift between exporter and billing pipeline.
+- Negative deltas if Xray stats reset without reconciliation.
+- Frontend regressions if console tries to read metrics directly instead of accounts.
+- Observability dashboards being misused as billing truth.
+
+**Verification baseline**
+- `agent.svc.plus`: proxy/runtime docs and control-boundary docs align with orchestrator-only scope
+- `accounts.svc.plus`: usage and billing API responses expose PostgreSQL source-of-truth metadata
+- `console.svc.plus`: subscription panel reads source-of-truth metadata from accounts and renders it
+- `observability.svc.plus`: dashboards remain presentation-only and do not become billing dependencies
+
+**Detailed execution order**
+1. Freeze the billing and metrics contract in documentation before any exporter or billing implementation work starts.
+2. Keep `agent.svc.plus` scoped to scheduling, reconciliation, and future execution hooks only.
+3. Add source-of-truth-only regression tests in `accounts.svc.plus` so PostgreSQL-backed usage and billing responses are locked.
+4. Add source-of-truth-only regression tests in `console.svc.plus` so usage and billing UI continues to read through `accounts`.
+5. Implement `xray-exporter` and `billing-service` only after the contract docs and regression tests are merged.
+6. Use the shared test matrix as the release gate for multi-node, replay, restart-recovery, and failure-mode validation.

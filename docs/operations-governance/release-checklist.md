@@ -24,6 +24,11 @@
 - [ ] The deploy host has a readable `knowledge` Git checkout mounted at the `docs.svc.plus` host path expected by the release vars
 - [ ] `console.svc.plus` has `DOCS_SERVICE_URL` / `DOCS_SERVICE_INTERNAL_URL` configured for the target environment
 - [ ] Gateway-side `docs-agent` policy keeps `plan_update` and `apply_update` separate, with confirmation required for apply
+- [ ] `xray-exporter` metric labels include `uuid`, `email`, `node_id`, `env`, and `inbound_tag`
+- [ ] `billing-service` writes idempotent minute buckets into PostgreSQL only and can replay late minutes safely
+- [ ] `accounts.svc.plus` usage and billing responses are PostgreSQL-backed and do not depend on Prometheus
+- [ ] `console.svc.plus` reads usage and billing data through `accounts.svc.plus` only and uses Grafana only for observability
+- [ ] `agent.svc.plus` remains a controller/orchestrator and does not become the billing truth source
 - [ ] The control-plane release gate entry exists at `.github/workflows/stable_release_gate.yml`
 - [ ] `python3 scripts/github-actions/stable-release-gate.py --mode local --service <service> --track <track> --service-ref <ref>` passes before any stable promotion
 - [ ] `python3 scripts/github-actions/stable-release-gate.py --mode stable --service <service> --track <track> --service-ref <ref>` passes against the live stable domain before release sign-off

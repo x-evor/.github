@@ -32,6 +32,7 @@ flowchart TB
   AccountsSvc["core / accounts"]
   RagSvc["core / rag-server"]
   OpenClawGW["external / OpenClaw gateway"]
+  ControlPlane["core / network billing control plane\n(xray-exporter + billing-service)"]
   OpsEntry["ops 维护入口<br/>SSH / Flux reconcile / kubectl / dashboard"]
 
   ExternalUser --> Ingress
@@ -42,6 +43,7 @@ flowchart TB
   ConsoleSvc --> DocsSvc
   ConsoleSvc --> XWorkmateSvc
   ConsoleSvc --> OpenClawGW
+  ConsoleSvc --> ControlPlane
   ConsoleSvc --> DB
   AccountsSvc --> DB
   RagSvc --> DB
@@ -88,11 +90,17 @@ flowchart TB
 | `console.svc.plus` | Main frontend console (Next.js) | `https://console.svc.plus` | `Cloud-Neutral-Toolkit/console.svc.plus` | `accounts.svc.plus`, `rag-server.svc.plus`, `docs.svc.plus`, `xworkmate.svc.plus`, `openclaw.svc.plus` |
 | `accounts.svc.plus` | Identity and auth core (Go) | `https://accounts.svc.plus` | `Cloud-Neutral-Toolkit/accounts.svc.plus` | `postgresql.svc.plus` |
 | `rag-server.svc.plus` | RAG backend (Go) | internal / service URL | `Cloud-Neutral-Toolkit/rag-server.svc.plus` | `postgresql.svc.plus`, vector provider |
-| `agent.svc.plus` | VM runtime agent and proxy orchestration | `https://agent.svc.plus` | `Cloud-Neutral-Toolkit/agent.svc.plus` | `accounts.svc.plus`, Xray, Caddy |
+| `agent.svc.plus` | VM runtime controller, proxy orchestration, and future reconciliation hooks | `https://agent.svc.plus` | `Cloud-Neutral-Toolkit/agent.svc.plus` | `accounts.svc.plus`, Xray, Caddy |
 | `docs.svc.plus` | Docs/content service | `https://docs.svc.plus` | `Cloud-Neutral-Toolkit/docs.svc.plus` | knowledge content |
 | `postgresql.svc.plus` | PostgreSQL runtime and bootstrap | internal DB endpoint | `Cloud-Neutral-Toolkit/postgresql.svc.plus` | infra, secrets |
 | `observability.svc.plus` | Logs / metrics / tracing | `https://observability.svc.plus` | `cloud-neutral-toolkit/observability.svc.plus` | all services |
 | `gitops` + `iac_modules` | Deployment / IaC / environment definitions | N/A | `cloud-neutral-toolkit/gitops`, `cloud-neutral-toolkit/iac_modules` | cloud provider APIs |
+
+## Planned Control Plane Components
+
+- `xray-exporter` converts raw Xray stats into Prometheus metrics and enriches them with `uuid`, `email`, `node_id`, `env`, and `inbound_tag`.
+- `billing-service` computes minute deltas and writes idempotent billing rows to PostgreSQL.
+- These components are part of the control-plane contract even when they live in a separate deployment bundle from the main application repos.
 
 ## Cross-Repo Docs
 

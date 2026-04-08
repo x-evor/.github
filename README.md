@@ -144,7 +144,7 @@ Core release-enabled services:
 | accounts | `accounts.svc.plus` | `api` | `ansible/playbooks/deploy_accounts_compose.yml` | `accounts.svc.plus` | `accounts-preview.svc.plus` |
 | rag-server | `rag-server.svc.plus` | `api` | `ansible/playbooks/deploy_rag_server_compose.yml` | `rag-server.svc.plus` | `rag-server-preview.svc.plus` |
 | x-cloud-flow | `x-cloud-flow.svc.plus` | `api` | `ansible/playbooks/deploy_x_cloud_flow_compose.yml` | `x-cloud-flow.svc.plus` | `x-cloud-flow-preview.svc.plus` |
-| x-ops-agent | `x-ops-agent.svc.plus` | `api` | `ansible/playbooks/deploy_x_ops_agent_compose.yml` | `x-ops-agent.svc.plus` | `x-ops-agent-preview.svc.plus` |
+| agent-svc-plus | `agent.svc.plus` | `api` | `ansible/playbooks/deploy_agent_svc_plus_release.yml` | `jp-xhttp-contabo.svc.plus` | n/a |
 | x-scope-hub | `x-scope-hub.svc.plus` | `api` | `ansible/playbooks/deploy_x_scope_hub_compose.yml` | `x-scope-hub.svc.plus` | `x-scope-hub-preview.svc.plus` |
 
 Workflow input model:
@@ -177,7 +177,6 @@ Before running the workflow, configure:
   - `ACCOUNTS_SMTP_PASSWORD`
   - `RAG_SERVER_ANSIBLE_VARS_YAML`
   - `X_CLOUD_FLOW_ANSIBLE_VARS_YAML`
-  - `X_OPS_AGENT_ANSIBLE_VARS_YAML`
   - `X_SCOPE_HUB_ANSIBLE_VARS_YAML`
   - `SINGLE_NODE_VPS_SSH_PRIVATE_KEY`
 
@@ -209,7 +208,7 @@ Manual run in GitHub UI:
 2. Select `Service Release Control Plane`
 3. Click `Run workflow`
 4. Fill:
-   - `service`: one of `accounts`, `rag-server`, `x-cloud-flow`, `x-ops-agent`, `x-scope-hub`
+   - `service`: one of `accounts`, `rag-server`, `x-cloud-flow`, `agent-svc-plus`, `x-scope-hub`
    - `track`: `prod` or `preview`
    - `service_ref`: branch, tag, or commit SHA from the service repository
    - `run_apply`: `false` for dry-run only, `true` to continue through the final apply stage

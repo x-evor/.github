@@ -1,6 +1,0 @@
-service: x-ops-agent
-track: preview
-enabled: true
-stable_domain: x-ops-agent-preview.svc.plus
-release_prefix: x-ops-agent-preview
-host_port: 18184

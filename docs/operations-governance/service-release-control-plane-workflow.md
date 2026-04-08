@@ -196,7 +196,6 @@ Sensitive values belong in GitHub Secrets, ideally at org scope if multiple repo
 | `ACCOUNTS_SMTP_PASSWORD` | `accounts` SMTP password |
 | `RAG_SERVER_ANSIBLE_VARS_YAML` | `rag-server` secret runtime vars |
 | `X_CLOUD_FLOW_ANSIBLE_VARS_YAML` | `x-cloud-flow` secret runtime vars |
-| `X_OPS_AGENT_ANSIBLE_VARS_YAML` | `x-ops-agent` secret runtime vars |
 | `X_SCOPE_HUB_ANSIBLE_VARS_YAML` | `x-scope-hub` secret runtime vars |
 
 ## Built-In SSH Defaults

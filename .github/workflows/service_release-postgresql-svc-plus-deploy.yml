@@ -11,6 +11,10 @@ on:
         description: "Branch / tag / sha"
         required: true
         type: string
+      target_host:
+        description: "Target_name"
+        required: true
+        type: string
       run_apply:
         description: "Dry Run / Apply"
         required: false
@@ -56,59 +60,21 @@ permissions:
   packages: write
 
 jobs:
-  deploy-stunnel-server-service:
-    name: "Deploy stunnel-server"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout control repo
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          submodules: recursive
-
-      - name: Install Ansible runtime
-        uses: ./.github/actions/install-ansible-runtime
-
-      - name: Prepare runner SSH key
-        env:
-          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
-        shell: bash
-        run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
-
-      - name: Deploy stunnel-server
-        shell: bash
-        env:
-          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
-        run: |
-          args=(
-            ansible-playbook
-            -i ansible/inventory.ini
-            -D
-            ansible/playbooks/deploy_stunnel_server.yml
-            -l
-            "${{ inputs.target_host }}"
-          )
-
-          if [[ "${{ inputs.run_apply }}" != "true" ]]; then
-            args+=(-C)
-          fi
-
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
-
   deploy-postgresql-service:
     name: "Deploy postgresql-svc-plus"
-    needs:
-      - deploy-stunnel-server-service
     runs-on: ubuntu-latest
     steps:
       - name: Checkout control repo
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           submodules: recursive
+
+      - name: Checkout playbooks repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: x-evor/playbooks
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: playbooks
 
       - name: Install Ansible runtime
         uses: ./.github/actions/install-ansible-runtime
@@ -131,9 +97,9 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
-            ansible/playbooks/deploy_postgresql_svc_plus.yml
+            "${{ github.workspace }}/playbooks/deploy_postgresql_svc_plus.yml"
             -l
             "${{ inputs.target_host }}"
           )
@@ -142,4 +108,4 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"

@@ -75,6 +75,13 @@ jobs:
       - name: Install Ansible runtime
         uses: ./.github/actions/install-ansible-runtime
 
+      - name: Checkout playbooks repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          repository: x-evor/playbooks
+          token: ${{ secrets.WORKSPACE_REPO_TOKEN || github.token }}
+          path: playbooks
+
       - name: Prepare runner SSH key
         env:
           SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
@@ -94,9 +101,9 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
-            ansible/playbooks/deploy_stunnel_client.yml
+            "${{ github.workspace }}/playbooks/deploy_stunnel-client.yml"
             -l
             "${{ inputs.target_host }}"
           )
@@ -105,7 +112,7 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"
 
   deploy-xray-exporter:
     name: "Deploy xray-exporter"
@@ -145,7 +152,7 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
             "${{ github.workspace }}/playbooks/deploy_xray_exporter.yml"
             -l
@@ -156,7 +163,7 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"
 
   deploy-billing-service:
     name: "Deploy billing-service"
@@ -195,7 +202,7 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
             "${{ github.workspace }}/playbooks/deploy_billing_service.yml"
             -l
@@ -206,7 +213,7 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"
 
   deploy-accounts:
     name: "Deploy accounts.svc.plus"
@@ -248,7 +255,7 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
             "${{ github.workspace }}/playbooks/deploy_accounts_svc_plus.yml"
             -l
@@ -259,7 +266,7 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"
 
   deploy-console:
     name: "Deploy console.svc.plus"
@@ -300,7 +307,7 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
             "${{ github.workspace }}/playbooks/deploy_console_svc_plus.yml"
             -l
@@ -311,7 +318,7 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"
 
   deploy-agent-svc-plus:
     name: "Deploy agent-svc-plus"
@@ -353,7 +360,7 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
             "${{ github.workspace }}/playbooks/deploy_agent_svc_plus.yml"
             -l
@@ -364,7 +371,7 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"
 
   deploy-xworkmate-bridge:
     name: "Deploy xworkmate-bridge vhosts"
@@ -403,7 +410,7 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
             "${{ github.workspace }}/playbooks/deploy_xworkmate_bridge_vhosts.yml"
             -l
@@ -414,7 +421,7 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"
 
   deploy-apisix:
     name: "Deploy apisix"
@@ -454,9 +461,9 @@ jobs:
         run: |
           args=(
             ansible-playbook
-            -i ansible/inventory.ini
+            -i "${{ github.workspace }}/playbooks/inventory.ini"
             -D
-            "${{ github.workspace }}/playbooks/deploy_apisix_svc.plus.yaml"
+            "${{ github.workspace }}/playbooks/deploy_apisix.yml"
             -l
             "${{ inputs.target_host }}"
           )
@@ -465,4 +472,4 @@ jobs:
             args+=(-C)
           fi
 
-          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+          ANSIBLE_CONFIG="${{ github.workspace }}/playbooks/ansible.cfg" "${args[@]}"

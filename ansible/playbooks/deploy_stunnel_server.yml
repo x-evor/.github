@@ -1,7 +1,0 @@
-- name: Deploy stunnel-server release
-  hosts: server
-  become: true
-  gather_facts: true
-  roles:
-    - role: stunnel_server_deploy
-

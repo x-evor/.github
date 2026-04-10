@@ -169,6 +169,36 @@ flowchart TB
 - The desktop pipeline is shown as a single merged pipeline so the development
   machine lifecycle is easier to reason about from one place.
 
+## Core Service Deploy Dependency Graph
+
+This graph is the baseline dependency contract for:
+
+- [`service_release-core-services.yml`](/Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit/.github/workflows/service_release-core-services.yml) job splitting and `needs`
+- [`deploy_svc_plus_core_services_stack.yml`](/Users/shenlan/workspaces/cloud-neutral-toolkit/playbooks/deploy_svc_plus_core_services_stack.yml) aggregate execution order
+
+Arrow direction means the left side executes first and the right side depends on it.
+
+```mermaid
+flowchart LR
+  BI["deploy-billing-service"]
+  BR["deploy-xworkmate-bridge"]
+  XR["deploy-xray-exporter"]
+  AG["deploy-agent-svc-plus"]
+  AC["deploy-accounts"]
+  ST["deploy-stunnel-client"]
+  AP["deploy-apisix"]
+  CO["deploy-console"]
+
+  BI --> XR
+  XR --> AG
+  AG --> AC
+  BI --> AC
+  BR --> AC
+  AC --> ST
+  AC --> AP
+  AP --> CO
+```
+
 ## k3s Logical Access Lines
 
 ```mermaid

@@ -1,6 +1,0 @@
-- name: Initialize Windows local development machine
-  hosts: all
-  gather_facts: true
-  roles:
-    - role: dev_desktop_windows_local
-

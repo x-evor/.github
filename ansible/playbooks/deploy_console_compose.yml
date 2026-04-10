@@ -1,9 +1,0 @@
-- name: Deploy console.svc.plus compose release
-  hosts: server
-  become: true
-  vars_files:
-    - ../vars/console.release.public.yml
-  tasks:
-    - name: Deploy console.svc.plus via shared compose role
-      ansible.builtin.include_role:
-        name: shared_compose_release

@@ -1,6 +1,0 @@
-- name: Deploy core services onto single-node K3s
-  hosts: all
-  become: yes
-  gather_facts: yes
-  roles:
-    - role: k3s_core_migration

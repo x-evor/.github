@@ -4,47 +4,48 @@ on:
   workflow_call:
     inputs:
       track:
-        description: "Release track"
+        description: "Environment"
         required: true
         type: string
       service_ref:
-        description: "Service repository ref (branch/tag/sha)"
+        description: "Branch / tag / sha"
         required: true
         type: string
       run_apply:
-        description: "Run the final ansible apply stage"
+        description: "Dry Run / Apply"
         required: false
         default: false
         type: boolean
       ssh_known_hosts:
-        description: "Optional known_hosts payload override"
+        description: "Known hosts override"
         required: false
         default: ""
         type: string
   workflow_dispatch:
     inputs:
       track:
-        description: "Release track"
+        description: "Environment"
         required: true
         default: "prod"
         type: choice
         options:
+          - pre
           - prod
       service_ref:
-        description: "Service repository ref (branch/tag/sha)"
+        description: "Branch / tag / sha"
         required: true
         default: "main"
         type: string
+      target_host:
+        description: "Target_name"
+        required: true
+        default: "jp-xhttp-contabo.svc.plus"
+        type: string
       run_apply:
-        description: "Run the final ansible apply stage"
+        description: "Dry Run / Apply"
         required: true
         default: false
         type: boolean
-      ssh_known_hosts:
-        description: "Optional known_hosts payload override"
-        required: false
-        default: ""
-        type: string
 
 concurrency:
   group: postgresql-svc-plus-release-${{ inputs.track }}
@@ -55,16 +56,90 @@ permissions:
   packages: write
 
 jobs:
+  deploy-stunnel-server-service:
+    name: "Deploy stunnel-server"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: recursive
+
+      - name: Install Ansible runtime
+        uses: ./.github/actions/install-ansible-runtime
+
+      - name: Prepare runner SSH key
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
+      - name: Deploy stunnel-server
+        shell: bash
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        run: |
+          args=(
+            ansible-playbook
+            -i ansible/inventory.ini
+            -D
+            ansible/playbooks/deploy_stunnel_server.yml
+            -l
+            "${{ inputs.target_host }}"
+          )
+
+          if [[ "${{ inputs.run_apply }}" != "true" ]]; then
+            args+=(-C)
+          fi
+
+          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+
   deploy-postgresql-service:
     name: "Deploy postgresql-svc-plus"
-    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
-    with:
-      service: postgresql-svc-plus
-      track: ${{ inputs.track }}
-      service_ref: ${{ inputs.service_ref }}
-      run_apply: ${{ inputs.run_apply }}
-      ssh_host: "5.78.45.49"
-      ssh_user: "root"
-      ssh_port: "22"
-      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
-    secrets: inherit
+    needs:
+      - deploy-stunnel-server-service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: recursive
+
+      - name: Install Ansible runtime
+        uses: ./.github/actions/install-ansible-runtime
+
+      - name: Prepare runner SSH key
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
+      - name: Deploy postgresql-svc-plus
+        shell: bash
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        run: |
+          args=(
+            ansible-playbook
+            -i ansible/inventory.ini
+            -D
+            ansible/playbooks/deploy_postgresql_svc_plus.yml
+            -l
+            "${{ inputs.target_host }}"
+          )
+
+          if [[ "${{ inputs.run_apply }}" != "true" ]]; then
+            args+=(-C)
+          fi
+
+          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"

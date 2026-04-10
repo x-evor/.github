@@ -1,7 +1,0 @@
-- name: Install Azure CLI and Google Cloud CLI prerequisites
-  hosts: all
-  gather_facts: true
-  become: "{{ ansible_system != 'Darwin' and ansible_os_family != 'Windows' }}"
-  roles:
-    - role: cloud_cli_prereqs
-

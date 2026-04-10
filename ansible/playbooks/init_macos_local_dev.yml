@@ -1,7 +1,0 @@
-- name: Initialize macOS local development machine
-  hosts: all
-  gather_facts: true
-  become: false
-  roles:
-    - role: dev_desktop_macos_local
-

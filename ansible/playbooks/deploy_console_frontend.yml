@@ -1,9 +1,0 @@
----
-- name: Deploy console frontend stack
-  hosts: all
-  gather_facts: false
-  vars:
-    console_frontend_control_repo_root: "{{ playbook_dir }}/../.."
-    console_frontend_repo_path: "{{ console_frontend_control_repo_root }}/../console.svc.plus"
-  roles:
-    - role: console_frontend_deploy

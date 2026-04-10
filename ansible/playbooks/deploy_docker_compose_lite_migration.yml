@@ -1,6 +1,0 @@
-- name: Deploy lightweight Docker Compose migration stack
-  hosts: all
-  become: yes
-  gather_facts: yes
-  roles:
-    - role: docker_compose_lite_migration

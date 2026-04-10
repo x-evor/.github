@@ -1,9 +1,0 @@
----
-- name: Update Cloudflare DNS records for svc.plus
-  hosts: localhost
-  connection: local
-  gather_facts: false
-  vars_files:
-    - ../vars/cloudflare_svc_plus_dns.yml
-  roles:
-    - role: cloudflare_dns

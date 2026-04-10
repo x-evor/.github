@@ -24,6 +24,7 @@ done
 [[ "${destroy_mode}" == "park" || "${destroy_mode}" == "destroy" ]] || usage
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+playbooks_root="$(cd "${repo_root}/../playbooks" && pwd)"
 state_dir="${repo_root}/.ansible/cloud-dev-desktop"
 runtime_vars="$(mktemp)"
 inventory_file="$(mktemp)"
@@ -41,8 +42,8 @@ python3 "${repo_root}/scripts/cloud-dev-desktop/render-runtime-vars.py" \
   --allow-missing-ip
 printf "[local_runner]\nlocalhost ansible_connection=local\n" > "${inventory_file}"
 
-args=(ansible-playbook -i "${inventory_file}" -D "${repo_root}/ansible/playbooks/destroy_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_destroy_mode=${destroy_mode}")
+args=(ansible-playbook -i "${inventory_file}" -D "${playbooks_root}/destroy_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_destroy_mode=${destroy_mode}")
 if [[ "${mode}" == "dry-run" ]]; then
-  args=(ansible-playbook -i "${inventory_file}" -D -C "${repo_root}/ansible/playbooks/destroy_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_destroy_mode=${destroy_mode}")
+  args=(ansible-playbook -i "${inventory_file}" -D -C "${playbooks_root}/destroy_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_destroy_mode=${destroy_mode}")
 fi
-ANSIBLE_CONFIG="${repo_root}/ansible/ansible.cfg" "${args[@]}"
+ANSIBLE_CONFIG="${playbooks_root}/ansible.cfg" "${args[@]}"

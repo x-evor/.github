@@ -21,7 +21,9 @@ done
 [[ -n "$provider" && -n "$request" ]] || usage
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+playbooks_root="$(cd "${repo_root}/../playbooks" && pwd)"
 state_dir="${repo_root}/.ansible/cloud-dev-desktop"
+mkdir -p "${state_dir}"
 runtime_vars="$(mktemp)"
 inventory_file="$(mktemp)"
 request_abs="$(cd "$(dirname "$request")" && pwd)/$(basename "$request")"
@@ -34,14 +36,16 @@ python3 "${repo_root}/scripts/cloud-dev-desktop/render-runtime-vars.py" \
   --provider-override "${provider}" \
   --runtime-vars-out "${runtime_vars}" \
   --inventory-out "${inventory_file}" \
-  --state-file "${state_file}"
+  --state-file "${state_file}" \
+  --allow-missing-ip
+printf "[local_runner]\nlocalhost ansible_connection=local\n" > "${inventory_file}"
 
 export OBJC_DISABLE_INITIALIZE_FORK_SAFETY="${OBJC_DISABLE_INITIALIZE_FORK_SAFETY:-YES}"
 export no_proxy="${no_proxy:-*}"
 export NO_PROXY="${NO_PROXY:-*}"
 
-args=(ansible-playbook -i "${inventory_file}" -D "${repo_root}/ansible/playbooks/verify_cloud_dev_desktop.yml" -e "@${runtime_vars}")
+args=(ansible-playbook -i "${inventory_file}" -D "${playbooks_root}/bootstrap_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_state_root=${state_dir}")
 if [[ "${mode}" == "dry-run" ]]; then
-  args=(ansible-playbook -i "${inventory_file}" -D -C "${repo_root}/ansible/playbooks/verify_cloud_dev_desktop.yml" -e "@${runtime_vars}")
+  args=(ansible-playbook -i "${inventory_file}" -D -C "${playbooks_root}/bootstrap_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_state_root=${state_dir}")
 fi
-ANSIBLE_CONFIG="${repo_root}/ansible/ansible.cfg" "${args[@]}"
+ANSIBLE_CONFIG="${playbooks_root}/ansible.cfg" "${args[@]}"

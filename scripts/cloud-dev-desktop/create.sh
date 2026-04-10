@@ -21,6 +21,7 @@ done
 [[ -n "$provider" && -n "$request" ]] || usage
 
 repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+playbooks_root="$(cd "${repo_root}/../playbooks" && pwd)"
 state_dir="${repo_root}/.ansible/cloud-dev-desktop"
 mkdir -p "${state_dir}"
 runtime_vars="$(mktemp)"
@@ -49,11 +50,11 @@ if [[ "${mode}" != "dry-run" ]]; then
   fi
 fi
 
-args=(ansible-playbook -i "${inventory_file}" -D "${repo_root}/ansible/playbooks/create_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_state_root=${state_dir}")
+args=(ansible-playbook -i "${inventory_file}" -D "${playbooks_root}/bootstrap_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_state_root=${state_dir}")
 if [[ "${mode}" == "dry-run" ]]; then
-  args=(ansible-playbook -i "${inventory_file}" -D -C "${repo_root}/ansible/playbooks/create_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_state_root=${state_dir}")
+  args=(ansible-playbook -i "${inventory_file}" -D -C "${playbooks_root}/bootstrap_cloud_dev_desktop.yml" -e "@${runtime_vars}" -e "cloud_vm_state_file=${state_file}" -e "cloud_vm_state_root=${state_dir}")
 fi
-ANSIBLE_CONFIG="${repo_root}/ansible/ansible.cfg" "${args[@]}"
+ANSIBLE_CONFIG="${playbooks_root}/ansible.cfg" "${args[@]}"
 
 if [[ -f "${state_file}" ]]; then
   python3 - "${state_file}" <<'PY'

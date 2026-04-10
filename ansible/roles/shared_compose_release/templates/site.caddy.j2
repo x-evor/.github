@@ -1,4 +1,0 @@
-{{ service_compose_release_domains | join(", ") }} {
-  encode zstd gzip
-  reverse_proxy 127.0.0.1:{{ service_compose_release_host_port }}
-}

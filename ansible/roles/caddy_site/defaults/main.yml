@@ -1,6 +1,0 @@
----
-caddy_site_conf_dir: /etc/caddy/conf.d
-caddy_site_reload_command: systemctl reload caddy
-caddy_site_name: ""
-caddy_site_domains: []
-caddy_site_upstream: 127.0.0.1:8080

@@ -8,6 +8,9 @@ usage() {
 
 [[ $# -eq 0 ]] || usage
 
+repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+playbooks_root="$(cd "${repo_root}/../playbooks" && pwd)"
+
 require_cmd() {
   command -v "$1" >/dev/null 2>&1 || {
     echo "[missing] $1" >&2
@@ -29,8 +32,6 @@ echo "[check] GCP CLI session"
 gcloud auth list --filter=status:ACTIVE --format='json(account,status)'
 
 echo "[check] Ansible syntax"
-ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook --syntax-check -i 'localhost,' -c local ansible/playbooks/create_cloud_dev_desktop.yml -e @ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml >/dev/null
-ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook --syntax-check -i 'localhost,' -c local ansible/playbooks/bootstrap_cloud_dev_desktop.yml -e @ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml >/dev/null
-ANSIBLE_CONFIG=ansible/ansible.cfg ansible-playbook --syntax-check -i 'localhost,' -c local ansible/playbooks/verify_cloud_dev_desktop.yml -e @ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml >/dev/null
+ANSIBLE_CONFIG="${playbooks_root}/ansible.cfg" ansible-playbook --syntax-check -i 'localhost,' -c local "${playbooks_root}/bootstrap_cloud_dev_desktop.yml" -e @ansible/vars/cloud_dev_desktop.azure.windows-desktop.example.yml >/dev/null
 
 echo "[ok] local cloud dev desktop precheck passed"

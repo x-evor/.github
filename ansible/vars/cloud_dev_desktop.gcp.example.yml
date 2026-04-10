@@ -1,7 +1,0 @@
-provider: gcp
-zone: asia-northeast1-a
-vm_size: n2-standard-8
-disk_gb: 200
-image_family: debian-13
-gcp_project_id: xzerolab-480008
-gcp_subnet_cidr: 10.52.1.0/24

@@ -7,6 +7,11 @@ This repository is the control plane for the Cloud-Neutral Toolkit multi-repo pr
 - Use this repo to define standards, plans, and cross-repo execution checklists.
 - Keep repo-specific implementation details inside each sub-repo.
 - Treat this file as the default policy all related repos should inherit.
+- Do not use `git submodule` in this repo.
+- Do not add or maintain Ansible playbooks under `ansible/playbooks` in this repo; use `../playbooks` instead.
+- `playbooks` references must point to `github.com:x-evor/playbooks.git`.
+- `iac_modules` references must point to `github.com:x-evor/iac_modules.git`.
+- `gitops` config references must point to `github.com:x-evor/gitops.git`.
 
 ## 2) Codex Work Rules
 

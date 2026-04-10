@@ -122,7 +122,17 @@ Billing-service accepts the normalized exporter snapshot defined above and persi
 - Negative deltas must never reduce billed usage.
 - Late-arriving minutes must update the same minute bucket rather than append a second logical row.
 
-## 5. PostgreSQL Schema Draft
+## 5. PostgreSQL Schema Mapping
+
+v1 reuses the existing `accounts.svc.plus` accounting control-plane schema rather than introducing new tables.
+
+Important storage mapping:
+
+- `account_uuid = sample.uuid`
+- `node_id = env + ":" + node_id`
+- `line_code = inbound_tag`
+
+This preserves multi-env isolation on top of the current schema keys.
 
 ### 5.1 `traffic_stat_checkpoints`
 
@@ -130,19 +140,17 @@ Purpose: remember the last cumulative counters seen by billing-service.
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `uuid` | text | part of unique identity |
-| `node_id` | text | part of unique identity |
-| `env` | text | part of unique identity |
-| `inbound_tag` | text | part of unique identity |
-| `email` | text | last resolved email |
-| `last_collected_at` | timestamptz | last accepted snapshot timestamp |
-| `uplink_bytes_total` | bigint | last cumulative uplink |
-| `downlink_bytes_total` | bigint | last cumulative downlink |
-| `updated_at` | timestamptz | row maintenance |
+| `node_id` | text | persisted as `env:node_id` |
+| `account_uuid` | uuid | v1 maps `sample.uuid` here |
+| `last_uplink_total` | bigint | last cumulative uplink |
+| `last_downlink_total` | bigint | last cumulative downlink |
+| `last_seen_at` | timestamptz | last accepted snapshot timestamp |
+| `xray_revision` | text | exporter / billing source revision |
+| `reset_epoch` | bigint | reset protection counter |
 
 Recommended uniqueness:
 
-- unique index on `(uuid, node_id, env, inbound_tag)`
+- primary key on `(node_id, account_uuid)`
 
 ### 5.2 `traffic_minute_buckets`
 
@@ -150,12 +158,11 @@ Purpose: minute-level usage fact table for accounts aggregation.
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `minute_ts` | timestamptz | UTC minute bucket |
-| `uuid` | text | billing identity |
-| `email` | text | denormalized for audit/debug |
-| `node_id` | text | billing identity |
-| `env` | text | billing identity |
-| `inbound_tag` | text | billing identity |
+| `bucket_start` | timestamptz | UTC minute bucket |
+| `node_id` | text | persisted as `env:node_id` |
+| `account_uuid` | uuid | v1 maps `sample.uuid` here |
+| `region` | text | config-injected region or empty string |
+| `line_code` | text | v1 maps `inbound_tag` here |
 | `uplink_bytes` | bigint | minute delta |
 | `downlink_bytes` | bigint | minute delta |
 | `total_bytes` | bigint | derived delta |
@@ -166,7 +173,7 @@ Purpose: minute-level usage fact table for accounts aggregation.
 
 Recommended uniqueness:
 
-- unique index on `(minute_ts, uuid, node_id, env, inbound_tag)`
+- primary key on `(bucket_start, node_id, account_uuid, region, line_code)`
 
 ### 5.3 `billing_ledger`
 
@@ -210,6 +217,7 @@ Accounts usage and billing APIs must:
 - read from PostgreSQL-backed store layers only
 - include `sourceOfTruth = "postgresql"` in usage and billing responses
 - avoid any direct dependency on Prometheus queries
+- continue serving the persisted billing truth written into the existing `accounts.svc.plus` schema
 
 ### 6.2 `console.svc.plus`
 

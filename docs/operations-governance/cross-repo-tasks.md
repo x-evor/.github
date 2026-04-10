@@ -331,5 +331,7 @@ Codex should answer with:
 2. Keep `agent.svc.plus` scoped to scheduling, reconciliation, and future execution hooks only.
 3. Add source-of-truth-only regression tests in `accounts.svc.plus` so PostgreSQL-backed usage and billing responses are locked.
 4. Add source-of-truth-only regression tests in `console.svc.plus` so usage and billing UI continues to read through `accounts`.
-5. Implement `xray-exporter` and `billing-service` only after the contract docs and regression tests are merged.
-6. Use the shared test matrix as the release gate for multi-node, replay, restart-recovery, and failure-mode validation.
+5. Initialize the standalone `xray-exporter` repo and implement the snapshot + metrics minimum contract.
+6. Initialize the standalone `billing-service` repo and implement minute delta, checkpoint, ledger, and quota-state writes against the existing `accounts.svc.plus` schema.
+7. Add an `agent.svc.plus` reconciliation acceptance document that treats billing collection and reconciliation as orchestrated jobs only.
+8. Use the shared test matrix as the release gate for multi-node, replay, restart-recovery, and failure-mode validation.

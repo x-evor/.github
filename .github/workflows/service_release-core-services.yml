@@ -1,0 +1,253 @@
+name: Service Release Core Services
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Release track"
+        required: true
+        default: "pre"
+        type: choice
+        options:
+          - prod
+          - pre
+      service_ref:
+        description: "Service repository ref (branch/tag/sha)"
+        required: true
+        default: "main"
+        type: string
+      run_apply:
+        description: "Run the final ansible apply stage"
+        required: true
+        default: false
+        type: boolean
+      deploy_apisix:
+        description: "Deploy apisix"
+        required: false
+        default: false
+        type: boolean
+      deploy_console:
+        description: "Deploy console.svc.plus (frontend)"
+        required: false
+        default: false
+        type: boolean
+      deploy_accounts:
+        description: "Deploy accounts.svc.plus"
+        required: false
+        default: false
+        type: boolean
+      deploy_agent_svc_plus:
+        description: "Deploy agent-svc-plus"
+        required: false
+        default: false
+        type: boolean
+      deploy_stunnel_client:
+        description: "Deploy stunnel-client"
+        required: false
+        default: false
+        type: boolean
+      deploy_agent_proxy:
+        description: "Deploy Agent Proxy Node"
+        required: false
+        default: false
+        type: boolean
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
+      target_host:
+        description: "Optional deploy target host override (Console)"
+        required: false
+        default: ""
+        type: string
+      target_cluster:
+        description: "Optional deploy target cluster/alias override (Console)"
+        required: false
+        default: ""
+        type: string
+      agent_proxy_ip:
+        description: "Target IP (Agent Proxy)"
+        required: false
+        default: "46.250.251.132"
+        type: string
+      agent_proxy_domain:
+        description: "Target domain (Agent Proxy)"
+        required: false
+        default: "jp-xhttp-contabo.svc.plus"
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy-apisix:
+    name: "Deploy apisix"
+    if: ${{ inputs.deploy_apisix }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: apisix
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
+
+  deploy-console:
+    name: "Deploy console.svc.plus"
+    if: ${{ inputs.deploy_console }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: console
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: ${{ inputs.target_host }}
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+      deploy_server_alias: ${{ inputs.target_cluster }}
+    secrets: inherit
+
+  deploy-accounts:
+    name: "Deploy accounts.svc.plus"
+    if: ${{ inputs.deploy_accounts }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: accounts
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
+
+  deploy-agent-svc-plus:
+    name: "Deploy agent-svc-plus"
+    if: ${{ inputs.deploy_agent_svc_plus }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: agent-svc-plus
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
+
+  deploy-stunnel-client:
+    name: "Deploy stunnel-client"
+    if: ${{ inputs.deploy_stunnel_client }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: stunnel-client
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
+
+  deploy-agent-proxy:
+    name: "Deploy Agent Proxy Node"
+    if: ${{ inputs.deploy_agent_proxy }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout control repo
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.11"
+
+      - name: Install Ansible runtime
+        shell: bash
+        run: bash scripts/github-actions/install-python-tools.sh ansible
+
+      - name: Update Cloudflare DNS
+        shell: bash
+        env:
+          CLOUDFLARE_DNS_API_TOKEN: ${{ secrets.CLOUDFLARE_DNS_API_TOKEN }}
+        run: |
+          args=(
+            ansible-playbook
+            -i ansible/inventory.ini
+            -D
+            ansible/playbooks/deploy_jp_xhttp_contabo.yml
+            --tags agent_proxy_dns
+            -e "target_ip=${{ inputs.agent_proxy_ip }}"
+            -e "target_domain=${{ inputs.agent_proxy_domain }}"
+          )
+
+          if [[ "${{ inputs.run_apply }}" != "true" ]]; then
+            args+=(-C)
+          fi
+
+          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+
+      - name: Prepare runner SSH key
+        env:
+          SINGLE_NODE_VPS_SSH_PRIVATE_KEY: ${{ secrets.SINGLE_NODE_VPS_SSH_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          python3 scripts/github-actions/private-key-payload.py normalize > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keygen -y -f ~/.ssh/id_rsa >/dev/null
+
+      - name: Deploy Agent Proxy Node
+        shell: bash
+        run: |
+          args=(
+            ansible-playbook
+            -i ansible/inventory.ini
+            -D
+            ansible/playbooks/deploy_jp_xhttp_contabo.yml
+            --tags agent_proxy_node
+            -e "target_ip=${{ inputs.agent_proxy_ip }}"
+            -e "target_domain=${{ inputs.agent_proxy_domain }}"
+          )
+
+          if [[ "${{ inputs.run_apply }}" != "true" ]]; then
+            args+=(-C)
+          fi
+
+          ANSIBLE_CONFIG="${{ github.workspace }}/ansible/ansible.cfg" "${args[@]}"
+
+      - name: Verify Deployment
+        if: ${{ inputs.run_apply }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import ipaddress
+          import socket
+          import sys
+
+          target_domain = "${{ inputs.agent_proxy_domain }}"
+          target_ip = "${{ inputs.agent_proxy_ip }}"
+
+          try:
+              ipaddress.ip_address(target_ip)
+          except ValueError as exc:
+              print(f"invalid target_ip: {target_ip}: {exc}", file=sys.stderr)
+              sys.exit(1)
+
+          resolved_ips = sorted(set(socket.gethostbyname_ex(target_domain)[2]))
+          print(f"{target_domain} resolved to {resolved_ips}")
+          if target_ip not in resolved_ips:
+              print(f"{target_domain} does not resolve to {target_ip}", file=sys.stderr)
+              sys.exit(1)
+          PY

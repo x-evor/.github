@@ -1,0 +1,93 @@
+name: Service Release Extended Services
+
+on:
+  workflow_dispatch:
+    inputs:
+      track:
+        description: "Release track"
+        required: true
+        default: "pre"
+        type: choice
+        options:
+          - prod
+          - pre
+      service_ref:
+        description: "Service repository ref (branch/tag/sha)"
+        required: true
+        default: "main"
+        type: string
+      run_apply:
+        description: "Run the final ansible apply stage"
+        required: true
+        default: false
+        type: boolean
+      deploy_docs:
+        description: "Deploy docs.svc.plus"
+        required: false
+        default: false
+        type: boolean
+      deploy_vault:
+        description: "Deploy vault"
+        required: false
+        default: false
+        type: boolean
+      deploy_rag_server:
+        description: "Deploy rag-server.svc.plus"
+        required: false
+        default: false
+        type: boolean
+      ssh_known_hosts:
+        description: "Optional known_hosts payload override"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  deploy-docs:
+    name: "Deploy docs.svc.plus"
+    if: ${{ inputs.deploy_docs }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: docs
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
+
+  deploy-vault:
+    name: "Deploy vault"
+    if: ${{ inputs.deploy_vault }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: vault
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit
+
+  deploy-rag-server:
+    name: "Deploy rag-server.svc.plus"
+    if: ${{ inputs.deploy_rag_server }}
+    uses: ./.github/workflows/service_release-service-control-plane-deploy.yml
+    with:
+      service: rag-server
+      track: ${{ inputs.track }}
+      service_ref: ${{ inputs.service_ref }}
+      run_apply: ${{ inputs.run_apply }}
+      ssh_host: "5.78.45.49"
+      ssh_user: "root"
+      ssh_port: "22"
+      ssh_known_hosts: ${{ inputs.ssh_known_hosts }}
+    secrets: inherit

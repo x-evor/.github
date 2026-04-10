@@ -177,6 +177,14 @@ Control repo:
 
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/github-org-cloud-neutral-toolkit && rg -n "sourceOfTruth|xray-exporter|billing-service|minute_ts|negative delta|late-arriving" docs/architecture docs/testing docs/operations-governance`
 
+Xray exporter:
+
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/xray-exporter && go test ./...`
+
+Billing service:
+
+- `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/billing-service && go test ./...`
+
 Accounts:
 
 - `cd /Users/shenlan/workspaces/cloud-neutral-toolkit/accounts.svc.plus && go test ./api/...`

@@ -149,6 +149,8 @@ jobs:
 
       - name: Deploy xray-exporter
         shell: bash
+        env:
+          INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
         run: |
           args=(
             ansible-playbook
@@ -199,6 +201,11 @@ jobs:
 
       - name: Deploy billing-service
         shell: bash
+        env:
+          # Required by playbooks/deploy_billing_service.yml even during dry run.
+          # This must point at the same account database used by accounts.svc.plus.
+          DATABASE_URL: ${{ secrets.BILLING_SERVICE_DATABASE_URL }}
+          INTERNAL_SERVICE_TOKEN: ${{ secrets.INTERNAL_SERVICE_TOKEN }}
         run: |
           args=(
             ansible-playbook

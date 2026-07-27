@@ -21,6 +21,16 @@
 
 ---
 
+## 最新发布
+
+| 环境 | 最新发布 | 说明 |
+| --- | --- | --- |
+| `sit` | [![sit](https://img.shields.io/badge/sit-Integration%20Check-16a34a?style=for-the-badge)](https://github.com/orgs/ai-workspace-services/packages) | 验证集成，检查服务间联动、权限和基础可用性。 |
+| `uat` | [![uat](https://img.shields.io/badge/uat-Pre%20Release-f59e0b?style=for-the-badge)](https://github.com/orgs/ai-workspace-services/packages) | 预发验证，确认镜像、配置和发布流程在正式上线前无误。 |
+| `prod` | [![prod](https://img.shields.io/badge/prod-Production%20Release-dc2626?style=for-the-badge)](https://github.com/orgs/ai-workspace-services/packages) | 生产发布，承载对外稳定运行的正式版本。 |
+
+> 三张卡片会保持简洁，重点是让你一眼看到每条环境线的最新发布入口。
+
 ## 中文
 
 `ai-workspace-services` 是面向真实业务运行的服务组织主页，聚合统一控制台、身份认证、AI 工作台与跨网络互联能力。
@@ -31,6 +41,12 @@
 - `Auth`：支持 `GitHub OAuth` 与 `Google OAuth`
 
 所有展示内容都对应实际在线运行的服务，不是 demo。
+
+### 环境速览
+
+- `sit`: 验证集成
+- `uat`: 预发验证
+- `prod`: 生产发布
 
 ## English
 
@@ -43,6 +59,12 @@
 
 Everything shown here points to live services, not a demo.
 
+### Environment Snapshot
+
+- `sit`: integration checks
+- `uat`: pre-release validation
+- `prod`: production release
+
 ---
 
 ## 入口 / Entry Points
@@ -52,4 +74,3 @@ Everything shown here points to live services, not a demo.
 | `Console` | 统一入口与服务导航 | https://console.svc.plus/ |
 | `Xworkmate` | AI 工作空间 | https://console.svc.plus/products/xworkmate |
 | `Xstream Platform` | 海外 AI 服务加速与互联 | https://console.svc.plus/products/xstream |
-
